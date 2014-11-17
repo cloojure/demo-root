@@ -14,15 +14,6 @@
 
 (use-fixtures :once schema.test/validate-schemas)
 
-(def SetOfStr
-  #{ s/Str } )
-
-(deftest t1 
-  (is (= (s/validate SetOfStr   #{ "a" "b" "c"} )
-                                #{ "a" "b" "c"} ))
-  (is (thrown? Exception 
-        (s/validate SetOfStr  #{ 1 "a" "b" "c"} ))))
-
 ;--------------------------------------------------------------------------------
 ; from README
 ;
@@ -262,6 +253,19 @@
   ))
 
 
+(deftest map-demos
+  ; This schema defines a map with only one entry, having key :a and a numeric value.  No
+  ; other entries are allowed.  So a "superset" map fails. 
+  (is (thrown? Exception
+    (s/validate {:a s/Num}  {:a 1 :b 2})))
+
+  ; We allow supersets of the minimum using s/Any.  Note that s/Any in the key position is
+  ; like a wildcard, interpreted as "zero or more".
+  (is (s/validate {:a s/Num,  s/Any s/Any}  {:a 1} ))
+  (is (s/validate {:a s/Num,  s/Any s/Any}  {:a 1,  :b 2,  3 "four"} ))
+)
+
+
 ;--------------------------------------------------------------------------------
 ; from Schema for Clojure(Script) blog article
 ; http://blog.getprismatic.com/schema-for-clojurescript-data-shape-declaration-and-validation/
@@ -340,4 +344,16 @@
 ;--------------------------------------------------------------------------------
 ; from Schema 0.2.0 blog article
 ; http://blog.getprismatic.com/schema-0-2-0-back-with-clojurescript-data-coercion/
+
+;--------------------------------------------------------------------------------
+; Misc
+
+(def SetOfStr
+  #{ s/Str } )
+
+(deftest t1 
+  (is (= (s/validate SetOfStr   #{ "a" "b" "c"} )
+                                #{ "a" "b" "c"} ))
+  (is (thrown? Exception 
+        (s/validate SetOfStr  #{ 1 "a" "b" "c"} ))))
 
