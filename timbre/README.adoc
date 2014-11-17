@@ -1,0 +1,133 @@
+= log-timbre
+
+A short template on the use of Timbre for Clojure logging
+
+== Usage
+
+Just execute using lein:
+
+    > lein run
+    Hello, World!
+    Shutting down...
+
+    > cat log.txt
+    2014-Oct-30 23:00:11 -0700 localhost.localdomain INFO [log-timbre.core] - Hello, Timbre! info
+    2014-Oct-30 23:00:11 -0700 localhost.localdomain INFO [log-timbre.core] - Hello, Timbre! spy :info Hello, Timbre! spy :info
+    2014-Oct-30 23:00:11 -0700 localhost.localdomain DEBUG [log-timbre.core] - Hello, Timbre! debug
+    2014-Oct-30 23:00:11 -0700 localhost.localdomain INFO [log-timbre.core] - arg2 arg3
+    java.lang.Exception: Doh!
+             log-timbre.core/-main                          core.clj:   36
+        clojure.lang.RestFn.invoke                       RestFn.java:  397
+           clojure.lang.Var.invoke                          Var.java:  375
+                        user/eval3  form-init6280606650468310964.clj:    1
+        clojure.lang.Compiler.eval                     Compiler.java: 6767
+        clojure.lang.Compiler.eval                     Compiler.java: 6757
+        clojure.lang.Compiler.load                     Compiler.java: 7194
+    clojure.lang.Compiler.loadFile                     Compiler.java: 7150
+          clojure.main/load-script                          main.clj:  274
+             clojure.main/init-opt                          main.clj:  279
+           clojure.main/initialize                          main.clj:  307
+             clojure.main/null-opt                          main.clj:  342
+                 clojure.main/main                          main.clj:  420
+        clojure.lang.RestFn.invoke                       RestFn.java:  421
+           clojure.lang.Var.invoke                          Var.java:  383
+    clojure.lang.AFn.applyToHelper                          AFn.java:  156
+          clojure.lang.Var.applyTo                          Var.java:  700
+                 clojure.main.main                         main.java:   37
+
+    2014-Oct-30 23:00:12 -0700 localhost.localdomain INFO [log-timbre.core] - (my-fn) =>  42
+    2014-Oct-30 23:00:12 -0700 localhost.localdomain INFO [log-timbre.core] - Profiling: :log-timbre.core/Arithmetic
+                             Id      nCalls       Min        Max       MAD      Mean   Time% Time
+    :log-timbre.core/slow-sleep         100     2.0ms      5.0ms    99.0μs     2.0ms      47 213.0ms
+    :log-timbre.core/fast-sleep         100     1.0ms      5.0ms    79.0μs     1.0ms      24 111.0ms
+           :log-timbre.core/div         100    68.0μs      1.0ms    85.0μs   234.0μs       5 23.0ms
+          :log-timbre.core/mult         100    42.0μs    544.0μs    54.0μs   149.0μs       3 15.0ms
+           :log-timbre.core/sub         100    43.0μs    464.0μs    59.0μs   143.0μs       3 14.0ms
+           :log-timbre.core/add         100    55.0μs    379.0μs    45.0μs   136.0μs       3 14.0ms
+                     Clock Time                                                          100 457.0ms
+                 Accounted Time                                                           85 390.0ms
+
+
+
+== The source code says everything you need to know:
+
+[source,clojure]
+----
+(ns log-timbre.core
+  (:require [clojure.java.io :as io]
+            [taoensso.timbre :as timbre] )
+  (:gen-class))
+
+; Set up the name of the log output file and delete any contents from previous runs (the
+; default is to continually append all runs to the file).
+(def log-file-name "log.txt")
+(io/delete-file log-file-name :quiet)
+
+(timbre/refer-timbre) ; set up timbre aliases
+
+; The default setup is simple console logging.  We with to turn off console logging and
+; turn on file logging to our chosen filename.
+(timbre/set-config! [:appenders :standard-out   :enabled?] false)   
+(timbre/set-config! [:appenders :spit           :enabled?] true)
+(timbre/set-config! [:shared-appender-config :spit-filename] log-file-name)
+(timbre/set-config! [:shared-appender-config :spit-filename] log-file-name)
+
+; Set the lowest-level to output as :debug
+(timbre/set-level! :debug)
+
+(defn my-fn
+  "A simple fn to demonstrate profiling"
+  []
+  (let [nums (vec (range 1000))]
+    (+ (p :fast-sleep (Thread/sleep 1) 10)
+       (p :slow-sleep (Thread/sleep 2) 32)
+       (p :add  (reduce + nums))
+       (p :sub  (reduce - nums))
+       (p :mult (reduce * nums))
+       (p :div  (reduce / nums)))))
+
+(defn -main []
+  (println "Hello, World!")  ; a short message to the console
+
+  ; Demonstrate logging with Timbre
+  (trace "Hello, Timbre! trace")  ; will not be logged, below current log-level
+  (debug "Hello, Timbre! debug")
+  (info  "Hello, Timbre! info")
+  (warn  "Hello, Timbre! warn")
+  (error "Hello, Timbre! error")
+  (fatal "Hello, Timbre! fatal")
+
+  ; Demonstrate multiple arities
+  (info "Arg-1")
+  (info "Arg-1" :Arg-2)
+  (info "Arg-1" :Arg-2 ["Arg-3"] )
+  (info "Arg-1" :Arg-2 ["Arg-3"] {:Arg 4} )
+
+  ; Demonstrate 3 arities of spy
+  (assert (= {:a 1}     (spy :info "Spy returns the last value" {:a 1} )))
+  (assert (= 42         (spy (* 6 7) ))) ; no level implies :debug
+  (assert (= 42         (spy :warn (* 6 7))))
+  (assert (= {:a 1}     (spy :error "optional message" {:a 1} )))
+
+  ; Even exceptions look nice in the logs
+  (error (Exception. "Doh!") "Any extra" :items {:go "here"} )
+
+  ; Demonstrate profiling with Timbre
+  (info "(my-fn) => " (my-fn))
+  (profile :info :Arithmetic (dotimes [n 100] (my-fn)))
+
+  ; Note that when using "lein run", we must place a call to (shutdown-agents) at the end of
+  ; the main program.  If this is omitted there is a one minute delay before (non-daemon)
+  ; agent threads will shutdown.  For some reason, however, this is not required for "lein
+  ; test".  Presumably "lein test" either calls either (shutdown-agents) or (System/exit 0)
+  ; when it is complete.
+  (shutdown-agents) 
+)
+----
+
+== License
+
+Copyright © 2014 Alan Thompson
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
