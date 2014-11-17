@@ -229,6 +229,39 @@
     ; RuntimeException: Value does not match schema: #{(not (odd? 2))}
 )
 
+
+(def CommentRequest
+  { (s/optional-key :parent-comment-id) long
+    :text String
+    :share-services [(s/enum :twitter :facebook :google)] } )
+
+(def parse-comment-request
+  (coerce/coercer CommentRequest coerce/json-coercion-matcher))
+ 
+(deftest blog-020-readme-t
+  (let [good-request    { :parent-comment-id  2128123123
+                          :text               "This is awesome!"
+                          :share-services     [:twitter :facebook]}
+
+        bad-request     { :parent-comment-id  (int 2128123123)
+                          :text               "This is awesome!"
+                          :share-services     ["twitter" "facebook"]} 
+  ]
+    (is (s/validate CommentRequest good-request))
+        ; passes validation
+ 
+    (is (thrown? Exception
+      (s/validate CommentRequest bad-request)))
+      ; Exception -- Value does not match schema:
+      ;  {:parent-comment-id (not (instance? java.lang.Long 2128123123)),
+      ;   :share-services [(not (#{:facebook :google :twitter} "twitter"))
+      ;                    (not (#{:facebook :google :twitter} "facebook"))]}
+
+    (is (= good-request (parse-comment-request bad-request)))
+        ; ==> true
+  ))
+
+
 ;--------------------------------------------------------------------------------
 ; from Schema for Clojure(Script) blog article
 ; http://blog.getprismatic.com/schema-for-clojurescript-data-shape-declaration-and-validation/
@@ -307,35 +340,4 @@
 ;--------------------------------------------------------------------------------
 ; from Schema 0.2.0 blog article
 ; http://blog.getprismatic.com/schema-0-2-0-back-with-clojurescript-data-coercion/
-
-(def CommentRequest
-  { (s/optional-key :parent-comment-id) long
-    :text String
-    :share-services [(s/enum :twitter :facebook :google)] } )
-
-(def parse-comment-request
-  (coerce/coercer CommentRequest coerce/json-coercion-matcher))
- 
-(deftest blog-020
-  (let [+good-request+  { :parent-comment-id  2128123123
-                          :text               "This is awesome!"
-                          :share-services     [:twitter :facebook]}
-
-        +bad-request+   { :parent-comment-id  (int 2128123123)
-                          :text               "This is awesome!"
-                          :share-services     ["twitter" "facebook"]} 
-  ]
-    (is (s/validate CommentRequest +good-request+))
-        ; passes validation
- 
-    (is (thrown? Exception
-      (s/validate CommentRequest +bad-request+)))
-      ; Exception -- Value does not match schema:
-      ;  {:parent-comment-id (not (instance? java.lang.Long 2128123123)),
-      ;   :share-services [(not (#{:facebook :google :twitter} "twitter"))
-      ;                    (not (#{:facebook :google :twitter} "facebook"))]}
-
-    (is (= +good-request+ (parse-comment-request +bad-request+)))
-        ; ==> true
-  ))
 
