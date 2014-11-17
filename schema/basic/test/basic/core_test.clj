@@ -25,8 +25,8 @@
           :f [s/Num] } ] } )
 
 (deftest readme-1-t
-  (is (map?  
-    (s/validate Data    ; Success!
+  (is (map?   
+    (s/validate Data    ; on success, s/validate returns its argument
       { :a {:b "abc"
             :c 123}
         :d [ {:e :bc
@@ -36,14 +36,20 @@
            ] } )))
 
   (is (thrown? Exception
-    (s/validate Data    ; Failure!
+    (s/validate Data    ; on failure, s/validate throws an Exception
       {:a {:b 123
-           :c "ABC"}} )))
+           :c "ABC"}} ))))
 
+(deftest readme-2-t
   ; s/Any, s/Bool, s/Num, s/Keyword, s/Symbol, s/Int, and s/Str are cross-platform schemas.  
 
   ; When validation succeeds, the value itself is returned
-  (is (= 42 (s/validate s/Num 42)))
+  (is (= 42     (s/validate s/Num       42)))
+  (is (= true   (s/validate s/Bool      true)))
+  (is (= :hi    (s/validate s/Keyword   :hi)))
+  (is (= 42     (s/validate s/Int       42)))
+  (is (= "yo!"  (s/validate s/Str       "yo!")))
+  (is (= 'map   (s/validate s/Symbol    'map)))
 
   (is (thrown? Exception
     (s/validate s/Num "42")))
@@ -72,7 +78,7 @@
 (def StringScores   {String double})        ; a map of String keys and double values
 (def StringScoreMap {long StringScores})    ; a map from long keys to StringScores values
 
-(deftest readme-1-t
+(deftest readme-3-t
   (try
     (s/validate StringList ["a" :b "c"])
     (catch Exception ex
@@ -110,7 +116,7 @@
   (StampedNames.      (System/currentTimeMillis)  names))
 
 ; You can inspect the schemas of the record and function
-(deftest readme-2-t
+(deftest readme-4-t
   (newline)
   (is (spyx (s/explain StampedNames)))
   ; ==> (record user.StampedNames {:date java.lang.Long, :names [java.lang.String]})
@@ -134,7 +140,7 @@
 
 (def FooBar {(s/required-key :foo) s/Str (s/required-key :bar) s/Keyword})
 
-(deftest readme-3-t
+(deftest readme-5-t
   (is (s/validate FooBar {:foo "f" :bar :b}))
   ; {:foo "f" :bar :b}
 
@@ -152,7 +158,7 @@
   { (s/optional-key :foo)   s/Keyword
      s/Str                  s/Str } )
 
-(deftest readme-3-t
+(deftest readme-6-t
   (is (s/validate FancyMap {"a" "b"} ))
   (is (s/validate FancyMap {:foo :f "c" "d" "e" "f"} )))
 
@@ -164,7 +170,7 @@
     (s/optional s/Keyword   "k")
     s/Num ] )
 
-(deftest readme-4-t
+(deftest readme-7-t
   (is (s/validate FancySeq ["test"]))
   (is (s/validate FancySeq ["test" :k]))
   (is (s/validate FancySeq ["test" :k 1 2 3]))
@@ -184,7 +190,7 @@
 ; both & pred can be used for schemas of seqs with at least one element:
 (def SetOfAtLeastOneOddLong (s/both #{OddLong} (s/pred seq 'seq)))
 
-(deftest readme-4-t
+(deftest readme-8-t
   ; maybe
   (is (= :a (s/validate (s/maybe s/Keyword) :a)))
     ; remember, successful validation just returns the value
@@ -268,7 +274,7 @@
 
 ;--------------------------------------------------------------------------------
 ; from Schema for Clojure(Script) blog article
-; http://blog.getprismatic.com/schema-for-clojurescript-data-shape-declaration-and-validation/
+;   http://blog.getprismatic.com/schema-for-clojurescript-data-shape-declaration-and-validation/
 
 (defn with-full-name-plain [m]
   (assoc m :name (str (:first-name m) " " (:last-name m))))
@@ -342,8 +348,9 @@
 
 
 ;--------------------------------------------------------------------------------
-; from Schema 0.2.0 blog article
-; http://blog.getprismatic.com/schema-0-2-0-back-with-clojurescript-data-coercion/
+; from Schema 0.2.0 blog article (already incorporated into README section)
+;   http://blog.getprismatic.com/schema-0-2-0-back-with-clojurescript-data-coercion/
+
 
 ;--------------------------------------------------------------------------------
 ; Misc
