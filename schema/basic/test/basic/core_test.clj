@@ -103,6 +103,7 @@
       ;   (not (instance? java.lang.Long 4.0)) invalid-key}
 )
 
+
 (s/defrecord StampedNames
   [date     :- Long
    names    :- [s/Str]] )
@@ -139,6 +140,94 @@
   (spyx (s/with-fn-validation (stamped-names-good ["bob"])))
 )
 
+
+(def FooBar {(s/required-key :foo) s/Str (s/required-key :bar) s/Keyword})
+
+(deftest readme-3-t
+  (is (s/validate FooBar {:foo "f" :bar :b}))
+  ; {:foo "f" :bar :b}
+
+  (is (thrown? Exception
+    (s/validate FooBar {:foo :f})))
+    ; RuntimeException: Value does not match schema:
+    ;  {:foo (not (instance? java.lang.String :f)),
+    ;   :bar missing-required-key}
+)
+
+
+(def FancyMap
+  "If foo is present, it must map to a Keyword.  Any number of additional
+   String-String mappings are allowed as well."
+  { (s/optional-key :foo)   s/Keyword
+     s/Str                  s/Str } )
+
+(deftest readme-3-t
+  (is (s/validate FancyMap {"a" "b"} ))
+  (is (s/validate FancyMap {:foo :f "c" "d" "e" "f"} )))
+
+
+(def FancySeq
+  "A sequence that starts with a String, followed by an optional Keyword,
+   followed by any number of Numbers."
+  [ (s/one      s/Str       "s")
+    (s/optional s/Keyword   "k")
+    s/Num ] )
+
+(deftest readme-4-t
+  (is (s/validate FancySeq ["test"]))
+  (is (s/validate FancySeq ["test" :k]))
+  (is (s/validate FancySeq ["test" :k 1 2 3]))
+
+  (is (thrown? Exception
+    (s/validate FancySeq [1 :k 2 3 "4"])))
+    ; RuntimeException: Value does not match schema:
+    ;  [(named (not (instance? java.lang.String 1)) "s")
+    ;   nil nil nil
+    ;   (not (instance? java.lang.Number "4"))]
+)
+
+
+; both and pred
+(def OddLong (s/both  long  (s/pred odd? 'odd?)))
+
+; both & pred can be used for schemas of seqs with at least one element:
+(def SetOfAtLeastOneOddLong (s/both #{OddLong} (s/pred seq 'seq)))
+
+(deftest readme-4-t
+  ; maybe
+  (is (= :a (s/validate (s/maybe s/Keyword) :a)))
+    ; remember, successful validation just returns the value
+
+  (is (nil? (s/validate (s/maybe s/Keyword) nil)))
+    ; since nil is not a truthy value, we cannot just use (is (s/validate ...)) syntax
+
+  ; enum
+  (is (s/validate (s/enum :a :b :c) :a))
+
+  (is (s/validate OddLong 1))
+  ; Note that since failed validations throw an Exception, we could just call
+  ; (s/validate...) without the (is...) syntax.  However, this will not update the
+  ; assertion count printed at the end of "lein test".
+  (newline)
+  (spyx (s/validate OddLong 1))
+
+  (is (thrown? Exception
+    (s/validate OddLong 2)))
+    ; RuntimeException: Value does not match schema: (not (odd? 2))
+  (is (thrown? Exception
+    (s/validate OddLong (int 3))))
+    ; RuntimeException: Value does not match schema: (not (instance? java.lang.Long 3))
+
+  (is (= #{3} (s/validate SetOfAtLeastOneOddLong #{3})))
+  (is (= #{7 3 5} (s/validate SetOfAtLeastOneOddLong #{3 5 7})))
+
+  (is (thrown? Exception
+    (s/validate SetOfAtLeastOneOddLong #{})))
+    ; RuntimeException: Value does not match schema: (not (seq #{}))
+  (is (thrown? Exception
+    (s/validate SetOfAtLeastOneOddLong #{2})))
+    ; RuntimeException: Value does not match schema: #{(not (odd? 2))}
+)
 
 ;--------------------------------------------------------------------------------
 ; from Schema for Clojure(Script) blog article
