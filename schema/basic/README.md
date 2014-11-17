@@ -1,4 +1,4 @@
-# schema
+# basic
 
 FIXME: description
 
@@ -10,7 +10,7 @@ Download from http://example.com/FIXME.
 
 FIXME: explanation
 
-    $ java -jar schema-0.1.0-standalone.jar [args]
+    $ java -jar basic-0.1.0-standalone.jar [args]
 
 ## Options
 

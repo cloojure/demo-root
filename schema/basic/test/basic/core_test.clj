@@ -1,4 +1,4 @@
-(ns schema.core-test
+(ns basic.core-test
   (:require [clojure.string                         :as str]
             [clojure.test.check                     :as tc]
             [clojure.test.check.generators          :as gen]
@@ -12,8 +12,9 @@
 (def SetOfStr
   #{ s/Str } )
 
-(deftest schema1 []
-  (s/validate SetOfStr #{ "a" "b" "c"} ))
+(deftest t1 []
+  (= (s/validate SetOfStr   #{ "a" "b" "c"} )
+                            #{ "a" "b" "c"} )
+  (is (thrown? Exception    (s/validate SetOfStr #{ 1 "a" "b" "c"} )))
+)
 
-(deftest dummy
-  (is (= 1 1))))

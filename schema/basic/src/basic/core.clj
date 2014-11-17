@@ -1,4 +1,4 @@
-(ns schema.core
+(ns basic.core
   (:gen-class)
   (:require [clojure.string                         :as str]
             [clojure.test.check                     :as tc]
