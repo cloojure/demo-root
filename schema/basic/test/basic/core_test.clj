@@ -25,6 +25,29 @@
           :f [s/Num] } ] } )
 
 (deftest readme-1-t
+  ; s/Any, s/Bool, s/Num, s/Keyword, s/Symbol, s/Int, and s/Str are cross-platform schemas.  
+
+  ; When validation succeeds, the value itself is returned
+  (is (= 42     (s/validate s/Num       42)))
+  (is (= true   (s/validate s/Bool      true)))
+  (is (= :hi    (s/validate s/Keyword   :hi)))
+  (is (= 42     (s/validate s/Int       42)))
+  (is (= "yo!"  (s/validate s/Str       "yo!")))
+  (is (= 'map   (s/validate s/Symbol    'map)))
+
+  ; Can use s/Any to match any value.  Note that for truthy values, can simplify to
+  ; (is (s/validate...))
+  (is (s/validate s/Any  42))
+  (is (s/validate s/Any  true))
+  (is (s/validate s/Any  :hi))
+  (is (s/validate s/Any  "yo!"))
+  (is (s/validate s/Any  'map))
+
+  (is (thrown? Exception
+    (s/validate s/Num "42"))))
+    ; RuntimeException: Value does not match schema: (not (instance java.lang.Number "42"))
+
+(deftest readme-2-t
   (is (map?   
     (s/validate Data    ; on success, s/validate returns its argument
       { :a {:b "abc"
@@ -38,22 +61,7 @@
   (is (thrown? Exception
     (s/validate Data    ; on failure, s/validate throws an Exception
       {:a {:b 123
-           :c "ABC"}} ))))
-
-(deftest readme-2-t
-  ; s/Any, s/Bool, s/Num, s/Keyword, s/Symbol, s/Int, and s/Str are cross-platform schemas.  
-
-  ; When validation succeeds, the value itself is returned
-  (is (= 42     (s/validate s/Num       42)))
-  (is (= true   (s/validate s/Bool      true)))
-  (is (= :hi    (s/validate s/Keyword   :hi)))
-  (is (= 42     (s/validate s/Int       42)))
-  (is (= "yo!"  (s/validate s/Str       "yo!")))
-  (is (= 'map   (s/validate s/Symbol    'map)))
-
-  (is (thrown? Exception
-    (s/validate s/Num "42")))
-    ; RuntimeException: Value does not match schema: (not (instance java.lang.Number "42"))
+           :c "ABC"}} )))
 
   (is (= :whoa (s/validate s/Keyword :whoa)))
 
