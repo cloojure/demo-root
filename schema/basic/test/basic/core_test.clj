@@ -17,14 +17,7 @@
 ;--------------------------------------------------------------------------------
 ; from README
 ;
-(def Data
-  "A schema for a nested data type"
-  {:a {:b s/Str
-       :c s/Int}
-   :d [ { :e s/Keyword
-          :f [s/Num] } ] } )
-
-(deftest readme-1-t
+(deftest readme-basic
   ; s/Any, s/Bool, s/Num, s/Keyword, s/Symbol, s/Int, and s/Str are cross-platform schemas.  
 
   ; When validation succeeds, the value itself is returned
@@ -47,7 +40,14 @@
     (s/validate s/Num "42"))))
     ; RuntimeException: Value does not match schema: (not (instance java.lang.Number "42"))
 
-(deftest readme-2-t
+(def Data
+  "A schema for a nested data type"
+  {:a {:b s/Str
+       :c s/Int}
+   :d [ { :e s/Keyword
+          :f [s/Num] } ] } )
+
+(deftest readme-2
   (is (map?   
     (s/validate Data    ; on success, s/validate returns its argument
       { :a {:b "abc"
@@ -86,7 +86,7 @@
 (def StringScores   {String double})        ; a map of String keys and double values
 (def StringScoreMap {long StringScores})    ; a map from long keys to StringScores values
 
-(deftest readme-3-t
+(deftest readme-3
   (try
     (s/validate StringList ["a" :b "c"])
     (catch Exception ex
@@ -124,7 +124,7 @@
   (StampedNames.      (System/currentTimeMillis)  names))
 
 ; You can inspect the schemas of the record and function
-(deftest readme-4-t
+(deftest readme-4
   (newline)
   (is (spyx (s/explain StampedNames)))
   ; ==> (record user.StampedNames {:date java.lang.Long, :names [java.lang.String]})
@@ -148,7 +148,7 @@
 
 (def FooBar {(s/required-key :foo) s/Str (s/required-key :bar) s/Keyword})
 
-(deftest readme-5-t
+(deftest readme-5
   (is (s/validate FooBar {:foo "f" :bar :b}))
   ; {:foo "f" :bar :b}
 
@@ -166,7 +166,7 @@
   { (s/optional-key :foo)   s/Keyword
      s/Str                  s/Str } )
 
-(deftest readme-6-t
+(deftest readme-6
   (is (s/validate FancyMap {"a" "b"} ))
   (is (s/validate FancyMap {:foo :f "c" "d" "e" "f"} )))
 
@@ -178,7 +178,7 @@
     (s/optional s/Keyword   "k")
     s/Num ] )
 
-(deftest readme-7-t
+(deftest readme-7
   (is (s/validate FancySeq ["test"]))
   (is (s/validate FancySeq ["test" :k]))
   (is (s/validate FancySeq ["test" :k 1 2 3]))
@@ -198,7 +198,7 @@
 ; both & pred can be used for schemas of seqs with at least one element:
 (def SetOfAtLeastOneOddLong (s/both #{OddLong} (s/pred seq 'seq)))
 
-(deftest readme-8-t
+(deftest readme-8
   ; maybe
   (is (= :a (s/validate (s/maybe s/Keyword) :a)))
     ; remember, successful validation just returns the value
@@ -243,7 +243,7 @@
 (def parse-comment-request
   (coerce/coercer CommentRequest coerce/json-coercion-matcher))
  
-(deftest blog-020-readme-t
+(deftest blog-020-readme
   (let [good-request    { :parent-comment-id  2128123123
                           :text               "This is awesome!"
                           :share-services     [:twitter :facebook]}
@@ -363,12 +363,20 @@
 ;--------------------------------------------------------------------------------
 ; Misc
 
-(def SetOfStr
+(def SetOfStr  ; This can be used similar to a "type"
   #{ s/Str } )
 
-(deftest t1 
+(deftest basic-sets
   (is (= (s/validate SetOfStr   #{ "a" "b" "c"} )
                                 #{ "a" "b" "c"} ))
   (is (thrown? Exception 
-        (s/validate SetOfStr  #{ 1 "a" "b" "c"} ))))
+        (s/validate SetOfStr  #{ 1 "a" "b" "c"} )))
+
+  ; Although a schema functions like a "type", it is just data.  Here we create a
+  ; local schema value and use it to verify the "type" of a set
+  (let [set-of-num #{ s/Num } ]
+    (is (s/validate set-of-num   #{ 1 2.0 3/7 } ))
+    (is (thrown? Exception 
+          (s/validate set-of-num  #{ 1 2.0 "3"} ))))
+)
 
