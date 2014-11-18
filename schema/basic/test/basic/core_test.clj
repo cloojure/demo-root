@@ -1,12 +1,8 @@
 (ns basic.core-test
-  (:require [clojure.string                         :as str]
-            [clojure.test.check                     :as tc]
-            [clojure.test.check.generators          :as gen]
-            [clojure.test.check.properties          :as prop]
-            [clojure.test.check.clojure-test        :as tst]
-            [schema.core                            :as s]
-            [schema.coerce                          :as coerce]
-            [schema.test                            :as s-tst]
+  (:require [clojure.string     :as str]
+            [schema.core        :as s]
+            [schema.coerce      :as coerce]
+            [schema.test        :as s-tst]
   )
   (:use cooljure.core
         clojure.test)
