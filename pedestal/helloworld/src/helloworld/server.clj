@@ -2,7 +2,7 @@
   (:gen-class)
   (:require [clojure.java.io                :as io]
             [io.pedestal.http               :as ped-http]
-            [helloworld.service    :as service] 
+            [helloworld.service             :as service] 
             [taoensso.timbre                :as timbre]
             [taoensso.timbre.profiling      :as timbre-prof]
   ))
@@ -15,7 +15,7 @@
 (def log-file-name "log.txt")
 (io/delete-file log-file-name :quiet)
 
-; The default setup is simple console logging only.  We with to turn off console logging and
+; The default setup is simple console logging only.  We wish to turn off console logging and
 ; turn on file logging to our chosen filename.
 (timbre/set-config! [:appenders :standard-out   :enabled?] false)   
 (timbre/set-config! [:appenders :spit           :enabled?] true)
