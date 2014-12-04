@@ -273,6 +273,9 @@
   ; like a wildcard, interpreted as "zero or more".
   (is (s/validate {:a s/Num,  s/Any s/Any}  {:a 1} ))
   (is (s/validate {:a s/Num,  s/Any s/Any}  {:a 1,  :b 2,  3 "four"} ))
+
+  (is (nil? (s/validate (s/maybe {s/Any s/Any}) nil    )))
+  (is       (s/validate (s/maybe {s/Any s/Any}) {:a 1} ) )
 )
 
 
@@ -376,3 +379,34 @@
           (s/validate set-of-num  #{ 1 2.0 "3"} ))))
 )
 
+
+(deftest repeats
+  ; Note that generic entries (e.g. s/Num) in a schema may have zero or more occurrances
+  (is (s/validate [s/Num]  [] ))
+  (is (s/validate [s/Num]  [1] ))
+  (is (s/validate [s/Num]  [1 2] ))
+  (is (s/validate [s/Num]  [1 2 3] ))
+
+  ; Generic values in a map schema may have zero or more occurrances
+  (is (s/validate {s/Keyword s/Num}   {} ))
+  (is (s/validate {s/Keyword s/Num}   {:a 1} ))
+  (is (s/validate {s/Keyword s/Num}   {:a 1 :b 2} ))
+
+  ; Specific values in a map schema must have exactly one occurrance
+  (is (thrown? Exception 
+        (s/validate {:a s/Num}  {} )))
+  (is   (s/validate {:a s/Num}  {:a 1} ))
+  (is (thrown? Exception 
+        (s/validate {:a s/Num}  {:a 1 :b 2} )))
+
+  ; Maps can be partially specified using a mixture of specifics and generics
+  (is   (s/validate {:a s/Num s/Keyword s/Any}  {:a 1} ))
+  (is   (s/validate {:a s/Num s/Keyword s/Any}  {:a 1 :b 2} ))
+  (is   (s/validate {:a s/Num s/Keyword s/Any}  {:a 1 :b 2 :c 3} ))
+
+  ; Partial map schemas are easiest using the entry [s/Any s/Any] as a "wildcard"
+  (is   (s/validate {:a s/Num s/Any s/Any}  {:a 1} ))
+  (is   (s/validate {:a s/Num s/Any s/Any}  {:a 1 :b 2} ))
+  (is   (s/validate {:a s/Num s/Any s/Any}  {:a 1 :b 2 :c "three" "string-key" :keyword-value} ))
+
+)
