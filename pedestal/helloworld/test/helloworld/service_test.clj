@@ -1,11 +1,11 @@
 (ns helloworld.service-test
-  (:require [clojure.test :refer :all]
-            [io.pedestal.test :refer :all]
-            [io.pedestal.http :as bootstrap]
-            [helloworld.service :as service]))
+  (:require [clojure.test           :refer :all]
+            [io.pedestal.test       :refer :all]
+            [io.pedestal.http       :as ped-http]
+            [helloworld.service     :as service]))
 
 (def service
-  (::bootstrap/service-fn (bootstrap/create-servlet service/service)))
+  (::ped-http/service-fn (ped-http/create-servlet service/service)))
 
 (deftest home-page-test
   (is (=
