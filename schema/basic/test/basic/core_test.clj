@@ -135,7 +135,7 @@
     ; ==> RuntimeException: Output of stamped-names-bad does not match schema:
     ;      {:date (not (instance? java.lang.Long "1378267311501"))}
     ;
-    ; Oops, I guess we should remove that `str` from `stamped-names`.
+    ; Oops, I guess we should remove that `str` from `stamped-names-bad`.
 
   (newline)
   (spyx (s/with-fn-validation (stamped-names-good ["bob"])))
