@@ -30,6 +30,13 @@
   (:community/name entity)
 )
 
+(def pull-results (d/q '[:find (pull ?c [*])
+                         :where [?c :community/name]] 
+                       db-val))
+(spyx (class pull-results))
+(spyx (count pull-results))
+
+
 (defn -main []
   (println "main - enter")
   (shutdown-agents)
