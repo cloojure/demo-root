@@ -5,10 +5,8 @@
   (:use   clojure.pprint
           cooljure.core 
   )
-  (import [java.util HashSet Set HashMap Map List])
+  (import [java.util Set Map List])
   (:gen-class))
-
-; (spyx (class datomic.query/EntityMap))
 
 (s/validate {s/Any s/Any} (into (sorted-map) {:a 1 :b 2}))
 
@@ -23,9 +21,9 @@
 (def schema-tx (read-string (slurp "samples/seattle/seattle-schema.edn")))
 @(d/transact conn schema-tx)
 (def data-tx (read-string (slurp "samples/seattle/seattle-data0.edn")))
-; (pprint (first data-tx))
-; (pprint (second data-tx))
-; (pprint (nth data-tx 2))
+; (spyx (first data-tx))
+; (spyx (second data-tx))
+; (spyx (nth data-tx 2))
 @(d/transact conn data-tx)
 (def db-val (d/db conn))
 (spyxt db-val)
