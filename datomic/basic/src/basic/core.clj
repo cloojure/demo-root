@@ -29,12 +29,12 @@
     :text "This is awesome!"
     :share-services [:twitter :facebook] } )
 (assert (= (cr-parser raw-comment-req) parsed-comment-req))
-;-----------------------------------------------------------------------------
 
+;-----------------------------------------------------------------------------
+; load data
 (s/validate {s/Any s/Any} (into (sorted-map) {:a 1 :b 2}))
 
 (def Eid            (s/one Long "entity-id"))
-(def ResultSet      #{ [s/Any] } )
 (def EidResultSet   #{ [ Eid ] } )
 
 (def uri "datomic:mem://seattle")
@@ -51,16 +51,14 @@
 (def db-val (d/db conn))
 (spyxx db-val)
 
-(def results (d/q '[:find ?c :where [?c :community/name]] db-val ))
-  ; (s/validate #{s/Any} results)  ; fails
-(spyx (class results))
-(spyx (count results))
-(s/validate Set results)
-(s/validate #{s/Any}        (into #{} results))
-(s/validate #{ [Long] }     (into #{} results))
-(s/validate EidResultSet    (into #{} results))
+;-----------------------------------------------------------------------------
+; entity api
+(def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
+(s/validate EidResultSet    (into #{} e-results))
+(spyx (class e-results))
+(spyx (count e-results))
 
-(def eid-1   (ffirst results))
+(def eid-1   (ffirst e-results))
 (spyxx eid-1)
 (def entity (d/entity db-val eid-1))
 (spyxx entity)
@@ -70,15 +68,15 @@
 )
 
 (newline)
-(spyxx results)
-(spyxx (first results))
+(spyxx e-results)
+(spyxx (first e-results))
 
 (newline)
-(def x1  (ffirst results))
+(def x1  (ffirst e-results))
 (spyxx  x1)
-(def x2  (d/entity db-val x1))
+(s/def x2  :- datomic.query.EntityMap
+  (d/entity db-val x1))
 (spyxx  x2)
-(s/validate datomic.query.EntityMap x2)
 ; (s/validate Map x2)                     ; fails
 ; (s/validate {s/Any s/Any} x2)           ; fails
 (s/validate {s/Any s/Any} (into {} x2))   ; ok
@@ -91,22 +89,42 @@
 (spyxx x2b)
 
 ;-----------------------------------------------------------------------------
+; pull api
 (def ResultVec     [ {s/Any s/Any} ] )
 (def ResultVecSeq  [ResultVec] )
 
-(def pull-results (d/q '[:find (pull ?c [*])
-                         :where [?c :community/name]]
-                       db-val))
-
+(s/def pull-results  :- ResultVecSeq
+  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] db-val))
 (newline)
 (spyx (count pull-results))
 (spyxx pull-results)
-(s/validate ResultVecSeq pull-results)
+(pprint (ffirst pull-results))
 
+;-----------------------------------------------------------------------------
+; back to entity api
+(newline)
+(println "Community & neighborhood names:")
+(pprint (map #(let [entity      (s/validate datomic.query.EntityMap 
+                                  (d/entity db-val (first %)))
+                    comm-name   (safe-> entity :community/name)
+                    nbr-name    (safe-> entity :community/neighborhood :neighborhood/name) ]
+                [comm-name nbr-name] )
+             e-results ))
 
+(s/def community      :- datomic.query.EntityMap     
+        (d/entity db-val (ffirst e-results)))
+(s/def neighborhood   :- datomic.query.EntityMap     
+        (safe-> community :community/neighborhood))
+(s/def communities    :- #{datomic.query.EntityMap}  
+        (:community/_neighborhood neighborhood))
+
+(newline)
+(println "Communities:")
+(pprint (mapv :community/name communities))
 
 (println "exiting")
 (System/exit 0)
+
 
 (defn -main []
   (println "main - enter")
