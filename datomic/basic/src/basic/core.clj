@@ -1,12 +1,35 @@
 (ns basic.core
   (:require [datomic.api      :as d] 
             [cooljure.core    :refer [spyx spyxx]]
-            [schema.core      :as s] )
+            [schema.core      :as s]
+            [schema.coerce    :as coerce]
+  )
   (:use   clojure.pprint
           cooljure.core 
   )
   (import [java.util Set Map List])
   (:gen-class))
+
+(set! *print-length* 5)
+
+; Prismatic Schema coersion testing
+;-----------------------------------------------------------------------------
+(def CommentRequest
+  { (s/optional-key :parent-comment-id) long
+    :text String
+    :share-services [ (s/enum :twitter :facebook :google) ] 
+  } )
+(def cr-parser (coerce/coercer CommentRequest coerce/json-coercion-matcher))
+(def raw-comment-req
+  { :parent-comment-id (int 1234)
+    :text "This is awesome!"
+    :share-services ["twitter" "facebook"] } )
+(def parsed-comment-req
+  { :parent-comment-id (long 1234)
+    :text "This is awesome!"
+    :share-services [:twitter :facebook] } )
+(assert (= (cr-parser raw-comment-req) parsed-comment-req))
+;-----------------------------------------------------------------------------
 
 (s/validate {s/Any s/Any} (into (sorted-map) {:a 1 :b 2}))
 
@@ -29,7 +52,7 @@
 (spyxx db-val)
 
 (def results (d/q '[:find ?c :where [?c :community/name]] db-val ))
-; (s/validate #{s/Any} results)  ; fails
+  ; (s/validate #{s/Any} results)  ; fails
 (spyx (class results))
 (spyx (count results))
 (s/validate Set results)
@@ -66,18 +89,24 @@
 (spyxx x2)
 (def x2b (into {} x2))
 (spyxx x2b)
-(newline)
 
-(println "exiting")
-(System/exit 0)
-
+;-----------------------------------------------------------------------------
+(def PullResult     [ {s/Any s/Any} ] )
+(def PullResultSeq  [PullResult] )
 
 (def pull-results (d/q '[:find (pull ?c [*])
                          :where [?c :community/name]]
                        db-val))
+
 (newline)
-(spyx (class pull-results))
 (spyx (count pull-results))
+(spyxx pull-results)
+
+(println "validate 1")
+(s/validate PullResultSeq pull-results)
+
+(println "exiting")
+(System/exit 0)
 
 (newline)
 (def pull-results-1st (first pull-results))
