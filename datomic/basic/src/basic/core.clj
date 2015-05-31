@@ -91,8 +91,8 @@
 (spyxx x2b)
 
 ;-----------------------------------------------------------------------------
-(def PullResult     [ {s/Any s/Any} ] )
-(def PullResultSeq  [PullResult] )
+(def ResultVec     [ {s/Any s/Any} ] )
+(def ResultVecSeq  [ResultVec] )
 
 (def pull-results (d/q '[:find (pull ?c [*])
                          :where [?c :community/name]]
@@ -101,23 +101,12 @@
 (newline)
 (spyx (count pull-results))
 (spyxx pull-results)
+(s/validate ResultVecSeq pull-results)
 
-(println "validate 1")
-(s/validate PullResultSeq pull-results)
+
 
 (println "exiting")
 (System/exit 0)
-
-(newline)
-(def pull-results-1st (first pull-results))
-(spyxx pull-results-1st)
-
-(newline)
-(def pull-results-1st-1st (first pull-results-1st))
-(spyxx pull-results-1st-1st)
-
-(defn mystery-fn [] (into (sorted-map) {:b 2 :a 1}))
-(spyxx (mystery-fn))
 
 (defn -main []
   (println "main - enter")
