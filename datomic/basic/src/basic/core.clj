@@ -1,11 +1,11 @@
 (ns basic.core
-  (:require [datomic.api      :as d] 
+  (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx]]
             [schema.core      :as s]
             [schema.coerce    :as coerce]
   )
   (:use   clojure.pprint
-          cooljure.core 
+          cooljure.core
   )
   (import [java.util Set Map List])
   (:gen-class))
@@ -17,7 +17,7 @@
 (def CommentRequest
   { (s/optional-key :parent-comment-id) long
     :text String
-    :share-services [ (s/enum :twitter :facebook :google) ] 
+    :share-services [ (s/enum :twitter :facebook :google) ]
   } )
 (def cr-parser (coerce/coercer CommentRequest coerce/json-coercion-matcher))
 (def raw-comment-req
@@ -104,18 +104,18 @@
 ; back to entity api
 (newline)
 (println "Community & neighborhood names:")
-(pprint (map #(let [entity      (s/validate datomic.query.EntityMap 
+(pprint (map #(let [entity      (s/validate datomic.query.EntityMap
                                   (d/entity db-val (first %)))
                     comm-name   (safe-> entity :community/name)
                     nbr-name    (safe-> entity :community/neighborhood :neighborhood/name) ]
                 [comm-name nbr-name] )
              e-results ))
 
-(s/def community      :- datomic.query.EntityMap     
+(s/def community      :- datomic.query.EntityMap
         (d/entity db-val (ffirst e-results)))
-(s/def neighborhood   :- datomic.query.EntityMap     
+(s/def neighborhood   :- datomic.query.EntityMap
         (safe-> community :community/neighborhood))
-(s/def communities    :- #{datomic.query.EntityMap}  
+(s/def communities    :- #{datomic.query.EntityMap}
         (:community/_neighborhood neighborhood))
 
 (newline)
@@ -124,7 +124,6 @@
 
 (println "exiting")
 (System/exit 0)
-
 
 (defn -main []
   (println "main - enter")
