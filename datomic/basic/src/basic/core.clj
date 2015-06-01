@@ -129,11 +129,29 @@
 )
 
 ; find all communities and specify returning their names into a collection
-(def com-names-coll (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
 (newline)
-(print "All com. names: ")
+(print "comms & names: ")   ; a set of tuples
+(s/def com-and-names  :- #{ [s/Any] }
+  (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] db-val)))
+(spyx (count com-and-names))
+(pprint com-and-names)
+
+; find all communities and specify returning their names into a collection
+(newline)
+(print "All com. names: ")  ; a list of names
+(s/def com-names-coll  :- [s/Str]
+  (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
 (spyx (count com-names-coll))
 (pprint com-names-coll)
+
+; find all community names & pull their urls
+(newline)
+(print "com. names & urls: ")   ; a list of tuples like [ Str {} ]
+(s/def comm-names-urls :- [ [ (s/one s/Str ":community/name")  
+                              {:community/url s/Str} ] ]
+  (d/q '[:find ?n (pull ?c [:community/url]) :where [?c :community/name ?n]]  db-val))
+(spyxx comm-names-urls)
+(pprint comm-names-urls)
 
 (println "exiting")
 (System/exit 0)
