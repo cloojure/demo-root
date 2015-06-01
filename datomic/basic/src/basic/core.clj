@@ -131,8 +131,8 @@
 ; find all communities and specify returning their names into a collection
 (def com-names-coll (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
 (newline)
-(spyxx (count com-names-coll))
-(println "All com. names:")
+(print "All com. names: ")
+(spyx (count com-names-coll))
 (pprint com-names-coll)
 
 (println "exiting")
