@@ -35,7 +35,6 @@
 (s/validate {s/Any s/Any} (into (sorted-map) {:a 1 :b 2}))
 
 (def Eid            (s/one Long "entity-id"))
-(def EidResultSet   #{ [ Eid ] } )
 
 (def uri "datomic:mem://seattle")
 
@@ -54,18 +53,16 @@
 ;-----------------------------------------------------------------------------
 ; entity api
 (def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
-(s/validate EidResultSet    (into #{} e-results))
-(spyx (class e-results))
 (spyx (count e-results))
+(spyx (class e-results))
+(s/validate  #{ [ Eid ] }  (into #{} e-results))
 
-(def eid-1   (ffirst e-results))
+(def eid-1 (ffirst e-results))
 (spyxx eid-1)
 (def entity (d/entity db-val eid-1))
-(spyxx entity)
-(spyx  (keys entity))
-(spyx
-  (:community/name entity)
-)
+(spyxx  entity)
+(spyx   (keys entity))
+(spyx   (:community/name entity))
 
 (newline)
 (spyxx e-results)
@@ -109,18 +106,34 @@
                     comm-name   (safe-> entity :community/name)
                     nbr-name    (safe-> entity :community/neighborhood :neighborhood/name) ]
                 [comm-name nbr-name] )
-             e-results ))
+          e-results ))
 
+; for the first community, get its neighborhood, then for that neighborhood, get all its
+; communities, and print out their names
 (s/def community      :- datomic.query.EntityMap
         (d/entity db-val (ffirst e-results)))
 (s/def neighborhood   :- datomic.query.EntityMap
         (safe-> community :community/neighborhood))
 (s/def communities    :- #{datomic.query.EntityMap}
-        (:community/_neighborhood neighborhood))
+        (safe-> neighborhood :community/_neighborhood ))
+(binding [*print-length* 20]
+  (newline)
+  (println "Community #1")
+  (pprint community)
+  (newline)
+  (println "Community #2")
+  (pprint (d/touch community))
+  (newline)
+  (println "Communities in same neighborhood as first:")
+  (pprint (mapv :community/name communities))
+)
 
+; find all communities and specify returning their names into a collection
+(def com-names-coll (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
 (newline)
-(println "Communities:")
-(pprint (mapv :community/name communities))
+(spyxx (count com-names-coll))
+(println "All com. names:")
+(pprint com-names-coll)
 
 (println "exiting")
 (System/exit 0)

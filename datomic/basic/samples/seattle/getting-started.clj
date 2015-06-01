@@ -74,7 +74,7 @@
 (def communities (:community/_neighborhood neighborhood))
 (pprint (map :community/name communities))
 
-;; find all communities and specify returning their  names into a collection
+;; find all communities and specify returning their names into a collection
 (def results (q '[:find [?n ...] :where [_ :community/name ?n]] (db conn)))
 (pprint results)
 
