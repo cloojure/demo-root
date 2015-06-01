@@ -150,7 +150,7 @@
 (s/def comm-names-urls :- [ [ (s/one s/Str ":community/name")  
                               {:community/url s/Str} ] ]
   (d/q '[:find ?n (pull ?c [:community/url]) :where [?c :community/name ?n]]  db-val))
-(spyxx comm-names-urls)
+(spyx (count comm-names-urls))
 (pprint comm-names-urls)
 
 (println "exiting")
