@@ -202,6 +202,20 @@
 (spyx (count com-twitter))
 (pprint com-twitter)
 
+;-----------------------------------------------------------------------------
+; find the names all communities in the NE region
+(newline)
+(print "com-ne: ")
+(s/def com-ne :- [ s/Str ]
+  (d/q '[:find [?name ...]
+         :where [?com   :community/name         ?name]
+                [?com   :community/neighborhood ?nbr]
+                [?nbr   :neighborhood/district  ?dist]
+                [?dist  :district/region        :region/ne] ]
+       db-val ))
+(spyx (count com-ne))
+(pprint com-ne)
+
 (println "exiting")
 (System/exit 0)
 
