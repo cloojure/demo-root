@@ -165,6 +165,13 @@
 (pprint comm-names-urls)
 
 ; find all categories for the community named "belltown"
+(s/def belltown-cats :- [ s/Any ]
+  (d/q '[:find [?cat ...]
+         :where [?com :community/name "belltown"]
+                [?com :community/category ?cat] ]
+       db-val ))
+(spyx (count belltown-cats))
+(pprint belltown-cats)
 
 (println "exiting")
 (System/exit 0)
