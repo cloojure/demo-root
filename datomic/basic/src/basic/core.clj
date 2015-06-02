@@ -131,7 +131,7 @@
 ; find all communities and specify returning their names into a collection
 (newline)
 (print "comms & names: ")   ; a set of tuples
-(s/def com-and-names  :- #{ [s/Any] }
+(s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
   (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] db-val)))
 (spyx (count com-and-names))
 (pprint com-and-names)
