@@ -164,14 +164,33 @@
 (assert (= 150 (spyx (count comm-names-urls))))
 (pprint comm-names-urls)
 
+;-----------------------------------------------------------------------------
 ; find all categories for the community named "belltown"
-(s/def belltown-cats :- [ s/Any ]
+(newline)
+(print "belltown-cats-1: ")
+(s/def belltown-cats-1 :- #{ [s/Any] }  ; a set of tuples
+  (into #{}
+    (d/q '[:find ?com ?cat
+           :where [?com :community/name "belltown"]
+                  [?com :community/category ?cat] ]
+         db-val )))
+(spyx (count belltown-cats-1))
+(pprint belltown-cats-1)
+
+; use collection syntax
+(newline)
+(print "belltown-cats-2: ")
+(s/def belltown-cats-2 :- [ s/Str ]  ; note it is not a list of tuples
   (d/q '[:find [?cat ...]
          :where [?com :community/name "belltown"]
                 [?com :community/category ?cat] ]
        db-val ))
-(spyx (count belltown-cats))
-(pprint belltown-cats)
+(spyx (count belltown-cats-2))
+(pprint belltown-cats-2)
+
+; use pull api    #awt #todo
+
+;-----------------------------------------------------------------------------
 
 (println "exiting")
 (System/exit 0)
