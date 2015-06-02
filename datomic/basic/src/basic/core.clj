@@ -191,6 +191,16 @@
 ; use pull api    #awt #todo
 
 ;-----------------------------------------------------------------------------
+; find the names of all communities that are twitter feeds
+(newline)
+(print "com-twitter: ")
+(s/def com-twitter := [ s/Str ]
+  (d/q '[:find [?n ...]
+         :where [?com :community/name ?n
+                 ?com :community/type :community.type/twitter] ]
+       dv-val ))
+(spyx (count belltown-cats-2))
+(pprint belltown-cats-2)
 
 (println "exiting")
 (System/exit 0)
