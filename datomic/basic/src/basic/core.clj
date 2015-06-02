@@ -133,24 +133,33 @@
 (print "comms & names: ")   ; a set of tuples
 (s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
   (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] db-val)))
-(spyx (count com-and-names))
+(assert (= 150 (spyx (count com-and-names))))
 (pprint com-and-names)
+
+; Some name strings are used by more than one entity
+(def names-set
+  (reduce   (fn [accum newval] (conj accum (second newval)))
+            #{}
+            com-and-names))
+(assert (= 132 (spyx (count names-set))))
+(pprint names-set)
 
 ; find all communities and specify returning their names into a collection
 (newline)
-(print "All com. names: ")  ; a list of names
+(print "All com. names: ")  ; a list of names (w/o duplicates)
 (s/def com-names-coll  :- [s/Str]
   (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
-(spyx (count com-names-coll))
+(assert (= 132 (spyx (count com-names-coll))))
 (pprint com-names-coll)
 
 ; find all community names & pull their urls
 (newline)
 (print "com. names & urls: ")   ; a list of tuples like [ Str {} ]
 (s/def comm-names-urls :- [ [ (s/one s/Str ":community/name")  
-                              {:community/url s/Str} ] ]
-  (d/q '[:find ?n (pull ?c [:community/url]) :where [?c :community/name ?n]]  db-val))
-(spyx (count comm-names-urls))
+                              { :community/category [s/Str]  :community/url s/Str }
+                            ] ]
+  (d/q '[:find ?n (pull ?c [:community/category :community/url ]) :where [?c :community/name ?n]]  db-val))
+(assert (= 150 (spyx (count comm-names-urls))))
 (pprint comm-names-urls)
 
 (println "exiting")
