@@ -158,9 +158,13 @@
 (s/def comm-names-urls :- [ [ (s/one s/Str ":community/name")  
                               { :community/category [s/Str]  :community/url s/Str }
                             ] ]
-  (d/q '[:find ?n (pull ?c [:community/category :community/url ]) :where [?c :community/name ?n]]  db-val))
+  (d/q '[:find ?n (pull ?c [:community/category :community/url ]) 
+         :where [?c :community/name ?n] ]
+       db-val))
 (assert (= 150 (spyx (count comm-names-urls))))
 (pprint comm-names-urls)
+
+; find all categories for the community named "belltown"
 
 (println "exiting")
 (System/exit 0)
