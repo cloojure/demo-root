@@ -34,7 +34,7 @@
 ; load data
 (s/validate {s/Any s/Any} (into (sorted-map) {:a 1 :b 2}))
 
-(def Eid            (s/one Long "entity-id"))
+(def Eid Long)
 
 (def uri "datomic:mem://seattle")
 
@@ -55,7 +55,7 @@
 (def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
 (spyx (count e-results))
 (spyx (class e-results))
-(s/validate  #{ [ Eid ] }  (into #{} e-results))
+(s/validate  #{ [ (s/one Eid "x") ] }  (into #{} e-results))
 
 (def eid-1 (ffirst e-results))
 (spyxx eid-1)
@@ -224,6 +224,7 @@
 (print "com-name-reg ")
 (s/def com-name-reg :- #{ [ (s/one s/Str      "comm-name") 
                             (s/one s/Keyword  "region-id") ] }
+  ; #awt #todo: re-do using pull api
   (into #{}
     (d/q '[:find ?com-name ?reg-id 
            :where [?com   :community/name           ?com-name]
@@ -236,7 +237,7 @@
 (pprint com-name-reg)
 
 ;-----------------------------------------------------------------------------
-; find all communities that are either twitter feeds or facebook pages, using a single query with a
+; find all communities that are either twitter feeds or facebook pages, by calling a single query with a
 ; parameterized type value
 (newline)
 (print "com-type-1 (entity)")
@@ -267,6 +268,24 @@
 (spyx (count com-type-2-fb))
 (pprint com-type-2-fb)
 
+;-----------------------------------------------------------------------------
+; In a single query, find all communities that are twitter feeds or facebook pages, using a list of
+; parameters
+(newline)
+(print "com-twfb")    ; a set of tuples
+(s/def com-twfb :- #{ [ (s/one s/Str      "comm-name")
+                        (s/one Eid        "type-eid")
+                        (s/one s/Keyword  "type-id") 
+                      ] }
+  (into #{}
+    (d/q '[:find ?com-name ?com-type ?type-id
+           :in $ [?type ...]
+           :where [?com :community/name ?com-name]
+                  [?com :community/type ?com-type]
+                  [?com-type :db/ident ?type-id] ]
+         db-val [:community.type/twitter :community.type/facebook-page] )))
+(spyx (count com-twfb))
+(pprint com-twfb)
 
 
 (println "exiting")
