@@ -334,7 +334,7 @@
 ; food, passing in type and search string as parameters
 (newline)
 (print "names-full-join")
-(s/def names-full-join :- #{ [s/Any] }
+(s/def names-full-join :- #{ [s/Str s/Str] }
   (into #{}
     (d/q '[:find ?name ?cat
            :in $ ?type ?search-word
@@ -345,6 +345,20 @@
 (spyx (count names-full-join))
 (pprint names-full-join)
 
+; find all names of all communities that are twitter feeds, using rules
+(newline)
+(print "com-rules-tw")
+(def rules-twitter [ [[twitter ?eid]
+                      [?eid :community/type :community.type/twitter]] ] )
+(s/def com-rules-tw  :- [s/Str]
+  (d/q '[:find [?name ...]
+         :in $ %
+         :where [?eid :community/name ?name]
+                [(twitter ?eid)] ]
+       db-val
+       rules ))
+(spyx (count com-rules-tw))
+(pprint com-rules-tw)
 
 
 (println "exiting")
