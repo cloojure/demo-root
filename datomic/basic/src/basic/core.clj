@@ -325,10 +325,25 @@
 (print "names-wall")
 (s/def names-wall :- [s/Str]
   (d/q '[:find [?name ...]
-         :where [(fulltext $ :community/name "Wallingford") [[?eid ?name]]]]
+         :where [(fulltext $ :community/name "Wallingford") [[?com ?name]]]]
        db-val ))
 (spyx (count names-wall))
 (pprint names-wall)
+
+; find all communities that are websites and that are about
+; food, passing in type and search string as parameters
+(newline)
+(print "names-full-join")
+(s/def names-full-join :- #{ [s/Any] }
+  (into #{}
+    (d/q '[:find ?name ?cat
+           :in $ ?type ?search-word
+           :where   [?com :community/name       ?name]
+                    [?com :community/type       ?type]
+                    [(fulltext $ :community/category ?search-word) [[?com ?cat]]]]
+         db-val :community.type/website "food" )))
+(spyx (count names-full-join))
+(pprint names-full-join)
 
 
 
