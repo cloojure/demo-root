@@ -306,12 +306,20 @@
          [ [:community.type/email-list  :community.orgtype/community] 
            [:community.type/website     :community.orgtype/commercial] ] )))
 (spyx (count com-ntot))
-(binding [*print-length* 10]
-  (pprint com-ntot))
+(pprint com-ntot)
 
 ; find all community names coming before "C" in alphabetical order
 (newline)
-(println "names-abc")
+(print "names-abc")
+(s/def names-abc :- s/Any
+  (d/q  '[:find [?name ...]
+          :where  [?com :community/name ?name]
+                  [(.compareTo ?name "c") ?result]
+                  [(< ?res 0)] ]
+        db-val))
+(spyx (count names-abc))
+(pprint names-abc)
+
 
 
 
