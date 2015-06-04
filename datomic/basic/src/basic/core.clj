@@ -474,7 +474,9 @@
 ; find all communities currently in DB
 (spyx (count (d/q communities-query db-val-new)))
 
-
+; find all communities since original seed data load transaction
+(let [db-since-data (d/since db-val-new data-tx-date)]
+  (spyx (count (d/q communities-query db-since-data))))
 
 (println "exiting")
 (System/exit 0)
