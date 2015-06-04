@@ -346,6 +346,7 @@
 (spyx (count names-full-join))
 (pprint names-full-join)
 
+;-----------------------------------------------------------------------------
 ; find all names of all communities that are twitter feeds, using rules
 (newline)
 (print "com-rules-tw")
@@ -361,6 +362,7 @@
 (spyx (count com-rules-tw))
 (pprint com-rules-tw)
 
+;-----------------------------------------------------------------------------
 ; find names of all communities in NE and SW regions, using rules
 ; to avoid repeating logic
 (newline)
@@ -389,6 +391,7 @@
 (spyx (count com-sw))
 (pprint com-sw)
 
+;-----------------------------------------------------------------------------
 ; find names of all communities that are in any of the northern
 ; regions and are social-media, using rules for OR logic
 (newline)
@@ -409,7 +412,7 @@
                     [(southern?  ?com-eid) (region ?com-eid :region/s) ]
                     [(southern?  ?com-eid) (region ?com-eid :region/sw) ]
                   ] )
-(s/def com-south :- s/Any ; [s/Str]
+(s/def com-south :- [s/Str]
   (d/q  '[:find [?name ...]
           :in $ %
           :where [?com-eid :community/name ?name]
@@ -419,6 +422,57 @@
 (spyx (count com-south))
 (pprint com-south)
 
+;-----------------------------------------------------------------------------
+; Find all transaction times, sort them in reverse order
+(newline)
+(println "tx-instants")
+(s/def tx-instants :- [s/Any]
+  (reverse (sort 
+    (d/q '[:find [?when ...] 
+           :where [_ :db/txInstant ?when] ]
+         db-val ))))
+(spyx (count tx-instants))
+(pprint tx-instants)
+(def data-tx-date   (first tx-instants))
+(def schema-tx-date (second tx-instants))
+
+; make query to find all communities
+(def communities-query '[:find [?com ...]  :where [?com :community/name] ] )
+
+; find all communities as of schema transaction
+(let [db-asof-schema (d/as-of db-val schema-tx-date) ]
+  (spyx (count (d/q communities-query db-asof-schema))))
+
+; find all communities as of seed data transaction
+(let [db-asof-data (d/as-of db-val data-tx-date) ]
+  (spyx (count (d/q communities-query db-asof-data))))
+
+
+; find all communities since schema transaction
+(let [db-since-schema (d/since db-val schema-tx-date) ]
+  (spyx (count (d/q communities-query db-since-schema))))
+
+; find all communities since seed data transaction
+(let [db-since-data (d/since db-val data-tx-date) ]
+  (spyx (count (d/q communities-query db-since-data))))
+
+
+; parse additional seed data file
+(def new-data-tx (read-string (slurp "samples/seattle/seattle-data1.edn")))
+
+; find all communities if new data is loaded
+(let [db-if-new-data (:db-after (d/with db-val new-data-tx)) ]
+  (spyx (count (d/q communities-query db-if-new-data))))
+
+; find all communities currently in DB
+(spyx (count (d/q communities-query db-val)))
+
+; submit new data tx
+@(d/transact conn new-data-tx)
+(def db-val-new (d/db conn))
+
+; find all communities currently in DB
+(spyx (count (d/q communities-query db-val-new)))
 
 
 
