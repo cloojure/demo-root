@@ -233,6 +233,20 @@
 (spyx (count com-name-reg))
 (pprint com-name-reg)
 
+;-----------------------------------------------------------------------------
+; find all communities that are either twitter feeds or facebook pages, using a single query with a
+; parameterized type value
+(newline)
+(print "com-type-1 ")
+(def q-com-type-1   '[:find [?com-name ...]
+                      :in $ ?type
+                      :where [?com   :community/name   ?com-name]
+                             [?com   :community/type   ?type] ] )
+(s/def com-type-1 :- [ s/Str ]
+  (d/q q-com-type-1 db-val :community.type/twitter ))
+(spyx (count com-type-1))
+(pprint com-type-1)
+
 
 (println "exiting")
 (System/exit 0)
