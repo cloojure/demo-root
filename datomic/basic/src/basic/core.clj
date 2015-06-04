@@ -90,7 +90,8 @@
 (def TupleMap     [ {s/Any s/Any} ] )
 
 (s/def pull-results  :- [TupleMap]
-  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] db-val))
+  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] 
+       db-val))
 (newline)
 (spyx (count pull-results))
 (spyxx pull-results)
@@ -131,7 +132,8 @@
 (newline)
 (print "comms & names: ")   ; a set of tuples
 (s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
-  (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] db-val)))
+  (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] 
+                 db-val)))
 (assert (= 150 (spyx (count com-and-names))))
 (pprint com-and-names)
 
@@ -147,7 +149,8 @@
 (newline)
 (print "All com. names: ")  ; a list of names (w/o duplicates)
 (s/def com-names-coll  :- [s/Str]
-  (d/q '[:find [?n ...] :where [_ :community/name ?n]] db-val))
+  (d/q '[:find [?n ...] :where [_ :community/name ?n]] 
+       db-val))
 (assert (= 132 (spyx (count com-names-coll))))
 (pprint com-names-coll)
 
@@ -227,8 +230,8 @@
                   [?com   :community/neighborhood   ?nbr]
                   [?nbr   :neighborhood/district    ?dist]
                   [?dist  :district/region          ?reg]
-                  [?reg   :db/ident                 ?reg-id]
-          ] db-val )))
+                  [?reg   :db/ident                 ?reg-id] ] 
+          db-val )))
 (spyx (count com-name-reg))
 (pprint com-name-reg)
 
