@@ -87,10 +87,9 @@
 
 ;-----------------------------------------------------------------------------
 ; pull api
-(def ResultVec     [ {s/Any s/Any} ] )
-(def ResultVecSeq  [ResultVec] )
+(def TupleMap     [ {s/Any s/Any} ] )
 
-(s/def pull-results  :- ResultVecSeq
+(s/def pull-results  :- [TupleMap]
   (d/q '[:find (pull ?c [*]) :where [?c :community/name]] db-val))
 (newline)
 (spyx (count pull-results))
@@ -237,15 +236,34 @@
 ; find all communities that are either twitter feeds or facebook pages, using a single query with a
 ; parameterized type value
 (newline)
-(print "com-type-1 ")
+(print "com-type-1 (entity)")
 (def q-com-type-1   '[:find [?com-name ...]
                       :in $ ?type
                       :where [?com   :community/name   ?com-name]
                              [?com   :community/type   ?type] ] )
-(s/def com-type-1 :- [ s/Str ]
+(s/def com-type-1-twitter :- [ s/Str ]
   (d/q q-com-type-1 db-val :community.type/twitter ))
-(spyx (count com-type-1))
-(pprint com-type-1)
+(spyx (count com-type-1-twitter))
+(pprint com-type-1-twitter)
+(s/def com-type-1-fb :- [ s/Str ]
+  (d/q q-com-type-1 db-val :community.type/facebook-page ))
+(spyx (count com-type-1-fb))
+(pprint com-type-1-fb)
+
+(newline)
+(print "com-type-2 (pull)")
+(def q-com-type-2   '[:find (pull ?com [:community/name])
+                      :in $ ?type
+                      :where [?com :community/type ?type] ] )
+(s/def com-type-2-twitter :- [ TupleMap ]
+  (d/q q-com-type-2 db-val :community.type/twitter ))
+(spyx (count com-type-2-twitter))
+(pprint com-type-2-twitter)
+(s/def com-type-2-fb :- [ TupleMap ]
+  (d/q q-com-type-2 db-val :community.type/facebook-page ))
+(spyx (count com-type-2-fb))
+(pprint com-type-2-fb)
+
 
 
 (println "exiting")
