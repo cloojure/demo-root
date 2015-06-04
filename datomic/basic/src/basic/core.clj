@@ -389,6 +389,37 @@
 (spyx (count com-sw))
 (pprint com-sw)
 
+; find names of all communities that are in any of the northern
+; regions and are social-media, using rules for OR logic
+(newline)
+(println "com-rules-region")
+(def big-ruleset '[ [(region ?com-eid ?reg-ident)
+                     [?com-eid    :community/neighborhood   ?nbr-eid]
+                     [?nbr-eid    :neighborhood/district    ?dist-eid]
+                     [?dist-eid   :district/region          ?reg-eid]
+                     [?reg-eid    :db/ident                 ?reg-ident]]
+                    [(social-media? ?com-eid)
+                     [?com-eid    :community/type           :community.type/twitter]]
+                    [(social-media? ?com-eid)
+                     [?com-eid    :community/type           :community.type/facebook-page]]
+                    [(northern?  ?com-eid) (region ?com-eid :region/ne) ]
+                    [(northern?  ?com-eid) (region ?com-eid :region/e) ]
+                    [(northern?  ?com-eid) (region ?com-eid :region/nw) ]
+                    [(southern?  ?com-eid) (region ?com-eid :region/se) ]
+                    [(southern?  ?com-eid) (region ?com-eid :region/s) ]
+                    [(southern?  ?com-eid) (region ?com-eid :region/sw) ]
+                  ] )
+(s/def com-south :- s/Any ; [s/Str]
+  (d/q  '[:find [?name ...]
+          :in $ %
+          :where [?com-eid :community/name ?name]
+                 (southern? ?com-eid)
+                 (social-media? ?com-eid) ]
+        db-val big-ruleset ))
+(spyx (count com-south))
+(pprint com-south)
+
+
 
 
 (println "exiting")
