@@ -50,6 +50,7 @@
 (def db-val (d/db conn))
 (spyxx db-val)
 
+; NOTE: the "entity" and the "entity ID" (EID) are the same thing
 ;-----------------------------------------------------------------------------
 ; entity api
 (def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
@@ -359,6 +360,35 @@
        rules-twitter ))
 (spyx (count com-rules-tw))
 (pprint com-rules-tw)
+
+; find names of all communities in NE and SW regions, using rules
+; to avoid repeating logic
+(newline)
+(println "com-rules-region")
+(def rules-region '[  [(region ?com-eid ?reg-id)
+                       [?com-eid    :community/neighborhood   ?nbr]
+                       [?nbr        :neighborhood/district    ?dist]
+                       [?dist       :district/region          ?reg]
+                       [?reg        :db/ident                 ?reg-id]] ])
+(s/def com-ne :- [s/Str]
+  (d/q '[:find [?name ...]
+         :in $ %
+         :where   [?com-eid :community/name ?name]
+                  (region ?com-eid :region/ne) ]
+       db-val
+       rules-region ))
+(spyx (count com-ne))
+(pprint com-ne)
+(s/def com-sw :- [s/Str]
+  (d/q '[:find [?name ...]
+         :in $ %
+         :where   [?com-eid :community/name ?name]
+                  (region ?com-eid :region/sw) ]
+       db-val
+       rules-region ))
+(spyx (count com-sw))
+(pprint com-sw)
+
 
 
 (println "exiting")
