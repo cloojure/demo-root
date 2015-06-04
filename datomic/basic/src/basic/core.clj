@@ -311,17 +311,24 @@
 ; find all community names coming before "C" in alphabetical order
 (newline)
 (print "names-abc")
-(s/def names-abc :- s/Any
+(s/def names-abc :- [s/Str]
   (d/q  '[:find [?name ...]
           :where  [?com :community/name ?name]
-                  [(.compareTo ?name "c") ?result]
-                  [(< ?res 0)] ]
+                  [(.compareTo ?name "C") ?result]
+                  [(neg? ?result)] ]
         db-val))
 (spyx (count names-abc))
 (pprint names-abc)
 
-
-
+; find the community whose names includes the string "Wallingford"
+(newline)
+(print "names-wall")
+(s/def names-wall :- [s/Str]
+  (d/q '[:find [?name ...]
+         :where [(fulltext $ :community/name "Wallingford") [[?eid ?name]]]]
+       db-val ))
+(spyx (count names-wall))
+(pprint names-wall)
 
 
 
