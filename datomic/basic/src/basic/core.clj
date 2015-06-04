@@ -511,11 +511,9 @@
                      :community/category "free stuff"] ] )    ; tuple syntax
 
 
-
-(println "exiting")
-(System/exit 0)
-
 (defn -main []
+  (newline)
   (println "main - enter")
+  (println "main - exit")
   (shutdown-agents)
 )
