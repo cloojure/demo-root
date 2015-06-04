@@ -10,7 +10,7 @@
   (import [java.util Set Map List])
   (:gen-class))
 
-(set! *print-length* 5)
+(set! *print-length* 10)
 
 ; Prismatic Schema coersion testing
 ;-----------------------------------------------------------------------------
@@ -292,14 +292,13 @@
 ; web-sites using a list of tuple parameters
 (newline)
 (print "com-ntot")    ; a set of tuples
-(s/def com-ntot :- s/Any 
-                   #_#{ [ (s/one s/Str      "name")
-                          (s/one s/Keyword  "type") 
-                          (s/one s/Keyword  "orgtype") 
-                        ] }
+(s/def com-ntot :- #{ [ (s/one s/Str      "name")
+                        (s/one s/Keyword  "type") 
+                        (s/one s/Keyword  "orgtype") 
+                      ] }
   (into #{} 
     (d/q '[:find ?name ?type ?orgtype
-           :in [ [?type ?orgtype] ]
+           :in $  [[?type ?orgtype]]
            :where [?com :community/name     ?name]
                   [?com :community/type     ?type]
                   [?com :community/orgtype  ?orgtype] ]
@@ -307,7 +306,12 @@
          [ [:community.type/email-list  :community.orgtype/community] 
            [:community.type/website     :community.orgtype/commercial] ] )))
 (spyx (count com-ntot))
-(pprint com-ntot)
+(binding [*print-length* 10]
+  (pprint com-ntot))
+
+; find all community names coming before "C" in alphabetical order
+(newline)
+(println "names-abc")
 
 
 
