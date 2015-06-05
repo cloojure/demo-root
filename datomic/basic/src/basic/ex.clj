@@ -32,15 +32,16 @@
   ] )
 @(d/transact conn data-tx)
 
-; Since the name is :db.unique/value, we can use that to update our entities 
+; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
 @(d/transact conn [
-  ; add a new attribute
-  { :db/id                        #db/id[:db.part/db]
-    :db/ident                     :weapon/type
-    :db/valueType                 :db.type/keyword
-    :db/cardinality               :db.cardinality/many
-    :db.install/_attribute        :db.part/db }
+  { :db/id                  #db/id[:db.part/db]
+    :db/ident               :weapon/type
+    :db/valueType           :db.type/keyword
+    :db/cardinality         :db.cardinality/many
+    :db.install/_attribute  :db.part/db }
 ] )
+
+; Since the name is :db.unique/value, we can use that to update our entities 
 @(d/transact conn [
   ; give James some weapons - map-format
   { :db/id  [:person/name "James Bond"]        :weapon/type :weapon/gun    }
