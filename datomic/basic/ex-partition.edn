@@ -1,0 +1,9 @@
+[
+;-----------------------------------------------------------------------------
+; partition definitions
+
+  { :db/id                        #db/id[:db.part/db]
+    :db/ident                     :people
+    :db.install/_partition        :db.part/db }
+]
+
