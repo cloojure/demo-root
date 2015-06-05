@@ -38,8 +38,10 @@
   
 ;-----------------------------------------------------------------------------
 ; enum values
-; [:db/add #db/id[:db.part/user]   :db/ident :region/n]
-; [:db/add #db/id[:db.part/user]   :db/ident :region/ne]
-; [:db/add #db/id[:db.part/user]   :db/ident :region/nw]
+; Literal representation of transaction list form:  [action entity-id attribute value]
+;  <action>   <tmp entity id>     <attribute>  <value>
+  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/gun]
+  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/knife]
+  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/me]
 
 ]
