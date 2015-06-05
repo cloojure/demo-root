@@ -12,16 +12,21 @@
 
 (d/create-database uri)
 (def conn (d/connect uri))
+
+(def partition-tx (read-string (slurp "ex-partition.edn")))
+@(d/transact conn partition-tx)
+
 (def schema-tx (read-string (slurp "ex-schema.edn")))
 @(d/transact conn schema-tx)
+
 (def data-tx
   [
-    {:db/id #db/id[:db.part/person -007], :person/name      "James Bond"}
-    {:db/id #db/id[:db.part/person -007], :person/ssn-usa   "123-45-6789"}
-    {:db/id #db/id[:db.part/person -007], :person/ssn-uk    "123-45-6789"}
+    {:db/id #db/id[:people -007]  :person/name      "James Bond"}
+    {:db/id #db/id[:people -007]  :person/ssn-usa   "123-45-6789"}
+    {:db/id #db/id[:people -007]  :person/ssn-uk    "123-45-6789"}
 
-    {:db/id #db/id[:db.part/person -666], :person/name      "Mephistopheles"}
-    {:db/id #db/id[:db.part/person -666], :person/ssn-hell  "123-45-6789"}
+    {:db/id #db/id[:people -666]  :person/name      "Mephistopheles"}
+    {:db/id #db/id[:people -666]  :person/ssn-hell  "123-45-6789"}
   ] )
 @(d/transact conn data-tx)
 (def db-val (d/db conn))

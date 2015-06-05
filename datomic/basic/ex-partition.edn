@@ -1,9 +1,8 @@
-[
 ;-----------------------------------------------------------------------------
 ; partition definitions
-
+[
   { :db/id                        #db/id[:db.part/db]
-    :db/ident                     :people
+    :db/ident                     :people       ; we could namespace like :db.part/people if we wanted
     :db.install/_partition        :db.part/db }
 ]
 
