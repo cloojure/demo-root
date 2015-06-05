@@ -129,12 +129,14 @@
   (pprint (mapv :community/name communities))
 )
 
-; find all communities and specify returning their names into a collection
+; find all communities and collect results into a plain Clojure map
 (newline)
 (print "comms & names: ")   ; a set of tuples
 (s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
-  (into #{} (d/q '[:find ?c ?n :where [?c :community/name ?n]] 
-                 db-val)))
+  (into #{} 
+    (d/q '[:find ?c ?n 
+           :where [?c :community/name ?n]] 
+         db-val )))
 (assert (= 150 (spyx (count com-and-names))))
 (pprint com-and-names)
 
@@ -191,6 +193,18 @@
 (spyx (count belltown-cats-2))
 (pprint belltown-cats-2)
 
+; query map syntax
+(newline)
+(print "belltown-cats-3: ")
+(s/def belltown-cats-3 :- #{ [s/Any] }  ; a set of tuples
+  (into #{}
+    (d/q '{:find [?com ?cat]
+           :where [[?com :community/name "belltown"]
+                   [?com :community/category ?cat]] }
+         db-val )))
+(spyx (count belltown-cats-3))
+(pprint belltown-cats-3)
+
 ; use pull api    #awt #todo
 
 ;-----------------------------------------------------------------------------
@@ -204,6 +218,16 @@
        db-val ))
 (spyx (count com-twitter))
 (pprint com-twitter)
+
+; map form
+(s/def com-twitter2 :- [ s/Str ]
+  (d/q '{:find  [[?n ...]]
+         :where [[?com :community/name ?n]
+                 [?com :community/type :community.type/twitter]] }
+       db-val ))
+(spyx (count com-twitter2))
+(pprint com-twitter2)
+
 
 ;-----------------------------------------------------------------------------
 ; find the names all communities in the NE region
