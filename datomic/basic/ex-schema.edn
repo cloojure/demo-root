@@ -42,6 +42,7 @@
 ;  <action>   <tmp entity id>     <attribute>  <value>
   [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/gun]
   [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/knife]
-  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/me]
+  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/guile]
+  [:db/add  #db/id[:db.part/user]  :db/ident  :weapon/curse]
 
 ]
