@@ -13,9 +13,6 @@
 (d/create-database uri)
 (def conn (d/connect uri))
 
-; (def partition-tx (read-string (slurp "ex-partition.edn")))
-; @(d/transact conn partition-tx)
-
 (def schema-tx (read-string (slurp "ex-schema.edn")))
 @(d/transact conn schema-tx)
 
