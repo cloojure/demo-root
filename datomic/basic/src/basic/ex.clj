@@ -55,6 +55,11 @@
     ; list format is always one "fact" (EAV) per list
 ] )
 
+; Updated James' name
+@(d/transact conn [
+  { :db/id  [:person/name "James Bond"]        :person/name "Bond, James Bond" }
+] )
+
 (def db-val (d/db conn))
 (spyxx db-val)
 
