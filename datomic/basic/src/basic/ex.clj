@@ -29,6 +29,7 @@
     [:db/add  #db/id[:people -666]  :person/name      "Mephistopheles"]
     [:db/add  #db/id[:people -666]  :person/ssn-hell  "123-45-6789"]
               ; [<partition> <tmpid>]
+              ; Note that <partition> could be namespaced like :beings.sentient/people
   ] )
 @(d/transact conn data-tx)
 
@@ -44,20 +45,20 @@
 ; Since the name is :db.unique/value, we can use that to update our entities 
 @(d/transact conn [
   ; give James some weapons - map-format
-  { :db/id  [:person/name "James Bond"]        :weapon/type :weapon/gun    }
-  { :db/id  [:person/name "James Bond"]        :weapon/type :weapon/knife  }
-  { :db/id  [:person/name "James Bond"]        :weapon/type :weapon/guile  }
-    ; must use a separate maps, since cannot have multiple :weapon/type keys in one map
+  { :db/id  [:person/name "James Bond"]        
+        :weapon/type  #{:weapon/gun :weapon/knife :weapon/guile}  }
+        ; must use a a set for multiple values of a single attr :weapon/type 
 
-  ; give the Devil his due - list-format
+  ; give the Devil his due - list-format (using a set for attr-value does not work here)
   [ :db/add  [:person/name "Mephistopheles"]   :weapon/type :weapon/curse  ]
   [ :db/add  [:person/name "Mephistopheles"]   :weapon/type :weapon/guile  ]
     ; list format is always one "fact" (EAV) per list
 ] )
 
-; Updated James' name
+; Updated James' name. Note that we can use the current value of name for lookup, then add in the
+; new name w/o conflict.
 @(d/transact conn [
-  { :db/id  [:person/name "James Bond"]        :person/name "Bond, James Bond" }
+  { :db/id  [:person/name "James Bond"]  :person/name "Bond, James Bond" }
 ] )
 
 (def db-val (d/db conn))
