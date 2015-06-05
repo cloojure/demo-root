@@ -129,7 +129,8 @@
   (pprint (mapv :community/name communities))
 )
 
-; find all communities and collect results into a plain Clojure map
+; Find all communities and collect results into a regular Clojure set (the native Datomic return
+; type is set-like but not a Clojure set, so it doesn't work right with Prismatic Schema specs)
 (newline)
 (print "comms & names: ")   ; a set of tuples
 (s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
@@ -174,7 +175,7 @@
 (newline)
 (print "belltown-cats-1: ")
 (s/def belltown-cats-1 :- #{ [s/Any] }  ; a set of tuples
-  (into #{}
+  (into #{}   ; pour the result into a regular Clojure set
     (d/q '[:find ?com ?cat
            :where [?com :community/name "belltown"]
                   [?com :community/category ?cat] ]
