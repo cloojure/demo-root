@@ -48,27 +48,17 @@
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
   (let [
-        res-1     (into (sorted-set)
+        res-1     (into #{}
                     (d/q '{:find [?c]
-                           :where [ [?c :db/txInstant]
-                                  ]
-                          }
+                           :where [ [?c :db/txInstant] ] }
                          db-val ))
-      ; _ (spyx (count res-1))
-      ; _ (spyxx res-1)
-
         res-2     (for [it res-1]
                     (let [eid     (first it)
-                          entity  (d/touch (d/entity db-val eid))
+                          entity  (d/entity db-val eid)
                           map-val (into (sorted-map) entity) ]
                       map-val ))
-      ; _ (spyx (count res-2))
-      ; _ (spyxx res-2)
-
         res-4     (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
-                        res-2)
-      ; _ (spyxx (count res-4))
-      ; _ (spyxx res-4)
+                    res-2)
   ]
     (doseq [it res-4]
       (pprint it))))
