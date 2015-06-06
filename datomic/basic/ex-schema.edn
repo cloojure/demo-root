@@ -36,6 +36,12 @@
     :db/unique                    :db.unique/value
     :db.install/_attribute        :db.part/db }
   
+  { :db/id                        #db/id[:db.part/db]
+    :db/ident                     :data/src
+    :db/valueType                 :db.type/string
+    :db/cardinality               :db.cardinality/one
+    :db.install/_attribute        :db.part/db }
+  
 ;-----------------------------------------------------------------------------
 ; enum values
 ; Literal representation of transaction list form:  [action entity-id attribute value]
