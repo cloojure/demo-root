@@ -9,6 +9,10 @@
 
 
 (def Eid Long)
+(def TxResult  {  :db-before    s/Any
+                  :db-after     s/Any
+                  :tx-data      s/Any
+                  :tempids      s/Any } )
 
 (def uri "datomic:mem://example")
 (d/create-database uri)
@@ -129,6 +133,21 @@
   [:db/add  #db/id[:db.part/user]  :weapon/type  :weapon/feminine-charm]
 ] )
 
+(s/defn txid  :- TxResult
+  "Returns the transaction EID given a tx-result"
+  [tx-result]
+  (let [datoms      (safe-> :tx-data tx-result)
+        result  (as-> datoms it     ; since all datoms in tx have same txid
+                      (first it)    ; we only need the first datom
+                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
+  ]
+    (when false  ; for testing
+      (let [txids   (for [it datoms] (nth it 3)) ]
+        (spyxx txids)
+        (assert (apply = txids))))
+    result ))
+
+
 ; Add Honey Rider & annotate the tx
 (let [tx-tmpid            (d/tempid :db.part/tx)
         _ (spyxx tx-tmpid)
@@ -140,7 +159,7 @@
                               :data/src "Dr. No" }
                           ]
       tx-result           @(d/transact conn tx-data)
-      ; _ (spyxx tx-result)
+      _ (spyxx tx-result)
       datoms    (safe-> :tx-data  tx-result)
       tempids   (safe-> :tempids  tx-result)
       tx-eid    (-> tx-tmpid tempids)
@@ -148,6 +167,11 @@
   (newline)
   (println "Tx Data:")
   (doseq [it datoms] (pprint it))
+
+  (newline)
+  (println "TXID:")
+  (pprint (into (sorted-map) (d/entity (d/db conn) (txid tx-result))))
+
   (newline)
   (println "Temp IDs:")
   (spyxx tempids)
