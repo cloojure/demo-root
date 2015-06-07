@@ -169,8 +169,20 @@
 )
 (newline) (println "added beauty")
 (show-db (d/db conn))
-
 (show-db-tx (d/db conn))
+
+(let [honey-eid (d/q  '{:find [?e]
+                        :where [ [?e :person/name "Honey Rider"]
+                               ]
+                       }
+                     (d/db conn) ) ]
+  @(d/transact conn [ [:db.fn/retractEntity honey-eid] ] )
+  (newline) (println "removed honey" )
+  (show-db (d/db conn))
+)
+
+; #awt #todo need a function like swap!, reset!
+
 (println "exit")
 (System/exit 1)
 
