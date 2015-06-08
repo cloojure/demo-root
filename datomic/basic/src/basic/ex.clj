@@ -13,14 +13,24 @@
                   :db-after     s/Any
                   :tx-data      s/Any
                   :tempids      s/Any } )
+(def Vec1 [ (s/one s/Any "x1") ] )
+(def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
+(def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
+(def Vec4 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") ] )
+(def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
+; Create the database & a connection to it
 (def uri "datomic:mem://example")
-(d/create-database uri)
-(def conn (d/connect uri))
-(def schema-tx (read-string (slurp "ex-schema.edn")))
-@(d/transact conn schema-tx)
+(d/create-database    uri)
+(def conn (d/connect  uri))
 
-(defn show-db [db-val]
+; Load the schema definition from file and insert into DB
+(def schema-defs (read-string (slurp "ex-schema.edn")))
+@(d/transact conn schema-defs)
+
+(defn show-db 
+  "Display facts about all entities with a :person/name"
+  [db-val]
   (println "-----------------------------------------------------------------------------")
     (s/def res-1 :- #{ [Eid] }
       (into #{}
@@ -29,47 +39,38 @@
                       ]
               }
              db-val )))
-  ; (spyx (count res-1))
-  ; (spyxx res-1)
-
     (doseq [it res-1]
       (let [eid     (first it)
-            entity  (d/touch (d/entity db-val eid))
-            map-val (into (sorted-map) entity)
+            map-val (into (sorted-map) (d/entity db-val eid))
            ]
         (newline)
-      ; (spyxx entity)
-        (pprint map-val)
-      )))
+        (pprint map-val))))
 
 
-(defn show-db-tx [db-val]
+(defn show-db-tx 
+  "Display all transactions in the DB"
+  [db-val]
   (newline)
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
-  (let [
-        res-1     (into #{}
-                    (d/q '{:find [?c]
-                           :where [ [?c :db/txInstant] ] }
-                         db-val ))
-        res-2     (for [it res-1]
-                    (let [eid     (first it)
-                          entity  (d/entity db-val eid)
-                          map-val (into (sorted-map) entity) ]
-                      map-val ))
-        res-4     (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
-                    res-2)
+  (let [result-set      (d/q '{:find [?c]
+                               :where [ [?c :db/txInstant] ] }
+                              db-val )
+        res-2           (for [ [eid] result-set]
+                          (into (sorted-map) (d/entity db-val eid)))
+        res-4       (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
+                          res-2)
   ]
     (doseq [it res-4]
       (pprint it))))
 
-(def data-tx
-  [
-    ; map-format transaction data:
-    {:db/id #db/id[:people -007]                                        ; entity specification
-                                    :person/name      "James Bond"      ; multiple attribute/value pairs
-                                    :person/ssn-usa   "123-45-6789"     ; multiple attribute/value pairs
-                                    :person/ssn-uk    "123-45-6789"}    ; multiple attribute/value pairs
+; load 2 antagonists into the db
+@(d/transact conn [
+  ; map-format transaction data (the "add" command is implicit)
+  { :db/id            #db/id[:people -007]      ; entity specification
+    :person/name      "James Bond"              ; multiple attribute/value pairs
+    :person/ssn-usa   "123-45-6789"             ; multiple attribute/value pairs
+    :person/ssn-uk    "123-45-6789"}            ; multiple attribute/value pairs
 
   ; list-format transaction data
   ; [<action>   <entity tmpid>      <attribute>        <value>  ]
@@ -77,8 +78,7 @@
     [:db/add  #db/id[:people -666]  :person/ssn-hell  "123-45-6789"]
               ; [<partition> <tmpid>]
               ; Note that <partition> could be namespaced like :beings.sentient/people
-  ] )
-@(d/transact conn data-tx)
+] )
 
 ; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
 @(d/transact conn [
@@ -139,6 +139,7 @@
 
 
 ; Add Honey Rider & annotate the tx
+(newline)
 (let [tx-tmpid            (d/tempid :db.part/tx)
         _ (spyxx tx-tmpid)
       honey-rider-tmpid   (d/tempid :people)
@@ -171,17 +172,36 @@
 (show-db (d/db conn))
 (show-db-tx (d/db conn))
 
-(let [honey-eid (d/q  '{:find [?e]
-                        :where [ [?e :person/name "Honey Rider"]
+; find honey by pull
+(def honey-pull (d/q '[:find (pull ?e [*])
+                       :where [?e :person/name "Honey Rider"]
+                      ] 
+                    (d/db conn)))
+(spyxx honey-pull)
+
+(let [honey-eid (d/q  '{:find [?e .]
+                        :in [$ ?n]
+                        :where [ [?e :person/name ?n]
                                ]
                        }
-                     (d/db conn) ) ]
-  @(d/transact conn [ [:db.fn/retractEntity honey-eid] ] )
+                     (d/db conn) "Honey Rider"  ) 
+      _ (spyxx honey-eid)
+      honey     (into {} (d/entity (d/db conn) honey-eid))
+      _ (spyxx honey)
+      tx-result     @(d/transact conn [ [:db.fn/retractEntity honey-eid] ] )
+  ]
   (newline) (println "removed honey" )
+  (spyxx tx-result)
   (show-db (d/db conn))
+
+  ; try to find honey now
+  (spyxx honey-eid)
+  (spyxx (into {} (d/entity (d/db conn) honey-eid)))
 )
 
-; #awt #todo need a function like swap!, reset!
+; #todo need a function like swap!, reset!
+; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
+; write qset -> (into #{} (d/q ...))
 
 (println "exit")
 (System/exit 1)
