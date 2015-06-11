@@ -172,8 +172,8 @@
 (s/defn txid  :- TxResult
   "Returns the transaction EID given a tx-result"
   [tx-result]
-  (let [datoms      (safe-> :tx-data tx-result)
-        result  (as-> datoms it     ; since all datoms in tx have same txid
+  (let [datoms  (safe-> :tx-data tx-result)
+        result  (it-> datoms        ; since all datoms in tx have same txid
                       (first it)    ; we only need the first datom
                       (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
   ]

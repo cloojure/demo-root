@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies   [ [org.clojure/clojure      "1.7.0-RC1"]
                     [prismatic/schema         "0.4.3"]
-                    [cooljure                 "0.1.26"]
+                    [cooljure                 "0.1.29"]
                     [com.datomic/datomic-pro  "0.9.5173" :exclusions [joda-time]]
                   ]
 ; :repositories {"my.datomic.com" {:url "https://my.datomic.com/repo"
