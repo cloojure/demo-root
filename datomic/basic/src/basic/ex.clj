@@ -21,6 +21,9 @@
     :tx-data      s/Any
     :tempids      s/Any } )
 
+(def EntitySpec (s/either long 
+                          [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
+
 ; #todo delete?  
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
@@ -38,13 +41,14 @@
 (def schema-defs (read-string (slurp "ex-schema.edn")))
 @(d/transact conn schema-defs)
 
+(s/set-fn-validation! true)
 
 ;---------------------------------------------------------------------------------------------------
 (defn show-db 
   "Display facts about all entities with a :person/name"
   [db-val]
   (println "-----------------------------------------------------------------------------")
-    (s/def ^:always-validate res-1 :- #{ [Eid] }
+    (s/def res-1 :- #{ [Eid] }
       (into #{}
         (d/q '{:find  [?e]
                :where [ [?e :person/name] ]
@@ -75,7 +79,7 @@
     (doseq [it res-4]
       (pprint it))))
 
-(s/defn ^:always-validate txid  :- Eid
+(s/defn txid  :- Eid
   "Returns the transaction EID given a tx-result"
   [tx-result]
   (let [datoms  (safe-> :tx-data tx-result)
@@ -89,7 +93,7 @@
         (assert (apply = txids))))
     result ))
 
-(s/defn ^:always-validate create-entity 
+(s/defn create-entity 
   "Create a new entity in the DB with the specified attribute-value pairs."
   ( [ attr-val-map    :- {s/Any s/Any} ]
    (create-entity :db.part/user attr-val-map))
@@ -103,11 +107,7 @@
       new-eid ))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
 )
 
-(def EntitySpec 
-  (s/either long 
-            [(s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
-
-(s/defn ^:always-validate update-entity 
+(s/defn update-entity 
   "Update an entity with new or changed attribute-value pairs"
   [entity-spec    :- EntitySpec
    attr-val-map   :- {s/Any s/Any} ] 
@@ -187,8 +187,8 @@
 
 
 (newline) (println "James 'e' value:")
-(def james-eid (s/validate Eid
-  (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  (d/db conn)))))
+(s/def james-eid :- Eid
+  (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  (d/db conn))))
 (spyxx james-eid)
 
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
