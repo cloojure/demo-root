@@ -183,7 +183,6 @@
         (assert (apply = txids))))
     result ))
 
-
 ; Add Honey Rider & annotate the tx
 (newline)
 (let [tx-tmpid            (d/tempid :db.part/tx)
@@ -248,6 +247,44 @@
 ; #todo need a function like swap!, reset!
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
+
+(s/defn add-entity [ 
+    -partition      :- s/Keyword
+    attr-val-map    :- {s/Any s/Any} 
+  ]
+  (newline)
+  (println "add-entity -----------------------------------------------------------------------------")
+  (let [new-tempid   (d/tempid -partition)
+        tx-result    @(d/transact conn [ (into {:db/id new-tempid} attr-val-map) ] )
+        _ (spyxx tx-result)
+        datoms    (safe-> :tx-data    tx-result)
+        tempids   (safe-> :tempids    tx-result)
+        db-after  (safe-> :db-after   tx-result)
+        new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
+    (println "Tx Data:")
+    (doseq [it datoms] (pprint it))
+    (newline)
+    (println "TXID:")
+    (pprint (into (sorted-map) (d/entity db-after (txid tx-result))))
+    (newline)
+    (println "Temp IDs:")
+    (spyxx tempids)
+    (newline)
+    (println "new-eid" new-eid)
+    (pprint (into (sorted-map) (d/entity db-after new-eid)))
+
+    new-eid
+  ))
+
+(def dr-no (add-entity 
+             :people
+             { :person/name    "Dr No"
+               :weapon/type    :weapon/guile } ))
+(newline) (println "Added dr-no" )
+(spyxx dr-no)
+(spyxx (d/ident (d/db conn) (d/part dr-no)))
+(show-db (d/db conn))
+
 
 (println "exit")
 (System/exit 1)
