@@ -16,7 +16,14 @@
     :db.install/_attribute        :db.part/db }   ; Datomic ceremony to "install" the new attribute
   
   { :db/id                        #db/id[:db.part/db]
-    :db/ident                     :person/ssn-usa
+    :db/ident                     :person/secret-id   ; Namespace/keyword can be anything (not predefined)
+    :db/valueType                 :db.type/long
+    :db/cardinality               :db.cardinality/one
+    :db/unique                    :db.unique/value
+    :db.install/_attribute        :db.part/db }
+
+  { :db/id                        #db/id[:db.part/db]
+    :db/ident                     :person/ssn-usa   ; Namespace/keyword can be anything (not predefined)
     :db/valueType                 :db.type/string
     :db/cardinality               :db.cardinality/one
     :db/unique                    :db.unique/value
@@ -38,6 +45,12 @@
   
   { :db/id                        #db/id[:db.part/db]
     :db/ident                     :data/src
+    :db/valueType                 :db.type/string
+    :db/cardinality               :db.cardinality/one
+    :db.install/_attribute        :db.part/db }
+  
+  { :db/id                        #db/id[:db.part/db]
+    :db/ident                     :location
     :db/valueType                 :db.type/string
     :db/cardinality               :db.cardinality/one
     :db.install/_attribute        :db.part/db }

@@ -8,17 +8,27 @@
   (:gen-class))
 
 
-(def Eid Long)
-(def TxResult  {  :db-before    s/Any
-                  :db-after     s/Any
-                  :tx-data      s/Any
-                  :tempids      s/Any } )
+;---------------------------------------------------------------------------------------------------
+; Prismatic Schema type definitions
+(def Eid 
+  "Entity ID (EID) type definition"
+  Long)
+
+(def TxResult  
+  "Transaction Result type definition"
+  { :db-before    s/Any
+    :db-after     s/Any
+    :tx-data      s/Any
+    :tempids      s/Any } )
+
+; #todo delete?  
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
 (def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
 (def Vec4 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") ] )
 (def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
+;---------------------------------------------------------------------------------------------------
 ; Create the database & a connection to it
 (def uri "datomic:mem://example")
 (d/create-database    uri)
@@ -28,11 +38,13 @@
 (def schema-defs (read-string (slurp "ex-schema.edn")))
 @(d/transact conn schema-defs)
 
+
+;---------------------------------------------------------------------------------------------------
 (defn show-db 
   "Display facts about all entities with a :person/name"
   [db-val]
   (println "-----------------------------------------------------------------------------")
-    (s/def res-1 :- #{ [Eid] }
+    (s/def ^:always-validate res-1 :- #{ [Eid] }
       (into #{}
         (d/q '{:find  [?e]
                :where [ [?e :person/name] ]
@@ -62,6 +74,47 @@
   ]
     (doseq [it res-4]
       (pprint it))))
+
+(s/defn ^:always-validate txid  :- Eid
+  "Returns the transaction EID given a tx-result"
+  [tx-result]
+  (let [datoms  (safe-> :tx-data tx-result)
+        result  (it-> datoms        ; since all datoms in tx have same txid
+                      (first it)    ; we only need the first datom
+                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
+  ]
+    (when false  ; for testing
+      (let [txids   (for [it datoms] (nth it 3)) ]
+        (spyxx txids)
+        (assert (apply = txids))))
+    result ))
+
+(s/defn ^:always-validate create-entity 
+  "Create a new entity in the DB with the specified attribute-value pairs."
+  ( [ attr-val-map    :- {s/Any s/Any} ]
+   (create-entity :db.part/user attr-val-map))
+  ( [ -partition      :- s/Keyword
+      attr-val-map    :- {s/Any s/Any} ]
+    (let [new-tempid   (d/tempid -partition)
+          tx-result    @(d/transact conn [ (into {:db/id new-tempid} attr-val-map) ] )
+          db-after  (safe-> :db-after   tx-result)
+          tempids   (safe-> :tempids    tx-result)
+          new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
+      new-eid ))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
+)
+
+(def EntitySpec 
+  (s/either long 
+            [(s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
+
+(s/defn ^:always-validate update-entity 
+  "Update an entity with new or changed attribute-value pairs"
+  [entity-spec    :- EntitySpec
+   attr-val-map   :- {s/Any s/Any} ] 
+    (println "update-entity " entity-spec)
+    (let [tx-data     (into {:db/id entity-spec} attr-val-map)
+          tx-result   @(d/transact conn [ tx-data ] ) ]
+      tx-result ))
 
 ; load 2 antagonists into the db
 @(d/transact conn [
@@ -100,6 +153,7 @@
   { :db/id  [:person/name "James Bond"]
         :weapon/type        #{:weapon/gun :weapon/knife :weapon/guile}  
         :favorite-weapon    :weapon/gun
+        :person/secret-id   007  ; '007' is interpreted as octal -> still 7 (whew!)
    }
         ; must use a a set for multiple values of a single attr :weapon/type
 
@@ -107,6 +161,7 @@
   [ :db/add  [:person/name "Mephistopheles"]   :weapon/type       :weapon/curse ]
   [ :db/add  [:person/name "Mephistopheles"]   :weapon/type       :weapon/guile ]
   [ :db/add  [:person/name "Mephistopheles"]   :favorite-weapon   :weapon/curse ]
+  [ :db/add  [:person/name "Mephistopheles"]   :person/secret-id  666           ]
     ; list format is always one "fact" (EAV) per list
 ] )
 
@@ -164,24 +219,32 @@
   (pprint  (:tempids   tx-result))
 )
 
+; Set James' location, then change it
+(newline) 
+(println "-----------------------------------------------------------------------------")
+(println "James location -> HQ")
+(update-entity james-eid {:location "London"} )
+(pprint          (d/entity (d/db conn) james-eid))    ;=> {:db/id 277076930200558}
+(pprint (into {} (d/entity (d/db conn) james-eid)))
+  ;=>   {:person/name "Bond, James Bond",
+  ;      :person/ssn-usa "123-45-6789",
+  ;      :person/ssn-uk "123-45-6789",
+  ;      :location "London",
+  ;      :weapon/type #{:weapon/guile :weapon/gun},
+  ;      :favorite-weapon :weapon/guile}
+
+(newline) (println "James location -> beach")
+(update-entity james-eid {:location "Tropical Beach"} )
+(pprint (into {} (d/entity (d/db conn) james-eid)))
+
+(newline) (println "James location -> cave")
+(update-entity [:person/secret-id 007] {:location "Secret Cave"} )
+(pprint (into {} (d/entity (d/db conn) james-eid)))
+
 ; Add a new weapon type
 @(d/transact conn [
   [:db/add  (d/tempid :db.part/user)  :weapon/type  :weapon/feminine-charm]
 ] )
-
-(s/defn txid  :- TxResult
-  "Returns the transaction EID given a tx-result"
-  [tx-result]
-  (let [datoms  (safe-> :tx-data tx-result)
-        result  (it-> datoms        ; since all datoms in tx have same txid
-                      (first it)    ; we only need the first datom
-                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
-  ]
-    (when false  ; for testing
-      (let [txids   (for [it datoms] (nth it 3)) ]
-        (spyxx txids)
-        (assert (apply = txids))))
-    result ))
 
 ; Add Honey Rider & annotate the tx
 (newline)
@@ -248,35 +311,7 @@
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(s/defn add-entity [ 
-    -partition      :- s/Keyword
-    attr-val-map    :- {s/Any s/Any} 
-  ]
-  (newline)
-  (println "add-entity -----------------------------------------------------------------------------")
-  (let [new-tempid   (d/tempid -partition)
-        tx-result    @(d/transact conn [ (into {:db/id new-tempid} attr-val-map) ] )
-        _ (spyxx tx-result)
-        datoms    (safe-> :tx-data    tx-result)
-        tempids   (safe-> :tempids    tx-result)
-        db-after  (safe-> :db-after   tx-result)
-        new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
-    (println "Tx Data:")
-    (doseq [it datoms] (pprint it))
-    (newline)
-    (println "TXID:")
-    (pprint (into (sorted-map) (d/entity db-after (txid tx-result))))
-    (newline)
-    (println "Temp IDs:")
-    (spyxx tempids)
-    (newline)
-    (println "new-eid" new-eid)
-    (pprint (into (sorted-map) (d/entity db-after new-eid)))
-
-    new-eid
-  ))
-
-(def dr-no (add-entity 
+(def dr-no (create-entity 
              :people
              { :person/name    "Dr No"
                :weapon/type    :weapon/guile } ))
