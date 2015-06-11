@@ -10,6 +10,8 @@
 
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
+(s/set-fn-validation! true)   ; #todo add to Schema docs
+
 (def Eid 
   "Entity ID (EID) type definition"
   Long)
@@ -40,8 +42,6 @@
 ; Load the schema definition from file and insert into DB
 (def schema-defs (read-string (slurp "ex-schema.edn")))
 @(d/transact conn schema-defs)
-
-(s/set-fn-validation! true)
 
 ;---------------------------------------------------------------------------------------------------
 (defn show-db 
@@ -100,23 +100,23 @@
   ( [ -partition      :- s/Keyword
       attr-val-map    :- {s/Any s/Any} ]
     (let [new-tempid   (d/tempid -partition)
-          tx-result    @(d/transact conn [ (into {:db/id new-tempid} attr-val-map) ] )
+          tx-data      (into {:db/id new-tempid} attr-val-map)
+          tx-result    @(d/transact conn [ tx-data ] )
           db-after  (safe-> :db-after   tx-result)
           tempids   (safe-> :tempids    tx-result)
           new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
-      new-eid ))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
-)
+      new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
 
 (s/defn update-entity 
   "Update an entity with new or changed attribute-value pairs"
   [entity-spec    :- EntitySpec
    attr-val-map   :- {s/Any s/Any} ] 
-    (println "update-entity " entity-spec)
     (let [tx-data     (into {:db/id entity-spec} attr-val-map)
           tx-result   @(d/transact conn [ tx-data ] ) ]
       tx-result ))
 
-; load 2 antagonists into the db
+;---------------------------------------------------------------------------------------------------
+; load 2 antagonists into the db (two manual techniques) 
 @(d/transact conn [
   ; map-format transaction data (the "add" command is implicit)
   { :db/id            (d/tempid :people -007)   ; entity specification
@@ -132,6 +132,13 @@
               ; Note that <partition> could be namespaced like :beings.sentient/people
 ] )
 
+; (defn create-attribute :- Eid
+;   "Creates a new attribute in the DB"
+;   [ident value-type & options]
+;   {:pre [(keyword? ident)}
+;   (when-not (or (=
+
+; #todo new method:  (create-attibute <ident> <valueType> [<cardinality> def one] [unique->none] [index->false] )
 ; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
 @(d/transact conn [
   { :db/id                  (d/tempid :db.part/db)
