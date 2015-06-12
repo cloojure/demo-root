@@ -3,6 +3,22 @@
         cooljure.core
         clojure.test ))
 
+(def ^:dynamic *conn*)
+
+(user-fixtures :once 
+  (fn [tst-fn]
+    ; Create the database & a connection to it
+    (let [uri           "datomic:mem://testing"
+          _  (d/create-database uri)
+          conn          (d/connect uri)
+          schema-defs   (read-string (slurp "ex-schema.edn")) ; Load schema defs from file
+    ]
+      @(d/transact conn schema-defs)
+      (binding [*conn* conn]
+        (tst-fn))
+      (d/delete-database uri))))
+
+
 (deftest t-create-attribute-map
   (let [result  (create-attribute-map :weapon/type :db.type/keyword 
                     :db.unique/value       :db.unique/identity 

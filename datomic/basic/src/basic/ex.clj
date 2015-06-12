@@ -7,7 +7,6 @@
           cooljure.core)
   (:gen-class))
 
-
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
@@ -78,12 +77,12 @@
 ;---------------------------------------------------------------------------------------------------
 ; Create the database & a connection to it
 (def uri "datomic:mem://example")
-(d/create-database    uri)
-(def conn (d/connect  uri))
+(d/create-database uri)
+(def ^:dynamic *conn* (d/connect uri))
 
 ; Load the schema definition from file and insert into DB
 (def schema-defs (read-string (slurp "ex-schema.edn")))
-@(d/transact conn schema-defs)
+@(d/transact *conn* schema-defs)
 
 ;---------------------------------------------------------------------------------------------------
 (defn show-db 
@@ -143,7 +142,7 @@
       attr-val-map    :- {s/Any s/Any} ]
     (let [new-tempid   (d/tempid -partition)
           tx-data      (into {:db/id new-tempid} attr-val-map)
-          tx-result    @(d/transact conn [ tx-data ] )
+          tx-result    @(d/transact *conn* [ tx-data ] )
           db-after  (safe-> :db-after   tx-result)
           tempids   (safe-> :tempids    tx-result)
           new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
@@ -154,7 +153,7 @@
   [entity-spec    :- EntitySpec
    attr-val-map   :- {s/Any s/Any} ] 
     (let [tx-data     (into {:db/id entity-spec} attr-val-map)
-          tx-result   @(d/transact conn [ tx-data ] ) ]
+          tx-result   @(d/transact *conn* [ tx-data ] ) ]
       tx-result ))
 
 (defn create-attribute-map    ; :- Eid #todo add schema
@@ -190,10 +189,10 @@
 
 (defn create-attribute    ; :- Eid  #todo add schema
   "Creates a new attribute in the DB"
-  [conn & args]
+  [& args]
 ; (spy :msg "create-attribute" args)
   (let [tx-specs (apply create-attribute-map args) ]
-  ;  @(d/transact conn [tx-specs] )
+  ;  @(d/transact *conn* [tx-specs] )
     tx-specs
   ))
 
@@ -204,7 +203,7 @@
 
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db (two manual techniques) 
-@(d/transact conn [
+@(d/transact *conn* [
   ; map-format transaction data (the "add" command is implicit)
   { :db/id            (d/tempid :people -007)   ; entity specification
     :person/name      "James Bond"              ; multiple attribute/value pairs
@@ -222,7 +221,7 @@
 
 ; #todo new method:  (create-attibute <ident> <valueType> [<cardinality> def one] [unique->none] [index->false] )
 ; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
-@(d/transact conn [
+@(d/transact *conn* [
   { :db/id                  (d/tempid :db.part/db)
     :db/ident               :weapon/type
     :db/valueType           :db.type/keyword
@@ -237,7 +236,7 @@
 ] )
 
 ; Since the name is :db.unique/value, we can use that to update our entities
-@(d/transact conn [
+@(d/transact *conn* [
   ; give James some weapons - map-format
   { :db/id  [:person/name "James Bond"]
         :weapon/type        #{:weapon/gun :weapon/knife :weapon/guile}  
@@ -255,19 +254,19 @@
 ] )
 
 (newline) (println "initial db")
-(show-db (d/db conn))
+(show-db (d/db *conn*))
 
-(let [james-raw       (d/q '{:find [?e  ]  :where [ [?e :person/name "James Bond"] ] }  (d/db conn))
-      james-scalar    (d/q '{:find [?e .]  :where [ [?e :person/name "James Bond"] ] }  (d/db conn))
+(let [james-raw       (d/q '{:find [?e  ]  :where [ [?e :person/name "James Bond"] ] }  (d/db *conn*))
+      james-scalar    (d/q '{:find [?e .]  :where [ [?e :person/name "James Bond"] ] }  (d/db *conn*))
       james-flat      (flatten (into [] james-raw))
   ]
     (spyxx james-raw)
     (spyxx james-scalar)
     (spyxx james-flat))
 
-(let [weapon-holders-1    (d/q '{:find [?e  ]  :where [ [?e :weapon/type] ] }  (d/db conn))
-      weapon-holders-2    (d/q '{:find [?e .]  :where [ [?e :weapon/type] ] }  (d/db conn))
-      weapon-holders-3    (d/q '{:find [[?e]]  :where [ [?e :weapon/type] ] }  (d/db conn))
+(let [weapon-holders-1    (d/q '{:find [?e  ]  :where [ [?e :weapon/type] ] }  (d/db *conn*))
+      weapon-holders-2    (d/q '{:find [?e .]  :where [ [?e :weapon/type] ] }  (d/db *conn*))
+      weapon-holders-3    (d/q '{:find [[?e]]  :where [ [?e :weapon/type] ] }  (d/db *conn*))
   ]
     (spyxx weapon-holders-1)
     (spyxx weapon-holders-2)
@@ -277,24 +276,24 @@
 
 (newline) (println "James 'e' value:")
 (s/def james-eid :- Eid
-  (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  (d/db conn))))
+  (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  (d/db *conn*))))
 (spyxx james-eid)
 
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
 ; new name w/o conflict.
-@(d/transact conn [
+@(d/transact *conn* [
   { :db/id  [:person/name "James Bond"]  :person/name "Bond, James Bond" }
 ] )
 
 ; James has dropped his knife...
-@(d/transact conn [
+@(d/transact *conn* [
   [:db/retract  [:person/name "Bond, James Bond"] :weapon/type  :weapon/knife]
 ] )
 (newline) (println "James dropped knife + new name")
-(show-db (d/db conn))
+(show-db (d/db *conn*))
 
 ; James changes his favorite weapon
-(let [tx-result   @(d/transact conn [
+(let [tx-result   @(d/transact *conn* [
                     { :db/id  james-eid  :favorite-weapon :weapon/guile }
                   ] )
 ]
@@ -313,8 +312,8 @@
 (println "-----------------------------------------------------------------------------")
 (println "James location -> HQ")
 (update-entity james-eid {:location "London"} )
-(pprint          (d/entity (d/db conn) james-eid))    ;=> {:db/id 277076930200558}
-(pprint (into {} (d/entity (d/db conn) james-eid)))
+(pprint          (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
+(pprint (into {} (d/entity (d/db *conn*) james-eid)))
   ;=>   {:person/name "Bond, James Bond",
   ;      :person/ssn-usa "123-45-6789",
   ;      :person/ssn-uk "123-45-6789",
@@ -324,14 +323,14 @@
 
 (newline) (println "James location -> beach")
 (update-entity james-eid {:location "Tropical Beach"} )
-(pprint (into {} (d/entity (d/db conn) james-eid)))
+(pprint (into {} (d/entity (d/db *conn*) james-eid)))
 
 (newline) (println "James location -> cave")
 (update-entity [:person/secret-id 007] {:location "Secret Cave"} )
-(pprint (into {} (d/entity (d/db conn) james-eid)))
+(pprint (into {} (d/entity (d/db *conn*) james-eid)))
 
 ; Add a new weapon type
-@(d/transact conn [
+@(d/transact *conn* [
   [:db/add  (d/tempid :db.part/user)  :weapon/type  :weapon/feminine-charm]
 ] )
 
@@ -346,7 +345,7 @@
                             { :db/id  tx-tmpid
                               :data/src "Dr. No" }
                           ]
-      tx-result           @(d/transact conn tx-data)
+      tx-result           @(d/transact *conn* tx-data)
       _ (spyxx tx-result)
       datoms    (safe-> :tx-data  tx-result)
       tempids   (safe-> :tempids  tx-result)
@@ -358,7 +357,7 @@
 
   (newline)
   (println "TXID:")
-  (pprint (into (sorted-map) (d/entity (d/db conn) (txid tx-result))))
+  (pprint (into (sorted-map) (d/entity (d/db *conn*) (txid tx-result))))
 
   (newline)
   (println "Temp IDs:")
@@ -366,14 +365,14 @@
   (println "tx-eid" tx-eid)
 )
 (newline) (println "added beauty")
-(show-db (d/db conn))
-(show-db-tx (d/db conn))
+(show-db (d/db *conn*))
+(show-db-tx (d/db *conn*))
 
 ; find honey by pull
 (def honey-pull (d/q '[:find (pull ?e [*])
                        :where [?e :person/name "Honey Rider"]
                       ] 
-                    (d/db conn)))
+                    (d/db *conn*)))
 (spyxx honey-pull)
 
 (let [honey-eid (d/q  '{:find [?e .]
@@ -381,19 +380,19 @@
                         :where [ [?e :person/name ?n]
                                ]
                        }
-                     (d/db conn) "Honey Rider"  ) 
+                     (d/db *conn*) "Honey Rider"  ) 
       _ (spyxx honey-eid)
-      honey     (into {} (d/entity (d/db conn) honey-eid))
+      honey     (into {} (d/entity (d/db *conn*) honey-eid))
       _ (spyxx honey)
-      tx-result     @(d/transact conn [ [:db.fn/retractEntity honey-eid] ] )
+      tx-result     @(d/transact *conn* [ [:db.fn/retractEntity honey-eid] ] )
   ]
   (newline) (println "removed honey" )
   (spyxx tx-result)
-  (show-db (d/db conn))
+  (show-db (d/db *conn*))
 
   ; try to find honey now
   (spyxx honey-eid)
-  (spyxx (into {} (d/entity (d/db conn) honey-eid)))
+  (spyxx (into {} (d/entity (d/db *conn*) honey-eid)))
 )
 
 ; #todo need a function like swap!, reset!
@@ -406,8 +405,8 @@
                :weapon/type    :weapon/guile } ))
 (newline) (println "Added dr-no" )
 (spyxx dr-no)
-(spyxx (d/ident (d/db conn) (d/part dr-no)))
-(show-db (d/db conn))
+(spyxx (d/ident (d/db *conn*) (d/part dr-no)))
+(show-db (d/db *conn*))
 
 
 ; (println "exit")
