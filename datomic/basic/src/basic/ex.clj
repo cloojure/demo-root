@@ -1,7 +1,7 @@
 (ns basic.ex
   (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx]]
-            [basic.datomic    :as t]
+            [basic.datomic    :refer :all]
             [schema.core      :as s]
             [schema.coerce    :as coerce] )
   (:use   clojure.pprint
@@ -133,7 +133,7 @@
 (newline) 
 (println "-----------------------------------------------------------------------------")
 (println "James location -> HQ")
-(t/update-entity *conn* james-eid {:location "London"} )
+(update-entity *conn* james-eid {:location "London"} )
 (pprint          (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
 (pprint (into {} (d/entity (d/db *conn*) james-eid)))
   ;=>   {:person/name "Bond, James Bond",
@@ -144,11 +144,11 @@
   ;      :favorite-weapon :weapon/guile}
 
 (newline) (println "James location -> beach")
-(t/update-entity *conn* james-eid {:location "Tropical Beach"} )
+(update-entity *conn* james-eid {:location "Tropical Beach"} )
 (pprint (into {} (d/entity (d/db *conn*) james-eid)))
 
 (newline) (println "James location -> cave")
-(t/update-entity *conn* [:person/secret-id 007] {:location "Secret Cave"} )
+(update-entity *conn* [:person/secret-id 007] {:location "Secret Cave"} )
 (pprint (into {} (d/entity (d/db *conn*) james-eid)))
 
 ; Add a new weapon type
@@ -221,7 +221,7 @@
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (t/create-entity *conn* :people
+(def dr-no (create-entity *conn* :people
                { :person/name    "Dr No"
                  :weapon/type    :weapon/guile } ))
 (newline) (println "Added dr-no" )
