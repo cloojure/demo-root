@@ -66,6 +66,7 @@
   ; :db/isComponent #{ true false }
   ; :db/noHistory #{ true false }
   }
+)
 
 ; #todo delete?  
 (def Vec1 [ (s/one s/Any "x1") ] )
@@ -173,18 +174,21 @@
               ; Note that <partition> could be namespaced like :beings.sentient/people
 ] )
 
-(defn create-attribute :- Eid
+(defn create-attribute    ; :- Eid
   "Creates a new attribute in the DB"
-  [ident value-type & options]
+  [ident value-type ; & options
+   ]
+  (spyxx ident)
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  (when-not (some (:db/valueType special-attribute-values) value-type)
+  (when-not (truthy? (safe-> special-attribute-values :db/valueType value-type))
     (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
+  (println "#10")
   (let [base-specs    { :db/id                  (d/tempid :db.part/db)
                         :db/cardinality         :db.cardinality/one
                         :db.install/_attribute  :db.part/db }
-        user-specs    { :db/ident       ident
-                        :db/valueType   value-type 
+        user-specs    { :db/ident               ident
+                        :db/valueType           value-type 
                       }
         tx-specs      (into base-specs user-specs)
   ]
