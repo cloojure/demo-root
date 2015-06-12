@@ -1,11 +1,11 @@
 (ns tst.basic.ex
   (:use basic.ex
         cooljure.core
-        clojure.test ))
+        clojure.test )
+  (:require [datomic.api      :as d]
+            [schema.core      :as s]))
 
-(def ^:dynamic *conn*)
-
-(user-fixtures :once 
+(use-fixtures :once 
   (fn [tst-fn]
     ; Create the database & a connection to it
     (let [uri           "datomic:mem://testing"
