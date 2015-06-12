@@ -26,6 +26,47 @@
 (def EntitySpec (s/either long 
                           [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
 
+(def special-attribute-values
+ "A map that defines the set of permissible values for use in attribute definition.  
+ 
+  User-defined attributes are special entities in Datomic. They are stored in the :db.part/db
+  partition, and are defined by special attributes that are built-in to Datomic (this is analgous to
+  the special forms that are built-in to Clojure). The root attributes are named by the following
+  keywords (all in the 'db' namespace):
+
+    :db/id
+    :db/ident
+    :db/valueType
+    :db/cardinality
+    :db/unique
+    :db/doc
+    :db/index
+    :db/fulltext
+    :db/isComponent
+    :db/noHistory
+
+  For each of these special attributes, this map defines the permissible values used for specifying
+  user-defined attributes. Most special attributes are defined by a set of permissible keyword
+  values. Permissible values for other special attributes are defined by a predicate function.  "
+  { 
+  ; :db/ident #(keyword? %)
+
+    :db/valueType
+      #{ :db.type/keyword :db.type/string :db.type/boolean :db.type/long :db.type/bigint :db.type/float
+         :db.type/double :db.type/bigdec :db.type/ref :db.type/instant :db.type/uuid
+         :db.type/uri :db.type/bytes }
+
+    :db/cardinality   #{ :db.cardinality/one :db.cardinality/many }
+
+    :db/unique        #{ :db.unique/value :db.unique/identity }
+
+  ; :db/doc #(string? %)
+  ; :db/index #{ true false }
+  ; :db/fulltext #{ true false }
+  ; :db/isComponent #{ true false }
+  ; :db/noHistory #{ true false }
+  }
+
 ; #todo delete?  
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
@@ -132,11 +173,29 @@
               ; Note that <partition> could be namespaced like :beings.sentient/people
 ] )
 
-; (defn create-attribute :- Eid
-;   "Creates a new attribute in the DB"
-;   [ident value-type & options]
-;   {:pre [(keyword? ident)}
-;   (when-not (or (=
+(defn create-attribute :- Eid
+  "Creates a new attribute in the DB"
+  [ident value-type & options]
+  (when-not (keyword? ident)
+    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
+  (when-not (some (:db/valueType special-attribute-values) value-type)
+    (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
+  (let [base-specs    { :db/id                  (d/tempid :db.part/db)
+                        :db/cardinality         :db.cardinality/one
+                        :db.install/_attribute  :db.part/db }
+        user-specs    { :db/ident       ident
+                        :db/valueType   value-type 
+                      }
+        tx-specs      (into base-specs user-specs)
+  ]
+    (spyxx tx-specs)
+  ))
+
+(create-attribute :weapon/type :db.type/keyword)
+(println "exit")
+(System/exit 1)
+
+
 
 ; #todo new method:  (create-attibute <ident> <valueType> [<cardinality> def one] [unique->none] [index->false] )
 ; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
