@@ -135,7 +135,7 @@
         (assert (apply = txids))))
     result ))
 
-(s/defn create-entity 
+(s/defn create-entity  ; #todo add conn
   "Create a new entity in the DB with the specified attribute-value pairs."
   ( [ attr-val-map    :- {s/Any s/Any} ]
    (create-entity :db.part/user attr-val-map))
@@ -149,13 +149,58 @@
           new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
       new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
 
-(s/defn update-entity 
+(s/defn update-entity ; #todo add conn
   "Update an entity with new or changed attribute-value pairs"
   [entity-spec    :- EntitySpec
    attr-val-map   :- {s/Any s/Any} ] 
     (let [tx-data     (into {:db/id entity-spec} attr-val-map)
           tx-result   @(d/transact conn [ tx-data ] ) ]
       tx-result ))
+
+(defn create-attribute-map    ; :- Eid #todo add schema
+  "Creates a new attribute in the DB"
+  [ident value-type & options ]
+  (when-not (keyword? ident)
+    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
+  (when-not (truthy? (safe-> special-attribute-values :db/valueType value-type))
+    (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
+  (let [base-specs    { :db/id                  (d/tempid :db.part/db)
+                        :db/cardinality         :db.cardinality/one
+                        :db.install/_attribute  :db.part/db 
+                        :db/ident               ident
+                        :db/valueType           value-type }
+        option-specs  (into (sorted-map)
+                        (for [it options]
+                          (condp = it
+                            :db.unique/value       {:db/unique :db.unique/value}
+                            :db.unique/identity    {:db/unique :db.unique/identity} 
+                            :db.cardinality/one    {:db/cardinality :db.cardinality/one}
+                            :db.cardinality/many   {:db/cardinality :db.cardinality/many}
+                            :db/index              {:db/index true}
+                            :db/fulltext           {:db/fulltext true}
+                            :db/isComponent        {:db/isComponent true}
+                            :db/noHistory          {:db/noHistory true}
+                            :db/doc 
+                              (throw (IllegalArgumentException. ":db/doc not yet implemented"))
+                      )))
+        tx-specs      (into base-specs option-specs)
+  ]
+    tx-specs
+  ))
+
+(defn create-attribute    ; :- Eid  #todo add schema
+  "Creates a new attribute in the DB"
+  [conn & args]
+; (spy :msg "create-attribute" args)
+  (let [tx-specs (apply create-attribute-map args) ]
+  ;  @(d/transact conn [tx-specs] )
+    tx-specs
+  ))
+
+
+; (println "exit")
+; (System/exit 1)
+
 
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db (two manual techniques) 
@@ -173,32 +218,6 @@
               ; [<partition> <tmpid>]
               ; Note that <partition> could be namespaced like :beings.sentient/people
 ] )
-
-(defn create-attribute    ; :- Eid
-  "Creates a new attribute in the DB"
-  [ident value-type ; & options
-   ]
-  (spyxx ident)
-  (when-not (keyword? ident)
-    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  (when-not (truthy? (safe-> special-attribute-values :db/valueType value-type))
-    (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
-  (println "#10")
-  (let [base-specs    { :db/id                  (d/tempid :db.part/db)
-                        :db/cardinality         :db.cardinality/one
-                        :db.install/_attribute  :db.part/db }
-        user-specs    { :db/ident               ident
-                        :db/valueType           value-type 
-                      }
-        tx-specs      (into base-specs user-specs)
-  ]
-    (spyxx tx-specs)
-  ))
-
-(create-attribute :weapon/type :db.type/keyword)
-(println "exit")
-(System/exit 1)
-
 
 
 ; #todo new method:  (create-attibute <ident> <valueType> [<cardinality> def one] [unique->none] [index->false] )
@@ -391,8 +410,8 @@
 (show-db (d/db conn))
 
 
-(println "exit")
-(System/exit 1)
+; (println "exit")
+; (System/exit 1)
 
 
 (defn -main []
