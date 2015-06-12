@@ -124,32 +124,6 @@
         (assert (apply = txids))))
     result ))
 
-; #todo verify upsert works here
-(s/defn create-entity  ; #todo add conn
-  "Create a new entity in the DB with the specified attribute-value pairs."
-  ( [ conn            :- s/Any  ; #todo
-      attr-val-map    :- {s/Any s/Any} ]
-   (create-entity :db.part/user attr-val-map))
-  ( [ conn            :- s/Any  ; #todo
-      -partition      :- s/Keyword
-      attr-val-map    :- {s/Any s/Any} ]
-    (let [new-tempid  (d/tempid -partition)
-          tx-data     (into {:db/id new-tempid} attr-val-map)
-          tx-result   @(d/transact conn [ tx-data ] )
-          db-after    (safe-> :db-after   tx-result)
-          tempids     (safe-> :tempids    tx-result)
-          new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
-      new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
-
-(s/defn update-entity ; #todo add conn
-  "Update an entity with new or changed attribute-value pairs"
-  [conn           :- s/Any  ; #todo
-   entity-spec    :- EntitySpec
-   attr-val-map   :- {s/Any s/Any} ] 
-    (let [tx-data     (into {:db/id entity-spec} attr-val-map)
-          tx-result   @(d/transact conn [ tx-data ] ) ]
-      tx-result ))
-
 (s/defn create-attribute-map    :- {s/Keyword s/Any}
   "Creates a new attribute in the DB"
   [ident value-type & options ]
@@ -158,8 +132,8 @@
   (when-not (truthy? (safe-> special-attribute-values :db/valueType value-type))
     (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
   (let [base-specs    { :db/id                  (d/tempid :db.part/db)
-                        :db/cardinality         :db.cardinality/one
-                        :db.install/_attribute  :db.part/db 
+                        :db.install/_attribute  :db.part/db ; Datomic ceremony to "install" the new attribute
+                        :db/cardinality         :db.cardinality/one   ; default value for most attrs
                         :db/ident               ident
                         :db/valueType           value-type }
         option-specs  (into (sorted-map)
@@ -182,11 +156,50 @@
   ))
 
 (s/defn create-attribute    :- s/Any  ; #todo add schema
-  "Creates a new attribute in the DB"
+  "Creates a new attribute in the DB.  Usage:  
+
+     (create-attribute [connection ident value-type & options ] )
+
+   The first 3 params are required. Others are optional and will use default normal Datomic default
+   values if omitted. Cardinality will default to :db.cardinality/one unless otherwise specified."
   [conn & args]
   (spy :msg "create-attribute" args)
   (let [tx-specs (apply create-attribute-map args) ]
     @(d/transact conn [tx-specs] )
     nil ; #todo what to return?
   ))
+
+; #todo verify upsert works here
+(s/defn create-entity  :- Eid
+  "Create a new entity in the DB with the specified attribute-value pairs."
+  ( [ conn            :- s/Any  ; #todo
+      attr-val-map    :- {s/Any s/Any} ]
+   (create-entity conn :db.part/user attr-val-map))
+  ( [ conn            :- s/Any  ; #todo
+      -partition      :- s/Keyword
+      attr-val-map    :- {s/Any s/Any} ]
+    (let [new-tempid  (d/tempid -partition)
+          tx-data     (into {:db/id new-tempid} attr-val-map)
+          tx-result   @(d/transact conn [ tx-data ] )
+          db-after    (safe-> :db-after   tx-result)
+          tempids     (safe-> :tempids    tx-result)
+          new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
+      new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
+
+(s/defn update-entity ; #todo add conn
+  "Update an entity with new or changed attribute-value pairs"
+  [conn           :- s/Any  ; #todo
+   entity-spec    :- EntitySpec
+   attr-val-map   :- {s/Any s/Any} ] 
+    (let [tx-data     (into {:db/id entity-spec} attr-val-map)
+          tx-result   @(d/transact conn [ tx-data ] ) ]
+      tx-result ))
+
+(s/defn create-enum :- Eid    ; #todo add namespace version
+  "Create an enumerated-type entity"
+  [conn  :- s/Any  ; #todo
+   ident :- s/Keyword ]
+  (when-not (keyword? ident)
+    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
+  (create-entity conn {:db/ident ident} ))
 
