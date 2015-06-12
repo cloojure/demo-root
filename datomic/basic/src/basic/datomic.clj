@@ -124,6 +124,7 @@
         (assert (apply = txids))))
     result ))
 
+; #todo verify upsert works here
 (s/defn create-entity  ; #todo add conn
   "Create a new entity in the DB with the specified attribute-value pairs."
   ( [ conn            :- s/Any  ; #todo
@@ -132,12 +133,12 @@
   ( [ conn            :- s/Any  ; #todo
       -partition      :- s/Keyword
       attr-val-map    :- {s/Any s/Any} ]
-    (let [new-tempid   (d/tempid -partition)
-          tx-data      (into {:db/id new-tempid} attr-val-map)
-          tx-result    @(d/transact conn [ tx-data ] )
-          db-after  (safe-> :db-after   tx-result)
-          tempids   (safe-> :tempids    tx-result)
-          new-eid   (d/resolve-tempid db-after tempids new-tempid) ]
+    (let [new-tempid  (d/tempid -partition)
+          tx-data     (into {:db/id new-tempid} attr-val-map)
+          tx-result   @(d/transact conn [ tx-data ] )
+          db-after    (safe-> :db-after   tx-result)
+          tempids     (safe-> :tempids    tx-result)
+          new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
       new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
 
 (s/defn update-entity ; #todo add conn
@@ -149,7 +150,7 @@
           tx-result   @(d/transact conn [ tx-data ] ) ]
       tx-result ))
 
-(defn create-attribute-map    ; :- Eid #todo add schema
+(s/defn create-attribute-map    :- {s/Keyword s/Any}
   "Creates a new attribute in the DB"
   [ident value-type & options ]
   (when-not (keyword? ident)
@@ -180,7 +181,7 @@
     tx-specs
   ))
 
-(defn create-attribute    ; :- Eid  #todo add schema
+(s/defn create-attribute    :- s/Any  ; #todo add schema
   "Creates a new attribute in the DB"
   [conn & args]
   (spy :msg "create-attribute" args)
