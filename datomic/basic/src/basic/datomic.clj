@@ -165,7 +165,7 @@
     tx-specs
   ))
 
-(s/defn create-attribute    :- s/Any  ; #todo add schema
+(s/defn create-attribute :- TxResult
   "Creates a new attribute in the DB.  Usage:  
 
      (create-attribute [connection ident value-type & options ] )
@@ -173,11 +173,8 @@
    The first 3 params are required. Others are optional and will use default normal Datomic default
    values if omitted. Cardinality will default to :db.cardinality/one unless otherwise specified."
   [conn & args]
-  (spy :msg "create-attribute" args)
   (let [tx-specs (apply create-attribute-map args) ]
-    @(d/transact conn [tx-specs] )
-    nil ; #todo what to return?
-  ))
+    @(d/transact conn [tx-specs] )))
 
 ; #todo verify upsert works here
 (s/defn create-entity  :- Eid
@@ -213,3 +210,21 @@
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   (create-entity conn {:db/ident ident} ))
 
+(s/defn retract :- TxResult
+  "Retract an attribute-value pair for an entity"
+  [conn           :- s/Any  ; #todo
+   entity-spec    :- EntitySpec
+   attribute      :- s/Keyword
+   value          :- s/Any ]
+  @(d/transact conn [ [:db/retract entity-spec attribute value] ] ))
+
+(s/defn retract-entity :- TxResult
+  "Retract all attribute-value pairs for an entity.  If any of its attributes have :db/isComponent=true, 
+   then the entities corresponding to that attribute will be recursively retracted as well."
+  [conn           :- s/Any  ; #todo
+   entity-spec    :- EntitySpec ]
+  (let [tx-data   [:db.fn/retractEntity entity-spec] 
+        result    @(d/transact conn [ (spyx tx-data) ] )
+  ]
+    (spyxx result)
+  ))
