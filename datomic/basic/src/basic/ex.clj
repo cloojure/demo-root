@@ -19,15 +19,13 @@
 (def ^:dynamic *conn* (d/connect uri))
 
 ;---------------------------------------------------------------------------------------------------
-; Partition definitions - manual for now #todo
-@(d/transact *conn*
-  [ { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
-      :db/ident                 :people       ; we could namespace like :db.part/people if we wanted
-      :db.install/_partition    :db.part/db } ] )
+; Partition definitions
+(create-partition *conn* :people )  ; we could namespace like :db.part/people if we wanted
 
 ;---------------------------------------------------------------------------------------------------
-; Attribute definitions.  The ident value (<namespace>/<name>) can be anything (not predefined).
-; Note that the <namespace> part is optional.
+; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
+; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be
+; anything (it is not predefined anywhere).  
 (create-attribute *conn* :person/name        :db.type/string        :db.unique/value)
 (create-attribute *conn* :person/secret-id   :db.type/long          :db.unique/value)
 (create-attribute *conn* :person/ssn-usa     :db.type/string        :db.unique/value)
@@ -45,17 +43,17 @@
 
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db
-(create-entity *conn*
-  { :person/name      "James Bond"
-    :person/ssn-usa   "123-45-6789"
-    :person/ssn-uk    "123-45-6789" } )
-(create-entity *conn*
-  { :person/name      "Mephistopheles"
-    :person/ssn-hell  "123-45-6789" } )
+(create-entity *conn*   { :person/name      "James Bond"
+                          :person/ssn-usa   "123-45-6789"
+                          :person/ssn-uk    "123-45-6789" } )
+
+(create-entity *conn*   { :person/name      "Mephistopheles"
+                          :person/ssn-hell  "123-45-6789" } )
 
 ; Add a new attribute. This must be done in a separate tx before we attempt to use the new attribute.
-(create-attribute *conn* :weapon/type :db.type/keyword :db.cardinality/many )
-(create-attribute *conn* :favorite-weapon :db.type/keyword ) ; ident doesn't need a namespace
+; Having a namespace is optional for the attribute name (it's :db/ident value).
+(create-attribute *conn* :weapon/type      :db.type/keyword :db.cardinality/many )
+(create-attribute *conn* :favorite-weapon  :db.type/keyword ) 
 
 ; Give James some weapons.  Since the name is :db.unique/value, we can use that to update our
 ; entities.  Since :weapon/type is :db.cardinality/many, we must use a a set to specify multiple

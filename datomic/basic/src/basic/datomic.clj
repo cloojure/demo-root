@@ -124,6 +124,16 @@
         (assert (apply = txids))))
     result ))
 
+(s/defn create-partition :- TxResult
+  "Creates a new partition in the DB"
+  [conn ident]
+  (when-not (keyword? ident)
+    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
+  @(d/transact conn
+    [ { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
+        :db.install/_partition    :db.part/db 
+        :db/ident                 ident } ] ))
+
 (s/defn create-attribute-map    :- {s/Keyword s/Any}
   "Creates a new attribute in the DB"
   [ident value-type & options ]
