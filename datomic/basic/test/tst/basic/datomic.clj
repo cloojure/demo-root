@@ -5,6 +5,10 @@
   (:require [datomic.api      :as d]
             [schema.core      :as s]))
 
+;---------------------------------------------------------------------------------------------------
+; Prismatic Schema type definitions
+(s/set-fn-validation! true)   ; #todo add to Schema docs
+
 (def ^:dynamic *tst-conn*)
 
 (use-fixtures :once 
