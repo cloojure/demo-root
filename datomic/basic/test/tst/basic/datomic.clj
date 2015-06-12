@@ -1,9 +1,11 @@
-(ns tst.basic.ex
-  (:use basic.ex
+(ns tst.basic.datomic
+  (:use basic.datomic
         cooljure.core
         clojure.test )
   (:require [datomic.api      :as d]
             [schema.core      :as s]))
+
+(def ^:dynamic *tst-conn*)
 
 (use-fixtures :once 
   (fn [tst-fn]
@@ -14,7 +16,7 @@
           schema-defs   (read-string (slurp "ex-schema.edn")) ; Load schema defs from file
     ]
       @(d/transact conn schema-defs)
-      (binding [*conn* conn]
+      (binding [*tst-conn* conn]
         (tst-fn))
       (d/delete-database uri))))
 
