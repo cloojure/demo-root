@@ -25,6 +25,13 @@
       (d/delete-database uri))))
 
 
+(deftest t-vecs
+  (is (truthy? (s/validate Vec1 [ 1 ])))
+  (is (truthy? (s/validate Vec2 [ 1 2 ])))
+  (is (truthy? (s/validate Vec3 [ 1 2 3 ])))
+  (is (truthy? (s/validate Vec4 [ 1 2 3 4 ])))
+  (is (truthy? (s/validate Vec5 [ 1 2 3 4 5 ]))))
+
 (deftest t-create-attribute-map
   (let [result  (create-attribute-map :weapon/type :db.type/keyword 
                     :db.unique/value       :db.unique/identity 

@@ -99,8 +99,8 @@
   (newline)
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
-  (let [result-set      (d/q '{:find [?c]
-                               :where [ [?c :db/txInstant] ] }
+  (let [result-set      (d/q '{:find  [?eid]
+                               :where [ [?eid :db/txInstant] ] }
                               db-val )
         res-2           (for [ [eid] result-set]
                           (into (sorted-map) (d/entity db-val eid)))
@@ -193,6 +193,14 @@
           new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
       new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
 
+(s/defn create-enum :- Eid    ; #todo add namespace version
+  "Create an enumerated-type entity"
+  [conn  :- s/Any  ; #todo
+   ident :- s/Keyword ]
+  (when-not (keyword? ident)
+    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
+  (create-entity conn {:db/ident ident} ))
+
 (s/defn update-entity ; #todo add conn
   "Update an entity with new or changed attribute-value pairs"
   [conn           :- s/Any  ; #todo
@@ -201,14 +209,6 @@
     (let [tx-data     (into {:db/id entity-spec} attr-val-map)
           tx-result   @(d/transact conn [ tx-data ] ) ]
       tx-result ))
-
-(s/defn create-enum :- Eid    ; #todo add namespace version
-  "Create an enumerated-type entity"
-  [conn  :- s/Any  ; #todo
-   ident :- s/Keyword ]
-  (when-not (keyword? ident)
-    (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  (create-entity conn {:db/ident ident} ))
 
 (s/defn retract :- TxResult
   "Retract an attribute-value pair for an entity"
