@@ -1,8 +1,8 @@
 (ns tst.basic.datomic
-  (:use basic.datomic
-        cooljure.core
+  (:use cooljure.core
         clojure.test )
   (:require [datomic.api      :as d]
+            [basic.datomic    :as t]
             [schema.core      :as s]))
 
 ;---------------------------------------------------------------------------------------------------
@@ -26,14 +26,14 @@
 
 
 (deftest t-vecs
-  (is (= [1]   (s/validate Vec1 [1] )))      ; (s/validate ...) returns its arg if no errors
-  (is (= [1 2] (s/validate Vec2 [1 2] )))
-  (is (truthy? (s/validate Vec3 [1 2 3] )))
-  (is (truthy? (s/validate Vec4 [1 2 3 4] )))
-  (is (truthy? (s/validate Vec5 [1 2 3 4 5] ))))
+  (is (= [1]   (s/validate t/Vec1 [1] )))      ; (s/validate ...) returns its arg if no errors
+  (is (= [1 2] (s/validate t/Vec2 [1 2] )))
+  (is (truthy? (s/validate t/Vec3 [1 2 3] )))
+  (is (truthy? (s/validate t/Vec4 [1 2 3 4] )))
+  (is (truthy? (s/validate t/Vec5 [1 2 3 4 5] ))))
 
 (deftest t-create-attribute-map
-  (let [result  (create-attribute-map :weapon/type :db.type/keyword 
+  (let [result  (t/create-attribute-map :weapon/type :db.type/keyword 
                     :db.unique/value       :db.unique/identity 
                     :db.cardinality/one    :db.cardinality/many 
                     :db/index :db/fulltext :db/isComponent :db/noHistory ) ]
@@ -42,7 +42,7 @@
             {:db/index true  :db/unique :db.unique/identity  :db/valueType :db.type/keyword 
              :db/noHistory true  :db/isComponent true  :db.install/_attribute :db.part/db 
              :db/fulltext true  :db/cardinality :db.cardinality/many  :db/ident :weapon/type} )))
-  (let [result  (create-attribute-map :weapon/type :db.type/keyword 
+  (let [result  (t/create-attribute-map :weapon/type :db.type/keyword 
                     :db.unique/identity    :db.unique/value
                     :db.cardinality/many   :db.cardinality/one
                     :db/index :db/fulltext :db/isComponent :db/noHistory ) ]

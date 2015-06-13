@@ -1,4 +1,5 @@
 (ns basic.datomic
+  (:refer-clojure :exclude [update])
   (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx]]
             [schema.core      :as s] )
