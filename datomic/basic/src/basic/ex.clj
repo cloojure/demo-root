@@ -1,7 +1,7 @@
 (ns basic.ex
   (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx]]
-            [basic.datomic    :refer :all]
+            [basic.datomic    :as h]
             [schema.core      :as s]
             [schema.coerce    :as coerce] )
   (:use   clojure.pprint
@@ -20,46 +20,46 @@
 
 ;---------------------------------------------------------------------------------------------------
 ; Partition definitions
-(create-partition *conn* :people )  ; we could namespace like :db.part/people if we wanted
+(h/create-partition *conn* :people )  ; we could namespace like :db.part/people if we wanted
 
 ;---------------------------------------------------------------------------------------------------
 ; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is
 ; not predefined anywhere).  
-(create-attribute *conn* :person/name        :db.type/string        :db.unique/value)
-(create-attribute *conn* :person/secret-id   :db.type/long          :db.unique/value)
-(create-attribute *conn* :person/ssn-usa     :db.type/string        :db.unique/value)
-(create-attribute *conn* :person/ssn-uk      :db.type/string        :db.unique/value)
-(create-attribute *conn* :person/ssn-hell    :db.type/string        :db.unique/value)
-(create-attribute *conn* :data/src           :db.type/string)
-(create-attribute *conn* :location           :db.type/string)
+(h/create-attribute *conn* :person/name        :db.type/string        :db.unique/value)
+(h/create-attribute *conn* :person/secret-id   :db.type/long          :db.unique/value)
+(h/create-attribute *conn* :person/ssn-usa     :db.type/string        :db.unique/value)
+(h/create-attribute *conn* :person/ssn-uk      :db.type/string        :db.unique/value)
+(h/create-attribute *conn* :person/ssn-hell    :db.type/string        :db.unique/value)
+(h/create-attribute *conn* :data/src           :db.type/string)
+(h/create-attribute *conn* :location           :db.type/string)
 
 ;-----------------------------------------------------------------------------
 ; enum values
-(create-enum *conn* :weapon/gun )
-(create-enum *conn* :weapon/knife )
-(create-enum *conn* :weapon/guile )
-(create-enum *conn* :weapon/curse )
+(h/create-enum *conn* :weapon/gun )
+(h/create-enum *conn* :weapon/knife )
+(h/create-enum *conn* :weapon/guile )
+(h/create-enum *conn* :weapon/curse )
 
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db
-(s/def james-eid :- Eid
-  (create-entity *conn*   { :person/name      "James Bond"
-                            :person/ssn-usa   "123-45-6789"
-                            :person/ssn-uk    "123-45-6789" } ))
+(s/def james-eid :- h/Eid
+  (h/create-entity *conn*   { :person/name      "James Bond"
+                              :person/ssn-usa   "123-45-6789"
+                              :person/ssn-uk    "123-45-6789" } ))
 
-(create-entity *conn*   { :person/name      "Mephistopheles"
-                          :person/ssn-hell  "123-45-6789" } )
+(h/create-entity *conn*   { :person/name      "Mephistopheles"
+                            :person/ssn-hell  "123-45-6789" } )
 
 ; Add some new attributes. This must be done in a separate tx before we attempt to use the new
 ; attributes.  Having a namespace is optional for the attribute name (it's :db/ident value).
-(create-attribute *conn* :weapon/type      :db.type/keyword :db.cardinality/many )
-(create-attribute *conn* :favorite-weapon  :db.type/keyword ) 
+(h/create-attribute *conn* :weapon/type      :db.type/keyword :db.cardinality/many )
+(h/create-attribute *conn* :favorite-weapon  :db.type/keyword ) 
 
 ; Give James some weapons.  Since the name is :db.unique/value, we can use that to update our
 ; entities instead of James' EID.  Since :weapon/type is :db.cardinality/many, we must use a a set
 ; to specify multiple values of a single attribute.
-(update-entity *conn* 
+(h/update *conn* 
   [:person/name "James Bond"]
   { :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
     :favorite-weapon    :weapon/gun
@@ -67,7 +67,7 @@
   } )
 
 ; Give the Devil his due
-(update-entity *conn* 
+(h/update *conn* 
   [:person/name "Mephistopheles"]
   { :weapon/type       #{ :weapon/curse :weapon/guile }
     :favorite-weapon   :weapon/curse
@@ -75,7 +75,7 @@
   } )
 
 (newline) (println "initial db")
-(show-db (d/db *conn*))
+(h/show-db (d/db *conn*))
 
 (let [james-raw       (d/q '{:find [?eid  ]  :where [ [?eid :person/name "James Bond"] ] }  (d/db *conn*))
       james-scalar    (d/q '{:find [?eid .]  :where [ [?eid :person/name "James Bond"] ] }  (d/db *conn*))
@@ -97,26 +97,26 @@
 (newline) (println "James 'e' value:")
 (spyxx james-eid)
 ; verify we can find James by name
-(let [result (s/validate Eid 
+(let [result (s/validate h/Eid 
                (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  
                             (d/db *conn*)))) ]
   (assert (= result james-eid)))
 
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
 ; new name w/o conflict.
-(update-entity *conn* [:person/name "James Bond"] {  :person/name "Bond, James Bond" } )
+(h/update *conn* [:person/name "James Bond"] {  :person/name "Bond, James Bond" } )
 
 ; James drops his knife...
-(retract *conn* [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
+(h/retract *conn* [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
 (newline) (println "James dropped knife + new name")
-(show-db (d/db *conn*))
+(h/show-db (d/db *conn*))
 
 ; James changes his favorite weapon
-(let [tx-result (update-entity *conn* james-eid {:favorite-weapon :weapon/guile} ) ]
+(let [tx-result (h/update *conn* james-eid {:favorite-weapon :weapon/guile} ) ]
   (newline) (println "James changes his favorite weapon - db-before:")
-  (show-db (:db-before tx-result))
+  (h/show-db (:db-before tx-result))
   (newline) (println "James changes his favorite weapon - db-after:")
-  (show-db (:db-after  tx-result))
+  (h/show-db (:db-after  tx-result))
   (newline) (println "James changes his favorite weapon - datoms:")
   (pprint  (:tx-data   tx-result))
   (newline) (println "James changes his favorite weapon - tempids")
@@ -127,9 +127,9 @@
 (newline)
 (println "-----------------------------------------------------------------------------")
 (println "James location -> HQ")
-(update-entity *conn* james-eid {:location "London"} )
-(pprint          (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
-(pprint (into {} (d/entity (d/db *conn*) james-eid)))
+(h/update *conn* james-eid {:location "London"} )
+(pprint (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
+(pprint (h/entity (d/db *conn*) james-eid))
   ;=>   {:person/name "Bond, James Bond",
   ;      :person/ssn-usa "123-45-6789",
   ;      :person/ssn-uk "123-45-6789",
@@ -138,15 +138,15 @@
   ;      :favorite-weapon :weapon/guile}
 
 (newline) (println "James location -> beach")
-(update-entity *conn* james-eid {:location "Tropical Beach"} )
-(pprint (into {} (d/entity (d/db *conn*) james-eid)))
+(h/update *conn* james-eid {:location "Tropical Beach"} )
+(pprint (h/entity (d/db *conn*) james-eid))
 
 (newline) (println "James location -> cave")
-(update-entity *conn* [:person/secret-id 007] {:location "Secret Cave"} )
-(pprint (into {} (d/entity (d/db *conn*) james-eid)))
+(h/update *conn* [:person/secret-id 007] {:location "Secret Cave"} )
+(pprint (h/entity (d/db *conn*) james-eid))
 
 ; Add a new weapon type
-(create-enum *conn* :weapon/feminine-charm)
+(h/create-enum *conn* :weapon/feminine-charm)
 
 ; Add Honey Rider & annotate the tx
 (newline)
@@ -171,7 +171,7 @@
 
   (newline)
   (println "TXID:")
-  (pprint (into (sorted-map) (d/entity (d/db *conn*) (txid tx-result))))
+  (pprint (h/entity (d/db *conn*) (h/txid tx-result)))
 
   (newline)
   (println "Temp IDs:")
@@ -179,11 +179,11 @@
   (println "tx-eid" tx-eid)
 )
 (newline) (println "added beauty")
-(show-db (d/db *conn*))
-(show-db-tx (d/db *conn*))
+(h/show-db (d/db *conn*))
+(h/show-db-tx (d/db *conn*))
 
 ; Give Honey a knife
-(update-entity *conn* [:person/name "Honey Rider"] {:weapon/type :weapon/knife} )
+(h/update *conn* [:person/name "Honey Rider"] {:weapon/type :weapon/knife} )
 
 ; find honey by pull
 (def honey-pull (d/q '[:find (pull ?e [*])
@@ -195,40 +195,38 @@
 
 (let [honey-eid (d/q  '{:find [?e .]
                         :in [$ ?n]
-                        :where [ [?e :person/name ?n]
-                               ]
+                        :where [ [?e :person/name ?n] ]
                        }
                      (d/db *conn*) "Honey Rider"  )
       _ (spyxx honey-eid)
-      honey     (into {} (d/entity (d/db *conn*) honey-eid))
+      honey     (h/entity (d/db *conn*) honey-eid)
       _ (spyxx honey)
-      tx-result (retract-entity *conn* honey-eid)
+      tx-result (h/retract-entity *conn* honey-eid)
   ]
   (newline) (println "removed honey" )
   (spyxx tx-result)
-  (show-db (d/db *conn*))
+  (h/show-db (d/db *conn*))
 
   ; try to find honey now
   (spyx honey-eid)
-  (spy :msg "Honey is missing" (into {} (d/entity (d/db *conn*) honey-eid)))
+  (spy :msg "Honey is missing" (h/entity (d/db *conn*) honey-eid))
 )
 
 ; #todo need a function like swap!, reset!
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (create-entity *conn* :people
+(def dr-no (h/create-entity *conn* :people
                { :person/name    "Dr No"
                  :weapon/type    :weapon/guile } ))
 (newline) (println "Added dr-no" )
 (spyxx dr-no)
 (spyxx (d/ident (d/db *conn*) (d/part dr-no)))
-(show-db (d/db *conn*))
+(h/show-db (d/db *conn*))
 
 
 ; (println "exit")
 ; (System/exit 1)
-
 
 (defn -main []
   (newline)

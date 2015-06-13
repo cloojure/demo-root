@@ -74,56 +74,6 @@
 (def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
 ;---------------------------------------------------------------------------------------------------
-
-(defn show-db 
-  "Display facts about all entities with a :person/name"
-  [db-val]
-  (println "-----------------------------------------------------------------------------")
-    (s/def res-1 :- #{ [Eid] }
-      (into #{}
-        (d/q '{:find  [?e]
-               :where [ [?e :person/name] ]
-              }
-             db-val )))
-    (doseq [it res-1]
-      (let [eid     (first it)
-            map-val (into (sorted-map) (d/entity db-val eid))
-           ]
-        (newline)
-        (pprint map-val))))
-
-
-(defn show-db-tx 
-  "Display all transactions in the DB"
-  [db-val]
-  (newline)
-  (println "-----------------------------------------------------------------------------")
-  (println "Database Transactions")
-  (let [result-set      (d/q '{:find  [?eid]
-                               :where [ [?eid :db/txInstant] ] }
-                              db-val )
-        res-2           (for [ [eid] result-set]
-                          (into (sorted-map) (d/entity db-val eid)))
-        res-4       (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
-                          res-2)
-  ]
-    (doseq [it res-4]
-      (pprint it))))
-
-(s/defn txid  :- Eid
-  "Returns the transaction EID given a tx-result"
-  [tx-result]
-  (let [datoms  (safe-> :tx-data tx-result)
-        result  (it-> datoms        ; since all datoms in tx have same txid
-                      (first it)    ; we only need the first datom
-                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
-  ]
-    (when false  ; for testing
-      (let [txids   (for [it datoms] (nth it 3)) ]
-        (spyxx txids)
-        (assert (apply = txids))))
-    result ))
-
 (s/defn create-partition :- TxResult
   "Creates a new partition in the DB"
   [conn ident]
@@ -201,7 +151,7 @@
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   (create-entity conn {:db/ident ident} ))
 
-(s/defn update-entity ; #todo add conn
+(s/defn update ; #todo add conn
   "Update an entity with new or changed attribute-value pairs"
   [conn           :- s/Any  ; #todo
    entity-spec    :- EntitySpec
@@ -228,3 +178,61 @@
   ]
     (spyxx result)
   ))
+
+(s/defn entity :- {s/Keyword s/Any}
+  "Like datomic/entity, but eagerly copies results into a plain clojure map."
+  [db-val         :- s/Any  ; #todo
+   entity-spec    :- EntitySpec ]
+  (into (sorted-map) (d/entity db-val entity-spec)))
+
+;---------------------------------------------------------------------------------------------------
+
+(defn show-db 
+  "Display facts about all entities with a :person/name"
+  [db-val]
+  (println "-----------------------------------------------------------------------------")
+    (s/def res-1 :- #{ [Eid] }
+      (into #{}
+        (d/q '{:find  [?e]
+               :where [ [?e :person/name] ]
+              }
+             db-val )))
+    (doseq [it res-1]
+      (let [eid     (first it)
+            map-val (entity db-val eid)
+           ]
+        (newline)
+        (pprint map-val))))
+
+
+(defn show-db-tx 
+  "Display all transactions in the DB"
+  [db-val]
+  (newline)
+  (println "-----------------------------------------------------------------------------")
+  (println "Database Transactions")
+  (let [result-set      (d/q '{:find  [?eid]
+                               :where [ [?eid :db/txInstant] ] }
+                              db-val )
+        res-2           (for [ [eid] result-set]
+                          (entity db-val eid))
+        res-4       (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
+                          res-2)
+  ]
+    (doseq [it res-4]
+      (pprint it))))
+
+(s/defn txid  :- Eid
+  "Returns the transaction EID given a tx-result"
+  [tx-result]
+  (let [datoms  (safe-> :tx-data tx-result)
+        result  (it-> datoms        ; since all datoms in tx have same txid
+                      (first it)    ; we only need the first datom
+                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
+  ]
+    (when false  ; for testing
+      (let [txids   (for [it datoms] (nth it 3)) ]
+        (spyxx txids)
+        (assert (apply = txids))))
+    result ))
+
