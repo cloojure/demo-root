@@ -85,7 +85,7 @@
         :db.install/_partition    :db.part/db 
         :db/ident                 ident } ] ))
 
-(s/defn create-attribute-map    :- {s/Keyword s/Any}
+(s/defn new-attribute    :- {s/Keyword s/Any}
   "Creates a new attribute in the DB"
   [ident value-type & options ]
   (when-not (keyword? ident)
@@ -124,7 +124,7 @@
    The first 3 params are required. Others are optional and will use default normal Datomic default
    values if omitted. Cardinality will default to :db.cardinality/one unless otherwise specified."
   [conn & args]
-  (let [tx-specs (apply create-attribute-map args) ]
+  (let [tx-specs (apply new-attribute args) ]
     @(d/transact conn [tx-specs] )))
 
 ; #todo verify upsert works here
@@ -175,10 +175,8 @@
   [conn           :- s/Any  ; #todo
    entity-spec    :- EntitySpec ]
   (let [tx-data   [:db.fn/retractEntity entity-spec] 
-        result    @(d/transact conn [ (spyx tx-data) ] )
-  ]
-    (spyxx result)
-  ))
+        result    @(d/transact conn [tx-data] ) ]
+    result ))
 
 (s/defn entity :- {s/Keyword s/Any}
   "Like datomic/entity, but eagerly copies results into a plain clojure map."
