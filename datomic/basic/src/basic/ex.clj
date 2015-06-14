@@ -27,82 +27,86 @@
 ; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is
 ; not predefined anywhere).  
-(t/create-attribute *conn* :person/name        :db.type/string        :db.unique/value)
-(t/create-attribute *conn* :person/secret-id   :db.type/long          :db.unique/value)
-(t/create-attribute *conn* :person/ssn-usa     :db.type/string        :db.unique/value)
-(t/create-attribute *conn* :person/ssn-uk      :db.type/string        :db.unique/value)
-(t/create-attribute *conn* :person/ssn-hell    :db.type/string        :db.unique/value)
-(t/create-attribute *conn* :data/src           :db.type/string)
-(t/create-attribute *conn* :location           :db.type/string)
+(d/transact *conn* [
+  (t/new-attribute :person/name        :db.type/string        :db.unique/value)
+  (t/new-attribute :person/secret-id   :db.type/long          :db.unique/value)
+  (t/new-attribute :person/ssn-usa     :db.type/string        :db.unique/value)
+  (t/new-attribute :person/ssn-uk      :db.type/string        :db.unique/value)
+  (t/new-attribute :person/ssn-hell    :db.type/string        :db.unique/value)
+  (t/new-attribute :data/src           :db.type/string)
+  (t/new-attribute :location           :db.type/string)
+] )
 
 ;-----------------------------------------------------------------------------
 ; enum values
-(t/create-enum *conn* :weapon/gun )
-(t/create-enum *conn* :weapon/knife )
-(t/create-enum *conn* :weapon/guile )
-(t/create-enum *conn* :weapon/curse )
+(d/transact *conn* [
+  (t/new-enum :weapon/gun )
+  (t/new-enum :weapon/knife )
+  (t/new-enum :weapon/guile )
+  (t/new-enum :weapon/curse )
+] )
 
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db
 (s/def james-eid :- t/Eid
-  (grab :eid
-    (t/create-entity *conn*   { :person/name      "James Bond"
-                                :person/ssn-usa   "123-45-6789"
-                                :person/ssn-uk    "123-45-6789" } )))
+  (it-> (t/new-entity { :person/name      "James Bond"
+                        :person/ssn-usa   "123-45-6789"
+                        :person/ssn-uk    "123-45-6789" } )
+        @(d/transact *conn* [it] )
+        (first (t/eids it))))
 
-(t/create-entity *conn*   { :person/name      "Mephistopheles"
-                            :person/ssn-hell  "123-45-6789" } )
+(d/transact *conn* [
+  (t/new-entity { :person/name      "Mephistopheles"
+                  :person/ssn-hell  "123-45-6789" } )
+] )
 
 ; Add some new attributes. This must be done in a separate tx before we attempt to use the new
 ; attributes.  Having a namespace is optional for the attribute name (it's :db/ident value).
-(t/create-attribute *conn* :weapon/type      :db.type/keyword :db.cardinality/many )
-(t/create-attribute *conn* :favorite-weapon  :db.type/keyword ) 
+(d/transact *conn* [
+  (t/new-attribute :weapon/type      :db.type/keyword :db.cardinality/many )
+  (t/new-attribute :favorite-weapon  :db.type/keyword ) 
+] )
 
-; Give James some weapons.  Since the name is :db.unique/value, we can use that to update our
-; entities instead of James' EID.  Since :weapon/type is :db.cardinality/many, we must use a a set
-; to specify multiple values of a single attribute.
-(t/update *conn* 
-  [:person/name "James Bond"]
-  { :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
+; Since the name is :db.unique/value, we can use that to update our entities instead of the EID.
+; Since :weapon/type is :db.cardinality/many, we must use a a set to specify multiple values of a
+; single attribute.
+(d/transact *conn* [
+  ; Give James some weapons
+  { :db/id              [:person/name "James Bond"]
+    :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
     :favorite-weapon    :weapon/gun
     :person/secret-id   007  ; '007' is interpreted as octal -> still 7 (whew!)
-  } )
+  }
 
-; Give the Devil his due
-(t/update *conn* 
-  [:person/name "Mephistopheles"]
-  { :weapon/type       #{ :weapon/curse :weapon/guile }
-    :favorite-weapon   :weapon/curse
-    :person/secret-id  666
-  } )
+  ; Give the Devil his due
+  { :db/id              [:person/name "Mephistopheles"]
+    :weapon/type        #{ :weapon/curse :weapon/guile }
+    :favorite-weapon    :weapon/curse
+    :person/secret-id   666
+  }
+] )
 
 (newline) (println "initial db")
 (t/show-db (d/db *conn*))
-
-(let [james-raw       (d/q '{:find [?eid  ]  :where [ [?eid :person/name "James Bond"] ] }  (d/db *conn*))
-      james-scalar    (d/q '{:find [?eid .]  :where [ [?eid :person/name "James Bond"] ] }  (d/db *conn*))
-      james-flat      (flatten (into [] james-raw))
-  ]
-    (spyxx james-raw)
-    (spyxx james-scalar)
-    (spyxx james-flat))
-
-(let [weapon-holders-1    (d/q '{:find [  ?eid  ]  :where [ [?eid :weapon/type] ] }  (d/db *conn*))
-      weapon-holders-2    (d/q '{:find [  ?eid .]  :where [ [?eid :weapon/type] ] }  (d/db *conn*))
-      weapon-holders-3    (d/q '{:find [ [?eid] ]  :where [ [?eid :weapon/type] ] }  (d/db *conn*))
-  ]
-    (spyxx weapon-holders-1)    ; set of tuples
-    (spyxx weapon-holders-2)    ; single-scalar, like (ffirst result))
-    (spyxx weapon-holders-3)    ; single-tuple,  like ( first result)
-)
 (newline) (println "James 'e' value:")
 (spyxx james-eid)
 
 ; verify we can find James by name
-(let [result (s/validate t/Eid 
-               (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  
-                            (d/db *conn*)))) ]
-  (assert (= result james-eid)))
+
+; query result is a set of tuples
+(let [db-val          (d/db *conn*)
+      james-raw       (d/q '{:find [?eid]  :where [ [?eid :person/name "James Bond"] ] }  db-val)
+      weapon-holders  (d/q '{:find [?eid]  :where [ [?eid :weapon/type] ] }  db-val)
+      found-eid       (s/validate t/Eid (ffirst james-raw)) ]
+  (newline)
+  (spyxx james-raw)
+  (spyxx weapon-holders)
+  (assert (= found-eid james-eid))
+  (pprint (t/entity db-val james-eid))
+)
+
+(println "exit")
+(System/exit 1)
 
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
 ; new name w/o conflict.
@@ -161,9 +165,8 @@
 ; Add Honey Rider & annotate the tx
 (newline)
 (newline) (println "adding Honey")
-(let [tx-result   (grab :tx-result 
-                    (t/create-entity *conn*   { :person/name    "Honey Rider"
-                                                :weapon/type    :weapon/feminine-charm } ))
+(let [tx-result   (d/transact *conn* (t/new-entity {  :person/name    "Honey Rider"
+                                                      :weapon/type    :weapon/feminine-charm } ))
       tx-eid      (t/txid tx-result) ]
   (t/update *conn* tx-eid {:db/id  tx-eid :data/src "Dr. No"} )
   (newline)
@@ -210,10 +213,10 @@
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (grab :eid 
-             (t/create-entity *conn* :people
+(def dr-no (first (t/eids (d/transact *conn*
+             (t/new-entity :people
                { :person/name    "Dr No"
-                 :weapon/type    :weapon/guile } )))
+                 :weapon/type    :weapon/guile } )))))
 (newline) (println "Added dr-no" )
 (spyxx dr-no)
 (spyxx (d/ident (d/db *conn*) (d/part dr-no)))

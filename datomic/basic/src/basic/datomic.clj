@@ -1,7 +1,7 @@
 (ns basic.datomic
   (:refer-clojure :exclude [update])
   (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx]]
+            [cooljure.core    :refer [spyx spyxx grab]]
             [schema.core      :as s] )
   (:use   clojure.pprint
           cooljure.core)
@@ -86,7 +86,7 @@
         :db/ident                 ident } ] ))
 
 (s/defn new-attribute    :- {s/Keyword s/Any}
-  "Creates a new attribute in the DB"
+  "#todo Creates a new attribute in the DB"
   [ident value-type & options ]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
@@ -127,30 +127,29 @@
   (let [tx-specs (apply new-attribute args) ]
     @(d/transact conn [tx-specs] )))
 
-; #todo verify upsert works here
-(s/defn create-entity  :- { :eid Eid :tx-result TxResult }
-  "Create a new entity in the DB with the specified attribute-value pairs."
-  ( [ conn            :- s/Any  ; #todo
+; #todo need test
+(s/defn new-entity  :- { s/Any s/Any }
+  "#todo"
+  ( [ attr-val-map    :- {s/Any s/Any} ]
+   (new-entity :db.part/user attr-val-map))
+  ( [ -partition      :- s/Keyword
       attr-val-map    :- {s/Any s/Any} ]
-   (create-entity conn :db.part/user attr-val-map))
-  ( [ conn            :- s/Any  ; #todo
-      -partition      :- s/Keyword
-      attr-val-map    :- {s/Any s/Any} ]
-    (let [new-tempid  (d/tempid -partition)
-          tx-data     (into {:db/id new-tempid} attr-val-map)
-          tx-result   @(d/transact conn [ tx-data ] )
-          db-after    (grab :db-after   tx-result)
-          tempids     (grab :tempids    tx-result)
-          new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
-      {:eid new-eid :tx-result tx-result } )))
+    (into {:db/id (d/tempid -partition) } attr-val-map)))
 
-(s/defn create-enum :- { :eid Eid :tx-result TxResult }   ; #todo add namespace version
+; #todo need test
+(s/defn new-enum :- { s/Any s/Any }   ; #todo add namespace version
   "Create an enumerated-type entity"
-  [conn  :- s/Any  ; #todo
-   ident :- s/Keyword ]
+  [ident :- s/Keyword]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  (create-entity conn {:db/ident ident} ))
+  (new-entity {:db/ident ident} ))
+
+; #todo need test
+(s/defn eids :- [long]
+  [tx-result :- TxResult]
+  (vals (grab :tempids tx-result)))
+
+;--------------------------------------------
 
 (s/defn update ; #todo add conn
   "Update an entity with new or changed attribute-value pairs"
