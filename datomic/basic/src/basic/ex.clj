@@ -105,29 +105,39 @@
   (pprint (t/entity db-val james-eid))
 )
 
-(println "exit")
-(System/exit 1)
-
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
 ; new name w/o conflict.
-(t/update *conn* [:person/name "James Bond"] {  :person/name "Bond, James Bond" } )
+(d/transact *conn* [
+  { :db/id [:person/name "James Bond"] 
+    :person/name "Bond, James Bond" } 
+] )
 
 ; James drops his knife...
-(t/retract *conn* [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
+(d/transact *conn* [
+  [ :db/retract [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife ]
+] )
 (newline) (println "James dropped knife + new name")
 (t/show-db (d/db *conn*))
 
 ; James changes his favorite weapon
-(let [tx-result (t/update *conn* james-eid {:favorite-weapon :weapon/guile} ) ]
-  (newline) (println "James changes his favorite weapon - db-before:")
+(let [tx-result (d/transact *conn* [ {:db/id james-eid :favorite-weapon :weapon/guile} ] ) 
+]
+  (newline)   
+  (println "James changes his favorite weapon - db-before:")
   (t/show-db (grab :db-before tx-result))
-  (newline) (println "James changes his favorite weapon - db-after:")
+  (newline)
+  (println "James changes his favorite weapon - db-after:")
   (t/show-db (grab :db-after  tx-result))
-  (newline) (println "James changes his favorite weapon - datoms:")
-  (pprint  (grab :tx-data   tx-result))
-  (newline) (println "James changes his favorite weapon - tempids")
-  (pprint  (grab :tempids   tx-result))
+  (newline) 
+  (println "James changes his favorite weapon - datoms:")
+  (pprint (grab :tx-data   tx-result))
+  (newline) 
+  (println "James changes his favorite weapon - tempids")
+  (pprint (grab :tempids   tx-result))
 )
+
+(println "exit")
+(System/exit 1)
 
 ; Set James' location, then change it
 (newline)
