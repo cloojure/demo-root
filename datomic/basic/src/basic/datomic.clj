@@ -132,21 +132,17 @@
   "Create a new entity in the DB with the specified attribute-value pairs."
   ( [ conn            :- s/Any  ; #todo
       attr-val-map    :- {s/Any s/Any} ]
-   (println "##10")
-   (spyx conn)
-   (spyx attr-val-map)
    (create-entity conn :db.part/user attr-val-map))
   ( [ conn            :- s/Any  ; #todo
       -partition      :- s/Keyword
       attr-val-map    :- {s/Any s/Any} ]
-    (println "##20")
     (let [new-tempid  (d/tempid -partition)
           tx-data     (into {:db/id new-tempid} attr-val-map)
           tx-result   @(d/transact conn [ tx-data ] )
           db-after    (grab :db-after   tx-result)
           tempids     (grab :tempids    tx-result)
           new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
-      (spy :msg "create-entity - exit" {:eid new-eid :tx-result tx-result } ))))
+      {:eid new-eid :tx-result tx-result } )))
 
 (s/defn create-enum :- { :eid Eid :tx-result TxResult }   ; #todo add namespace version
   "Create an enumerated-type entity"

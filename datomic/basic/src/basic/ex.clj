@@ -164,15 +164,12 @@
 (let [tx-result   (grab :tx-result 
                     (t/create-entity *conn*   { :person/name    "Honey Rider"
                                                 :weapon/type    :weapon/feminine-charm } ))
-      _ (spyxx tx-result)
       tx-eid      (t/txid tx-result) ]
-      (spyxx tx-eid)
   (t/update *conn* tx-eid {:db/id  tx-eid :data/src "Dr. No"} )
   (newline)
-  (println "Tx Data:")
   (spyxx tx-eid)
+  (println "Tx Data:")
   (doseq [it (grab :tx-data tx-result)] (pprint it))
-  (newline)
   (println "Temp IDs:")
   (spyxx (grab :tempids tx-result))
 )
