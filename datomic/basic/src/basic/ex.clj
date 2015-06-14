@@ -120,7 +120,7 @@
 (t/show-db (d/db *conn*))
 
 ; James changes his favorite weapon
-(let [tx-result (d/transact *conn* [ {:db/id james-eid :favorite-weapon :weapon/guile} ] ) 
+(let [tx-result @(d/transact *conn* [ {:db/id james-eid :favorite-weapon :weapon/guile} ] ) 
 ]
   (newline)   
   (println "James changes his favorite weapon - db-before:")
