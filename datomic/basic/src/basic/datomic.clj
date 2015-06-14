@@ -128,23 +128,27 @@
     @(d/transact conn [tx-specs] )))
 
 ; #todo verify upsert works here
-(s/defn create-entity  :- Eid
+(s/defn create-entity  :- { :eid Eid :tx-result TxResult }
   "Create a new entity in the DB with the specified attribute-value pairs."
   ( [ conn            :- s/Any  ; #todo
       attr-val-map    :- {s/Any s/Any} ]
+   (println "##10")
+   (spyx conn)
+   (spyx attr-val-map)
    (create-entity conn :db.part/user attr-val-map))
   ( [ conn            :- s/Any  ; #todo
       -partition      :- s/Keyword
       attr-val-map    :- {s/Any s/Any} ]
+    (println "##20")
     (let [new-tempid  (d/tempid -partition)
           tx-data     (into {:db/id new-tempid} attr-val-map)
           tx-result   @(d/transact conn [ tx-data ] )
-          db-after    (safe-> :db-after   tx-result)
-          tempids     (safe-> :tempids    tx-result)
+          db-after    (grab :db-after   tx-result)
+          tempids     (grab :tempids    tx-result)
           new-eid     (d/resolve-tempid db-after tempids new-tempid) ]
-      new-eid )))  ; #todo:  maybe return a map of { :eid xxx   :tx-result yyy}
+      (spy :msg "create-entity - exit" {:eid new-eid :tx-result tx-result } ))))
 
-(s/defn create-enum :- Eid    ; #todo add namespace version
+(s/defn create-enum :- { :eid Eid :tx-result TxResult }   ; #todo add namespace version
   "Create an enumerated-type entity"
   [conn  :- s/Any  ; #todo
    ident :- s/Keyword ]
@@ -186,6 +190,20 @@
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
+(s/defn txid  :- Eid
+  "Returns the transaction EID given a tx-result"
+  [tx-result]
+  (let [datoms  (grab :tx-data tx-result)
+        result  (it-> datoms        ; since all datoms in tx have same txid
+                      (first it)    ; we only need the first datom
+                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
+  ]
+    (when false  ; for testing
+      (let [txids   (for [it datoms] (nth it 3)) ]
+        (spyxx txids)
+        (assert (apply = txids))))
+    result ))
+
 ;---------------------------------------------------------------------------------------------------
 
 (defn show-db 
@@ -222,18 +240,4 @@
   ]
     (doseq [it res-4]
       (pprint it))))
-
-(s/defn txid  :- Eid
-  "Returns the transaction EID given a tx-result"
-  [tx-result]
-  (let [datoms  (safe-> :tx-data tx-result)
-        result  (it-> datoms        ; since all datoms in tx have same txid
-                      (first it)    ; we only need the first datom
-                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
-  ]
-    (when false  ; for testing
-      (let [txids   (for [it datoms] (nth it 3)) ]
-        (spyxx txids)
-        (assert (apply = txids))))
-    result ))
 

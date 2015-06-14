@@ -1,9 +1,10 @@
 (ns basic.ex
-  (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx]]
-            [basic.datomic    :as t]
-            [schema.core      :as s]
-            [schema.coerce    :as coerce] )
+  (:require [datomic.api        :as d]
+            [cooljure.core      :refer [spyx spyxx]]
+            [cooljure.explicit  :as x]
+            [basic.datomic      :as t]
+            [schema.core        :as s]
+            [schema.coerce      :as coerce] )
   (:use   clojure.pprint
           cooljure.core)
   (:gen-class))
@@ -44,9 +45,10 @@
 ;---------------------------------------------------------------------------------------------------
 ; load 2 antagonists into the db
 (s/def james-eid :- t/Eid
-  (t/create-entity *conn*   { :person/name      "James Bond"
-                              :person/ssn-usa   "123-45-6789"
-                              :person/ssn-uk    "123-45-6789" } ))
+  (grab :eid
+    (t/create-entity *conn*   { :person/name      "James Bond"
+                                :person/ssn-usa   "123-45-6789"
+                                :person/ssn-uk    "123-45-6789" } )))
 
 (t/create-entity *conn*   { :person/name      "Mephistopheles"
                             :person/ssn-hell  "123-45-6789" } )
@@ -93,9 +95,9 @@
     (spyxx weapon-holders-2)    ; single-scalar, like (ffirst result))
     (spyxx weapon-holders-3)    ; single-tuple,  like ( first result)
 )
-
 (newline) (println "James 'e' value:")
 (spyxx james-eid)
+
 ; verify we can find James by name
 (let [result (s/validate t/Eid 
                (ffirst (d/q '{:find [?e]  :where [ [?e :person/name "James Bond"] ] }  
@@ -114,20 +116,28 @@
 ; James changes his favorite weapon
 (let [tx-result (t/update *conn* james-eid {:favorite-weapon :weapon/guile} ) ]
   (newline) (println "James changes his favorite weapon - db-before:")
-  (t/show-db (:db-before tx-result))
+  (t/show-db (grab :db-before tx-result))
   (newline) (println "James changes his favorite weapon - db-after:")
-  (t/show-db (:db-after  tx-result))
+  (t/show-db (grab :db-after  tx-result))
   (newline) (println "James changes his favorite weapon - datoms:")
-  (pprint  (:tx-data   tx-result))
+  (pprint  (grab :tx-data   tx-result))
   (newline) (println "James changes his favorite weapon - tempids")
-  (pprint  (:tempids   tx-result))
+  (pprint  (grab :tempids   tx-result))
 )
 
 ; Set James' location, then change it
 (newline)
 (println "-----------------------------------------------------------------------------")
 (println "James location -> HQ")
-(t/update *conn* james-eid {:location "London"} )
+(let [tx-result (t/update *conn* james-eid {:location "London"} ) 
+      tx-eid    (spyx (t/txid tx-result))
+     ]
+  ; annotate the tx
+  (t/update *conn* tx-eid {:data/src "MI5"} )
+  (spyx (t/entity (d/db *conn*) tx-eid)))
+
+(newline)
+(println "d/entity vs t/entity:")
 (pprint (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
 (pprint (t/entity (d/db *conn*) james-eid))
   ;=>   {:person/name "Bond, James Bond",
@@ -150,35 +160,22 @@
 
 ; Add Honey Rider & annotate the tx
 (newline)
-(let [tx-tmpid            (d/tempid :db.part/tx)
-        _ (spyxx tx-tmpid)
-      honey-rider-tmpid   (d/tempid :people)
-      tx-data             [ { :db/id  honey-rider-tmpid
-                              :person/name    "Honey Rider"
-                              :weapon/type    :weapon/feminine-charm }
-                            { :db/id  tx-tmpid
-                              :data/src "Dr. No" }
-                          ]
-      tx-result           @(d/transact *conn* tx-data)
+(newline) (println "adding Honey")
+(let [tx-result   (grab :tx-result 
+                    (t/create-entity *conn*   { :person/name    "Honey Rider"
+                                                :weapon/type    :weapon/feminine-charm } ))
       _ (spyxx tx-result)
-      datoms    (safe-> :tx-data  tx-result)
-      tempids   (safe-> :tempids  tx-result)
-      tx-eid    (-> tx-tmpid tempids)
-     ]
+      tx-eid      (t/txid tx-result) ]
+      (spyxx tx-eid)
+  (t/update *conn* tx-eid {:db/id  tx-eid :data/src "Dr. No"} )
   (newline)
   (println "Tx Data:")
-  (doseq [it datoms] (pprint it))
-
-  (newline)
-  (println "TXID:")
-  (pprint (t/entity (d/db *conn*) (t/txid tx-result)))
-
+  (spyxx tx-eid)
+  (doseq [it (grab :tx-data tx-result)] (pprint it))
   (newline)
   (println "Temp IDs:")
-  (spyxx tempids)
-  (println "tx-eid" tx-eid)
+  (spyxx (grab :tempids tx-result))
 )
-(newline) (println "added beauty")
 (t/show-db (d/db *conn*))
 (t/show-db-tx (d/db *conn*))
 
@@ -216,9 +213,10 @@
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (t/create-entity *conn* :people
+(def dr-no (grab :eid 
+             (t/create-entity *conn* :people
                { :person/name    "Dr No"
-                 :weapon/type    :weapon/guile } ))
+                 :weapon/type    :weapon/guile } )))
 (newline) (println "Added dr-no" )
 (spyxx dr-no)
 (spyxx (d/ident (d/db *conn*) (d/part dr-no)))
