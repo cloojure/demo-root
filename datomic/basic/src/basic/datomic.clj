@@ -25,7 +25,7 @@
 (def EntitySpec (s/either long
                           [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
 
-(def special-attribute-values
+(def special-attrvals
  "A map that defines the set of permissible values for use in attribute definition.
 
   User-defined attributes are special entities in Datomic. They are stored in the :db.part/db
@@ -107,7 +107,7 @@
   [ident value-type & options ]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  (when-not (truthy? (safe-> special-attribute-values :db/valueType value-type))
+  (when-not (truthy? (safe-> special-attrvals :db/valueType value-type))
     (throw (IllegalArgumentException. (str "attribute value-type invalid: " ident ))))
   (let [base-specs    { :db/id                  (d/tempid :db.part/db)
                         :db.install/_attribute  :db.part/db ; Datomic ceremony to "install" the new attribute
