@@ -160,22 +160,19 @@
           tx-result   @(d/transact conn [ tx-data ] ) ]
       tx-result ))
 
-(s/defn retract :- TxResult
-  "Retract an attribute-value pair for an entity"
-  [conn           :- s/Any  ; #todo
-   entity-spec    :- EntitySpec
-   attribute      :- s/Keyword
-   value          :- s/Any ]
-  @(d/transact conn [ [:db/retract entity-spec attribute value] ] ))
+(s/defn retraction :- Vec4
+  "Constructs & returns a tuple to retract a fact (attribute-value pair) for an entity"
+  [entity-spec  :- EntitySpec
+   attribute    :- s/Keyword
+   value        :- s/Any ]
+  [:db/retract entity-spec attribute value] )
 
-(s/defn retract-entity :- TxResult
-  "Retract all attribute-value pairs for an entity.  If any of its attributes have :db/isComponent=true, 
-   then the entities corresponding to that attribute will be recursively retracted as well."
-  [conn           :- s/Any  ; #todo
-   entity-spec    :- EntitySpec ]
-  (let [tx-data   [:db.fn/retractEntity entity-spec] 
-        result    @(d/transact conn [tx-data] ) ]
-    result ))
+(s/defn retraction-entity :- Vec2
+  "Constructs & returns a tuple to retract all attribute-value pairs for an entity.  If any of its
+   attributes have :db/isComponent=true, then the entities corresponding to that attribute will be
+   recursively retracted as well."
+  [entity-spec  :- EntitySpec ]
+  [:db.fn/retractEntity entity-spec] )
 
 (s/defn entity :- {s/Keyword s/Any}
   "Like datomic/entity, but eagerly copies results into a plain clojure map."
