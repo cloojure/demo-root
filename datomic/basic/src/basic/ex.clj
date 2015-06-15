@@ -203,20 +203,18 @@
   (spy :msg "Honey is missing" (t/entity (d/db *conn*) honey-eid))
 )
 
-(println "exit")
-(System/exit 1)
-
 ; #todo need a function like swap!, reset!
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (first (t/eids (d/transact *conn*
+(def dr-no (first (t/eids @(d/transact *conn* [
              (t/new-entity :people
                { :person/name    "Dr No"
-                 :weapon/type    :weapon/guile } )))))
-(newline) (println "Added dr-no" )
-(spyxx dr-no)
-(spyxx (d/ident (d/db *conn*) (d/part dr-no)))
+                 :weapon/type    :weapon/guile } ) 
+             ] ))))
+(newline) 
+(println "Added dr-no EID:       " dr-no)
+(println "Added dr-no partition: " (t/partition (d/db *conn*) dr-no))
 (t/show-db (d/db *conn*))
 
 

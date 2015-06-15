@@ -1,5 +1,5 @@
 (ns basic.datomic
-  (:refer-clojure :exclude [update])
+  (:refer-clojure :exclude [update partition])
   (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx grab]]
             [schema.core      :as s] )
@@ -193,6 +193,11 @@
         (spyxx txids)
         (assert (apply = txids))))
     result ))
+
+(s/defn partition :- s/Keyword
+  [db-val       :- s/Any  ; #todo
+   entity-spec  :- EntitySpec ]
+  (d/ident db-val (d/part entity-spec)))
 
 ;---------------------------------------------------------------------------------------------------
 
