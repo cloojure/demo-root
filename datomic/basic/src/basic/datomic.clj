@@ -252,7 +252,7 @@
   [db-val :- s/Any]
   (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
     (for [datom tx-datoms]  ; datom is [e a v t added?]
-      (let [[eid] datom]    ; destructure to get eid; (first datom) crashes
+      (let [eid (nth datom 0) ]   ; (first datom) crashes
         (entity-map db-val eid)))))
 
 ; #todo need test
