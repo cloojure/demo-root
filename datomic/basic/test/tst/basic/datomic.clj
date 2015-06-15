@@ -32,8 +32,8 @@
   (is (truthy? (s/validate t/Vec4 [1 2 3 4] )))
   (is (truthy? (s/validate t/Vec5 [1 2 3 4 5] ))))
 
-(deftest t-create-attribute-map
-  (let [result  (t/create-attribute-map :weapon/type :db.type/keyword 
+(deftest t-new-attribute
+  (let [result  (t/new-attribute :weapon/type :db.type/keyword 
                     :db.unique/value       :db.unique/identity 
                     :db.cardinality/one    :db.cardinality/many 
                     :db/index :db/fulltext :db/isComponent :db/noHistory ) ]
@@ -42,7 +42,7 @@
             {:db/index true  :db/unique :db.unique/identity  :db/valueType :db.type/keyword 
              :db/noHistory true  :db/isComponent true  :db.install/_attribute :db.part/db 
              :db/fulltext true  :db/cardinality :db.cardinality/many  :db/ident :weapon/type} )))
-  (let [result  (t/create-attribute-map :weapon/type :db.type/keyword 
+  (let [result  (t/new-attribute :weapon/type :db.type/keyword 
                     :db.unique/identity    :db.unique/value
                     :db.cardinality/many   :db.cardinality/one
                     :db/index :db/fulltext :db/isComponent :db/noHistory ) ]

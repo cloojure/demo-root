@@ -222,7 +222,6 @@
 (defn show-db-tx 
   "Display all transactions in the DB"
   [db-val]
-  (newline)
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
   (let [result-set      (d/q '{:find  [?eid]
@@ -230,7 +229,7 @@
                               db-val )
         res-2           (for [ [eid] result-set]
                           (entity db-val eid))
-        res-4       (into (sorted-set-by #(.compareTo (:db/txInstant %1) (:db/txInstant %2) ))
+        res-4       (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
                           res-2)
   ]
     (doseq [it res-4]
