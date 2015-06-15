@@ -14,6 +14,31 @@
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
 ;---------------------------------------------------------------------------------------------------
+; helper functions
+
+(defn show-db
+  "Display facts about all entities with a :person/name"
+  [db-val]
+  (println "-----------------------------------------------------------------------------")
+  (let [result-set  (s/validate #{ [t/Eid] }
+                      (into #{} (d/q '{:find  [?e]
+                                       :where [ [?e :person/name] ] }
+                                     db-val ))) ]
+    (doseq [ [eid] result-set]    ; destructure as we loop
+      (newline)
+      (pprint (t/entity-map db-val eid)))))
+
+(defn show-db-tx
+  "Display all transactions in the DB"
+  [db-val]
+  (println "-----------------------------------------------------------------------------")
+  (println "Database Transactions")
+  (let [result    (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
+                        (t/transactions db-val)) ]
+    (doseq [it result]
+      (pprint it))))
+
+;---------------------------------------------------------------------------------------------------
 ; Create the database & a connection to it
 (def uri "datomic:mem://example")
 (d/create-database uri)
