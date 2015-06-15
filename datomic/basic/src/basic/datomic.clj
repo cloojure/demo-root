@@ -35,6 +35,12 @@
     :tx-data      s/Any
     :tempids      s/Any } )
 
+(def Datom 
+  "The raw Datom type (a 5-tuple) returned by (d/datoms ...)"
+; [ eid  attr-eid  value  tx-eid  added? ]   <- interpretation
+  [ Eid       Eid  s/Any     Eid  s/Bool ] ; <- actual types
+)
+
 (def special-attrvals
  "A map that defines the set of permissible values for use in attribute definition.
 
@@ -242,14 +248,12 @@
   (d/ident db-val (d/part entity-spec)))
 
 (s/defn transactions :- [ {s/Keyword s/Any} ]
-  "Returns a collection of all DB transactions"
-  [db-val :- s/Any ]
-  (let [result-set    (d/q  '{:find  [?eid]
-                              :where [ [?eid :db/txInstant] ] } 
-                            db-val) ]
-    ; return a lazy seq
-    (for [[eid] result-set]   ; destructure as we loop
-      (entity-map db-val eid))))
+  "Returns a lazy-seq of entity-maps for all DB transactions"
+  [db-val :- s/Any]
+  (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
+    (for [datom tx-datoms]  ; datom is [e a v t added?]
+      (let [[eid] datom]    ; destructure to get eid; (first datom) crashes
+        (entity-map db-val eid)))))
 
 ; #todo need test
 (s/defn eids :- [long]
