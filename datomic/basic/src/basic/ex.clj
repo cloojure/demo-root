@@ -95,7 +95,7 @@
   (spyxx james-raw)
   (spyxx weapon-holders)
   (assert (= found-eid james-eid))
-  (pprint (t/entity db-val james-eid))
+  (pprint (t/entity-map db-val james-eid))
 )
 
 ; Updated James' name. Note that we can use the current value of name in a lookup-ref, then assert
@@ -130,14 +130,14 @@
 (println "James location -> HQ")
 (let [tx-result   @(d/transact *conn* [ (t/update james-eid {:location "London"} ) ] )
       tx-eid      (t/txid tx-result) ]
-  (spyx (t/entity (d/db *conn*) tx-eid))
+  (spyx (t/entity-map (d/db *conn*) tx-eid))
   @(d/transact *conn* [ (t/update tx-eid {:data/src "MI5"} ) ] ) ; annotate the tx
-  (spyx (t/entity (d/db *conn*) tx-eid)))
+  (spyx (t/entity-map (d/db *conn*) tx-eid)))
 
 (newline)
 (println "d/entity vs t/entity:")
-(pprint (d/entity (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
-(pprint (t/entity (d/db *conn*) james-eid))
+(pprint (d/entity     (d/db *conn*) james-eid))    ;=> {:db/id 277076930200558}
+(pprint (t/entity-map (d/db *conn*) james-eid))
   ;=>   {:person/name "Bond, James Bond",
   ;      :person/ssn-usa "123-45-6789",
   ;      :person/ssn-uk "123-45-6789",
@@ -147,9 +147,9 @@
 
 (newline) (println "James location -> beach -> cave")
 (d/transact *conn* [ (t/update james-eid {:location "Tropical Beach"} ) ] )
-(pprint (t/entity (d/db *conn*) james-eid))
+(pprint (t/entity-map (d/db *conn*) james-eid))
 (d/transact *conn* [ (t/update [:person/secret-id 007] {:location "Secret Cave"} ) ] )
-(pprint (t/entity (d/db *conn*) james-eid))
+(pprint (t/entity-map (d/db *conn*) james-eid))
 
 ; Add a new weapon type
 (d/transact *conn* [ (t/new-enum :weapon/feminine-charm) ] )
@@ -187,7 +187,7 @@
                         :where [ [?e :person/name ?n] ] }
                      (d/db *conn*) "Mephistopheles" )
       _ (spyxx devil-eid)
-      devil     (t/entity (d/db *conn*) devil-eid)
+      devil     (t/entity-map (d/db *conn*) devil-eid)
       _ (spyxx devil)
       tx-result @(d/transact *conn* [ (t/retraction-entity devil-eid) ] )
   ]
@@ -197,7 +197,7 @@
 
   ; try to find devil now
   (spyx devil-eid)
-  (spy :msg "devil is missing" (t/entity (d/db *conn*) devil-eid))
+  (spy :msg "devil is missing" (t/entity-map (d/db *conn*) devil-eid))
 )
 
 (def dr-no  (it-> (t/new-entity :people { :person/name    "Dr No"

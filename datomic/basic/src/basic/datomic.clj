@@ -12,15 +12,25 @@
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
 (def Eid
-  "Entity ID (EID) type definition"
+  "Each entity in the DB is uniquely specified its Entity ID (EID).  Indeed, allocation of a unique
+   EID is what 'creates' an entity in the DB."
   Long)
 
 ; #todo - clarify in all doc-strings that entity-spec = [EID or lookup-ref]
-(def LookupRef  [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] )
-(def EntitySpec (s/either Eid LookupRef ))
+(def LookupRef  
+  "If an entity has an attribute with either :db.unique/value or :db.unique/identity, that entity
+   can be uniquely specified using a lookup-ref (LookupRef). A lookup-ref is an attribute-value pair
+   expressed as a tuple:  [ <attribute> <value> ]"
+  [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] )
+
+(def EntitySpec 
+  "An EntitySpec is used to uniquely specify an entity in the DB. It consists of 
+   either an EID or a LookupRef."
+  (s/either Eid LookupRef))
 
 (def TxResult
-  "Transaction Result type definition"
+  "A map returned by a successful transaction. Contains the keys 
+   :db-before, :db-after, :tx-data, and :tempids"
   { :db-before    s/Any
     :db-after     s/Any
     :tx-data      s/Any
@@ -49,8 +59,6 @@
   user-defined attributes. Most special attributes are defined by a set of permissible keyword
   values. Permissible values for other special attributes are defined by a predicate function.  "
   {
-  ; :db/ident #(keyword? %)
-
     :db/valueType
       #{ :db.type/keyword :db.type/string :db.type/boolean :db.type/long :db.type/bigint :db.type/float
          :db.type/double :db.type/bigdec :db.type/ref :db.type/instant :db.type/uuid
@@ -60,15 +68,16 @@
 
     :db/unique        #{ :db.unique/value :db.unique/identity }
 
-  ; :db/doc #(string? %)
-  ; :db/index #{ true false }
-  ; :db/fulltext #{ true false }
-  ; :db/isComponent #{ true false }
-  ; :db/noHistory #{ true false }
+  ; #todo - document & enforce types & values for these attrs:
+  ;   :db/ident #(keyword? %)
+  ;   :db/doc #(string? %)
+  ;   :db/index #{ true false }
+  ;   :db/fulltext #{ true false }
+  ;   :db/isComponent #{ true false }
+  ;   :db/noHistory #{ true false }
   }
 )
 
-; #todo delete?
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
 (def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
@@ -76,6 +85,8 @@
 (def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
 ;---------------------------------------------------------------------------------------------------
+; Core functions
+
 (s/defn new-partition :- {s/Keyword s/Any}
   "Returns the tx-data to create a new partition in the DB. Usage:
 
@@ -83,7 +94,7 @@
       (partition ident)
     ] )
   "
-  [ident]
+  [ident :- s/Keyword]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
@@ -111,7 +122,9 @@
       :db/noHistory
       :db/doc                 <- *** currently unimplemented ***
   " 
-  [ident value-type & options ]
+  [ ident       :- s/Keyword
+    value-type  :- s/Any
+   & options ]  ; #todo type spec?
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   (when-not (truthy? (safe-> special-attrvals :db/valueType value-type))
@@ -213,7 +226,7 @@
   [entity-spec  :- EntitySpec ]
   [:db.fn/retractEntity entity-spec] )
 
-(s/defn entity :- {s/Keyword s/Any}
+(s/defn entity-map :- {s/Keyword s/Any}
   "Eagerly returns an entity's attribute-value pairs in a clojure map.  A simpler, eager version of
    datomic/entity."
   [db-val         :- s/Any  ; #todo
@@ -253,7 +266,7 @@
                               :where [ [?eid :db/txInstant] ] } 
                             db-val)
         tx-ents       (for [[eid] result-set]
-                        (entity db-val eid)) ]
+                        (entity-map db-val eid)) ]
         tx-ents))
 
 ;---------------------------------------------------------------------------------------------------
@@ -270,7 +283,7 @@
              db-val )))
     (doseq [it res-1]
       (let [eid     (first it)
-            map-val (entity db-val eid)
+            map-val (entity-map db-val eid)
            ]
         (newline)
         (pprint map-val))))
