@@ -37,10 +37,10 @@
 
 ; enum values
 (d/transact *conn* [
-  (t/new-enum :weapon/gun )
-  (t/new-enum :weapon/knife )
-  (t/new-enum :weapon/guile )
-  (t/new-enum :weapon/curse )
+  (t/enum :weapon/gun )
+  (t/enum :weapon/knife )
+  (t/enum :weapon/guile )
+  (t/enum :weapon/curse )
 ] )
 
 ; load 2 antagonists into the db
@@ -150,7 +150,7 @@
 (pprint (t/entity (d/db *conn*) james-eid))
 
 ; Add a new weapon type
-(d/transact *conn* [ (t/new-enum :weapon/feminine-charm) ] )
+(d/transact *conn* [ (t/enum :weapon/feminine-charm) ] )
 
 ; Add Honey Rider & annotate the tx
 (newline) (println "adding Honey")

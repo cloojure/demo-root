@@ -143,7 +143,7 @@
     (into {:db/id (d/tempid -partition) } attr-val-map)))
 
 ; #todo need test
-(s/defn new-enum :- { s/Any s/Any }   ; #todo add namespace version
+(s/defn enum :- { s/Any s/Any }   ; #todo add namespace version
   "Create an enumerated-type entity"
   [ident :- s/Keyword]
   (when-not (keyword? ident)
