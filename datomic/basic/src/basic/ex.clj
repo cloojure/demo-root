@@ -16,7 +16,7 @@
 ;---------------------------------------------------------------------------------------------------
 ; helper functions
 
-(defn show-db
+(defn show-people
   "Display facts about all entities with a :person/name"
   [db-val]
   (println "-----------------------------------------------------------------------------")
@@ -29,7 +29,7 @@
       (newline)
       (pprint (t/entity-map db-val eid)))))
 
-(defn show-db-tx
+(defn show-transactions
   "Display all transactions in the DB"
   [db-val]
   (println "-----------------------------------------------------------------------------")
@@ -108,7 +108,7 @@
 ] )
 
 (newline) (println "initial db")
-(show-db (d/db *conn*))
+(show-people (d/db *conn*))
 (newline) (println "James 'e' value:")
 (spyxx james-eid)
 
@@ -135,15 +135,15 @@
   (t/retraction [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
 ] )
 (newline) (println "James dropped knife + new name")
-(show-db (d/db *conn*))
+(show-people (d/db *conn*))
 
 ; James changes his favorite weapon
 (let [tx-result @(d/transact *conn* [
                    (t/update james-eid {:favorite-weapon :weapon/guile} ) ] ) ]
   (newline) (println "James changes his favorite weapon - db-before:")
-  (show-db (grab :db-before tx-result))
+  (show-people (grab :db-before tx-result))
   (newline) (println "James changes his favorite weapon - db-after:")
-  (show-db (grab :db-after  tx-result))
+  (show-people (grab :db-after  tx-result))
   (newline) (println "James changes his favorite weapon - datoms:")
   (pprint (grab :tx-data   tx-result))
   (newline) (println "James changes his favorite weapon - tempids")
@@ -193,8 +193,8 @@
   (println "Temp IDs:")
   (spyxx (grab :tempids tx-result))
 )
-(show-db    (d/db *conn*))
-(show-db-tx (d/db *conn*))
+(show-people        (d/db *conn*))
+(show-transactions  (d/db *conn*))
 
 ; Give Honey a knife
 (d/transact *conn* [ (t/update [:person/name "Honey Rider"] {:weapon/type :weapon/knife} ) ] )
@@ -219,7 +219,7 @@
   ]
   (newline) (println "removed devil" )
   (spyxx tx-result)
-  (show-db (d/db *conn*))
+  (show-people (d/db *conn*))
 
   ; try to find devil now
   (spyx devil-eid)
@@ -233,7 +233,7 @@
                   (first it)))
 (newline)
 (println "Added dr-no  EID:" dr-no "   partition:" (t/partition-name (d/db *conn*) dr-no))
-(show-db (d/db *conn*))
+(show-people (d/db *conn*))
 
 ; (println "exit")
 ; (System/exit 1)
