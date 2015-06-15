@@ -19,8 +19,10 @@
 (d/create-database uri)
 (def ^:dynamic *conn* (d/connect uri))
 
-; Partition definitions
-(t/create-partition *conn* :people )  ; we could namespace like :db.part/people if we wanted
+; Create a partition :people (we could namespace like :db.part/people if we wanted)
+(d/transact *conn* [
+  (t/partition :people )   
+] )
 
 ; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is

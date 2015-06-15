@@ -75,22 +75,28 @@
 (def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
 ;---------------------------------------------------------------------------------------------------
-(s/defn create-partition :- TxResult
-  "Creates a new partition in the DB"
-  [conn ident]
+(s/defn partition :- TxResult
+  "Returns the tx-data for a new partition in the DB. Usage:
+
+    (d/transact *conn* [
+      (partition ident)
+    ] )
+  "
+  [ident]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
-  @(d/transact conn
-    [ { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
-        :db.install/_partition    :db.part/db
-        :db/ident                 ident } ] ))
+  { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
+    :db.install/_partition    :db.part/db   ; ceremony so Datomic "installs" our new partition
+    :db/ident                 ident } )     ; the "name" of our new partition
 
 (s/defn attribute    :- {s/Keyword s/Any}
-  "Returns tx-data for a attribute.  Usage:
+  "Returns tx-data for a new attribute.  Usage:
 
-      (create-attribute [ident value-type & options ] )
+    (d/transact *conn* [
+      (attribute ident value-type & options)
+    ] )
 
-   The first 2 params are required. Others are optional and will use normal Datomic default
+   The first 2 params are required. Other params are optional and will use normal Datomic default
    values (false or nil) if omitted. An attribute is assumed to be :db.cardinality/one unless
    otherwise specified.  Optional values are:
 
@@ -135,7 +141,15 @@
 
 ; #todo need test
 (s/defn new-entity  :- { s/Any s/Any }
-  "#todo"
+  "Returns tx-data for a new entity  Usage:
+
+    (d/transact *conn* [
+      (new-entity attr-val-map)                 ; default partition -> :db.part/user 
+      (new-entity partition attr-val-map)       ; user-specified partition
+    ] )
+
+   where attr-val-map is a Clojure map containing attribute-value pairs to be added to the new
+   entity."
   ( [ attr-val-map    :- {s/Any s/Any} ]
    (new-entity :db.part/user attr-val-map))
   ( [ -partition      :- s/Keyword
@@ -158,33 +172,54 @@
 ;--------------------------------------------
 
 (s/defn update :- { s/Any s/Any }
-  "Update an entity with new or changed attribute-value pairs"
+  "Returns tx-data to update an existing entity  Usage:
+
+    (d/transact *conn* [
+      (update entity-spec attr-val-map)
+    ] )
+
+   where attr-val-map is a Clojure map containing attribute-value pairs to be added to the new
+   entity.  For attributes with :db.cardinality/one, the previous value will be (automatically)
+   retracted prior to the insertion of the new value. For attributes with :db.cardinality/many, the
+   new value will be accumulated into the current set of values.  "
   [entity-spec    :- EntitySpec
    attr-val-map   :- {s/Any s/Any} ]
     (into {:db/id entity-spec} attr-val-map))
 
 (s/defn retraction :- Vec4
-  "Constructs & returns a tuple to retract a fact (attribute-value pair) for an entity"
+  "Returns tx-data to retract an attribute-value pair for an entity. Usage:
+
+    (d/transact *conn* [
+      (retraction entity-spec attribute value)
+    ] )
+
+   where the attribute-value pair must exist for the entity or the retraction will fail.  " ; #todo verify
   [entity-spec  :- EntitySpec
    attribute    :- s/Keyword
    value        :- s/Any ]
   [:db/retract entity-spec attribute value] )
 
 (s/defn retraction-entity :- Vec2
-  "Constructs & returns a tuple to retract all attribute-value pairs for an entity.  If any of its
-   attributes have :db/isComponent=true, then the entities corresponding to that attribute will be
-   recursively retracted as well."
+  "Returns tx-data to retract all attribute-value pairs for an entity.  
+   
+    (d/transact *conn* [
+      (retraction-entity entity-spec)
+    ] )
+   
+  For any of the entity's attributes with :db/isComponent=true, the corresponding entities 
+  will be recursively retracted as well."
   [entity-spec  :- EntitySpec ]
   [:db.fn/retractEntity entity-spec] )
 
 (s/defn entity :- {s/Keyword s/Any}
-  "Like datomic/entity, but eagerly copies results into a plain clojure map."
+  "Eagerly returns an entity's attribute-value pairs in a clojure map.  A simpler, eager version of
+   datomic/entity. "
   [db-val         :- s/Any  ; #todo
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
 (s/defn txid  :- Eid
-  "Returns the transaction EID given a tx-result"
+  "Returns the transaction EID for a tx-result"
   [tx-result]
   (let [datoms  (grab :tx-data tx-result)
         result  (it-> datoms        ; since all datoms in tx have same txid
@@ -198,9 +233,17 @@
     result ))
 
 (s/defn partition :- s/Keyword
+  "Returns the name (:db/ident value) of a partition in the DB"
   [db-val       :- s/Any  ; #todo
    entity-spec  :- EntitySpec ]
   (d/ident db-val (d/part entity-spec)))
+
+(s/defn transactions
+  "Returns a collection of EIDs for all transactions in the DB"
+  [db-val]
+  (d/q  '{:find  [?eid ...]
+          :where [ [?eid :db/txInstant] ] }
+        db-val ))
 
 ;---------------------------------------------------------------------------------------------------
 
@@ -221,19 +264,15 @@
         (newline)
         (pprint map-val))))
 
-
 (defn show-db-tx
   "Display all transactions in the DB"
   [db-val]
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
-  (let [result-set      (d/q '{:find  [?eid]
-                               :where [ [?eid :db/txInstant] ] }
-                              db-val )
-        res-2           (for [ [eid] result-set]
-                          (entity db-val eid))
-        res-4       (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
-                          res-2)
+  (let [res-2  (for [eid (transactions db-val) ]
+                 (entity db-val eid))
+        res-4  (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
+                     res-2)
   ]
     (doseq [it res-4]
       (pprint it))))
