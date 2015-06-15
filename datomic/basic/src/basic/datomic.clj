@@ -1,10 +1,9 @@
 (ns basic.datomic
   (:refer-clojure :exclude [update partition])
   (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx grab glue]]
+            [cooljure.core    :refer [truthy? safe-> it-> spyx spyxx grab]]
             [schema.core      :as s] )
-  (:use   clojure.pprint
-          cooljure.core)
+  (:use   clojure.pprint)
   (:gen-class))
 
 ;---------------------------------------------------------------------------------------------------
@@ -148,7 +147,7 @@
                             :db/doc
                               (throw (IllegalArgumentException. ":db/doc not yet implemented"))
                       )))
-        tx-specs      (glue base-specs option-specs)
+        tx-specs      (into base-specs option-specs)
   ]
     tx-specs
   ))
