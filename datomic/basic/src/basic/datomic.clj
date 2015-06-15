@@ -11,23 +11,23 @@
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
-(def Eid 
+(def Eid
   "Entity ID (EID) type definition"
   Long)
 
-(def TxResult  
+(def TxResult
   "Transaction Result type definition"
   { :db-before    s/Any
     :db-after     s/Any
     :tx-data      s/Any
     :tempids      s/Any } )
 
-(def EntitySpec (s/either long 
+(def EntitySpec (s/either long
                           [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
 
 (def special-attribute-values
- "A map that defines the set of permissible values for use in attribute definition.  
- 
+ "A map that defines the set of permissible values for use in attribute definition.
+
   User-defined attributes are special entities in Datomic. They are stored in the :db.part/db
   partition, and are defined by special attributes that are built-in to Datomic (this is analgous to
   the special forms that are built-in to Clojure). The root attributes are named by the following
@@ -47,7 +47,7 @@
   For each of these special attributes, this map defines the permissible values used for specifying
   user-defined attributes. Most special attributes are defined by a set of permissible keyword
   values. Permissible values for other special attributes are defined by a predicate function.  "
-  { 
+  {
   ; :db/ident #(keyword? %)
 
     :db/valueType
@@ -67,7 +67,7 @@
   }
 )
 
-; #todo delete?  
+; #todo delete?
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
 (def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
@@ -82,11 +82,28 @@
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   @(d/transact conn
     [ { :db/id                    (d/tempid :db.part/db) ; The partition :db.part/db is built-in to Datomic
-        :db.install/_partition    :db.part/db 
+        :db.install/_partition    :db.part/db
         :db/ident                 ident } ] ))
 
-(s/defn new-attribute    :- {s/Keyword s/Any}
-  "#todo Creates a new attribute in the DB"
+(s/defn attribute    :- {s/Keyword s/Any}
+  "Returns tx-data for a attribute.  Usage:
+
+      (create-attribute [ident value-type & options ] )
+
+   The first 2 params are required. Others are optional and will use normal Datomic default
+   values (false or nil) if omitted. An attribute is assumed to be :db.cardinality/one unless
+   otherwise specified.  Optional values are:
+
+      :db.unique/value
+      :db.unique/identity
+      :db.cardinality/one     <- assumed by default
+      :db.cardinality/many
+      :db/index
+      :db/fulltext
+      :db/isComponent
+      :db/noHistory
+      :db/doc                 <- *** currently unimplemented ***
+  " 
   [ident value-type & options ]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
@@ -101,31 +118,20 @@
                         (for [it options]
                           (condp = it
                             :db.unique/value       {:db/unique :db.unique/value}
-                            :db.unique/identity    {:db/unique :db.unique/identity} 
+                            :db.unique/identity    {:db/unique :db.unique/identity}
                             :db.cardinality/one    {:db/cardinality :db.cardinality/one}
                             :db.cardinality/many   {:db/cardinality :db.cardinality/many}
                             :db/index              {:db/index true}
                             :db/fulltext           {:db/fulltext true}
                             :db/isComponent        {:db/isComponent true}
                             :db/noHistory          {:db/noHistory true}
-                            :db/doc 
+                            :db/doc
                               (throw (IllegalArgumentException. ":db/doc not yet implemented"))
                       )))
         tx-specs      (glue base-specs option-specs)
   ]
     tx-specs
   ))
-
-(s/defn create-attribute :- TxResult
-  "Creates a new attribute in the DB.  Usage:  
-
-     (create-attribute [connection ident value-type & options ] )
-
-   The first 3 params are required. Others are optional and will use default normal Datomic default
-   values if omitted. Cardinality will default to :db.cardinality/one unless otherwise specified."
-  [conn & args]
-  (let [tx-specs (apply new-attribute args) ]
-    @(d/transact conn [tx-specs] )))
 
 ; #todo need test
 (s/defn new-entity  :- { s/Any s/Any }
@@ -151,14 +157,11 @@
 
 ;--------------------------------------------
 
-(s/defn update ; #todo add conn
+(s/defn update :- { s/Any s/Any }
   "Update an entity with new or changed attribute-value pairs"
-  [conn           :- s/Any  ; #todo
-   entity-spec    :- EntitySpec
-   attr-val-map   :- {s/Any s/Any} ] 
-    (let [tx-data     (into {:db/id entity-spec} attr-val-map)
-          tx-result   @(d/transact conn [ tx-data ] ) ]
-      tx-result ))
+  [entity-spec    :- EntitySpec
+   attr-val-map   :- {s/Any s/Any} ]
+    (into {:db/id entity-spec} attr-val-map))
 
 (s/defn retraction :- Vec4
   "Constructs & returns a tuple to retract a fact (attribute-value pair) for an entity"
@@ -201,7 +204,7 @@
 
 ;---------------------------------------------------------------------------------------------------
 
-(defn show-db 
+(defn show-db
   "Display facts about all entities with a :person/name"
   [db-val]
   (println "-----------------------------------------------------------------------------")
@@ -219,7 +222,7 @@
         (pprint map-val))))
 
 
-(defn show-db-tx 
+(defn show-db-tx
   "Display all transactions in the DB"
   [db-val]
   (println "-----------------------------------------------------------------------------")

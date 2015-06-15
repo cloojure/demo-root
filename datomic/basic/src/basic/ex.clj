@@ -26,13 +26,13 @@
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is
 ; not predefined anywhere).  
 (d/transact *conn* [
-  (t/new-attribute :person/name        :db.type/string        :db.unique/value)
-  (t/new-attribute :person/secret-id   :db.type/long          :db.unique/value)
-  (t/new-attribute :person/ssn-usa     :db.type/string        :db.unique/value)
-  (t/new-attribute :person/ssn-uk      :db.type/string        :db.unique/value)
-  (t/new-attribute :person/ssn-hell    :db.type/string        :db.unique/value)
-  (t/new-attribute :data/src           :db.type/string)
-  (t/new-attribute :location           :db.type/string)
+  (t/attribute :person/name        :db.type/string        :db.unique/value)
+  (t/attribute :person/secret-id   :db.type/long          :db.unique/value)
+  (t/attribute :person/ssn-usa     :db.type/string        :db.unique/value)
+  (t/attribute :person/ssn-uk      :db.type/string        :db.unique/value)
+  (t/attribute :person/ssn-hell    :db.type/string        :db.unique/value)
+  (t/attribute :data/src           :db.type/string)
+  (t/attribute :location           :db.type/string)
 ] )
 
 ; enum values
@@ -59,27 +59,24 @@
 ; Add some new attributes. This must be done in a separate tx before we attempt to use the new
 ; attributes.  Having a namespace is optional for the attribute name (it's :db/ident value).
 (d/transact *conn* [
-  (t/new-attribute :weapon/type      :db.type/keyword :db.cardinality/many )
-  (t/new-attribute :favorite-weapon  :db.type/keyword ) 
+  (t/attribute :weapon/type      :db.type/keyword :db.cardinality/many )
+  (t/attribute :favorite-weapon  :db.type/keyword ) 
 ] )
 
 ; Since the name is :db.unique/value, we can use that to update our entities instead of the EID.
 ; Since :weapon/type is :db.cardinality/many, we must use a a set to specify multiple values of a
 ; single attribute.
 (d/transact *conn* [
-  ; Give James some weapons
-  { :db/id              [:person/name "James Bond"]
-    :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
-    :favorite-weapon    :weapon/gun
-    :person/secret-id   007  ; '007' is interpreted as octal -> still 7 (whew!)
-  }
-
-  ; Give the Devil his due
-  { :db/id              [:person/name "Mephistopheles"]
-    :weapon/type        #{ :weapon/curse :weapon/guile }
-    :favorite-weapon    :weapon/curse
-    :person/secret-id   666
-  }
+  (t/update ; Give James some weapons
+    [:person/name "James Bond"]
+    { :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
+      :favorite-weapon    :weapon/gun
+      :person/secret-id   007  } ) ; '007' is interpreted as octal -> still 7 (whew!)
+  (t/update ; Give the Devil his due
+    [:person/name "Mephistopheles"]
+    { :weapon/type        #{ :weapon/curse :weapon/guile }
+      :favorite-weapon    :weapon/curse
+      :person/secret-id   666 } )
 ] )
 
 (newline) (println "initial db")
@@ -102,8 +99,7 @@
 ; Updated James' name. Note that we can use the current value of name for lookup, then add in the
 ; new name w/o conflict.
 (d/transact *conn* [
-  { :db/id [:person/name "James Bond"] 
-    :person/name "Bond, James Bond" } 
+  (t/update [:person/name "James Bond"] { :person/name "Bond, James Bond" } )
 ] )
 
 ; James drops his knife...
@@ -115,8 +111,8 @@
 
 ; James changes his favorite weapon
 (let [tx-result @(d/transact *conn* [ 
-                     {:db/id james-eid :favorite-weapon :weapon/guile} ] ) ]
-  (newline)   (println "James changes his favorite weapon - db-before:")
+                   (t/update james-eid {:favorite-weapon :weapon/guile} ) ] ) ]
+  (newline) (println "James changes his favorite weapon - db-before:")
   (t/show-db (grab :db-before tx-result))
   (newline) (println "James changes his favorite weapon - db-after:")
   (t/show-db (grab :db-after  tx-result))
@@ -130,11 +126,10 @@
 (newline)
 (println "-----------------------------------------------------------------------------")
 (println "James location -> HQ")
-(let [tx-result   @(d/transact *conn* [ 
-                    { :db/id james-eid :location "London"} ] ) 
+(let [tx-result   @(d/transact *conn* [ (t/update james-eid {:location "London"} ) ] )
       tx-eid      (t/txid tx-result) ]
   (spyx (t/entity (d/db *conn*) tx-eid))
-  @(d/transact *conn* [ { :db/id tx-eid :data/src "MI5"} ] ) ; annotate the tx
+  @(d/transact *conn* [ (t/update tx-eid {:data/src "MI5"} ) ] ) ; annotate the tx
   (spyx (t/entity (d/db *conn*) tx-eid)))
 
 (newline)
@@ -149,9 +144,9 @@
   ;      :favorite-weapon :weapon/guile}
 
 (newline) (println "James location -> beach -> cave")
-(d/transact *conn* [ {:db/id james-eid :location "Tropical Beach"} ] )
+(d/transact *conn* [ (t/update james-eid {:location "Tropical Beach"} ) ] )
 (pprint (t/entity (d/db *conn*) james-eid))
-(d/transact *conn* [ {:db/id [:person/secret-id 007] :location "Secret Cave"} ] )
+(d/transact *conn* [ (t/update [:person/secret-id 007] {:location "Secret Cave"} ) ] )
 (pprint (t/entity (d/db *conn*) james-eid))
 
 ; Add a new weapon type
@@ -162,7 +157,7 @@
 (let [tx-result   @(d/transact *conn* [ (t/new-entity {:person/name    "Honey Rider"
                                                        :weapon/type    :weapon/feminine-charm} ) ] )
       tx-eid      (t/txid tx-result) ]
-  (d/transact *conn* [ { :db/id  tx-eid :data/src "Dr. No"} ] )
+  (d/transact *conn* [ (t/update tx-eid {:data/src "Dr. No"} ) ] )
   (newline)
   (spyxx tx-eid)
   (println "Tx Data:")
@@ -174,7 +169,7 @@
 (t/show-db-tx (d/db *conn*))
 
 ; Give Honey a knife
-(d/transact *conn* [ {:db/id [:person/name "Honey Rider"] :weapon/type :weapon/knife} ] )
+(d/transact *conn* [ (t/update [:person/name "Honey Rider"] {:weapon/type :weapon/knife} ) ] )
 
 ; find honey by pull
 (def honey-pull (d/q '[:find (pull ?e [*])
