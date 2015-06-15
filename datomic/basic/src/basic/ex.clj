@@ -213,8 +213,7 @@
                  :weapon/type    :weapon/guile } ) 
              ] ))))
 (newline) 
-(println "Added dr-no EID:       " dr-no)
-(println "Added dr-no partition: " (t/partition (d/db *conn*) dr-no))
+(println "Added dr-no.  EID: " dr-no "   partition: " (t/partition (d/db *conn*) dr-no))
 (t/show-db (d/db *conn*))
 
 
