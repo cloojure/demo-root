@@ -207,15 +207,14 @@
 ; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
-(def dr-no (first (t/eids @(d/transact *conn* [
-             (t/new-entity :people
-               { :person/name    "Dr No"
-                 :weapon/type    :weapon/guile } ) 
-             ] ))))
+(def dr-no  (it-> (t/new-entity :people { :person/name    "Dr No"
+                                          :weapon/type    :weapon/guile } )
+                  @(d/transact *conn* [it] )
+                  (t/eids it)
+                  (first it)))
 (newline) 
 (println "Added dr-no  EID:" dr-no "   partition:" (t/partition (d/db *conn*) dr-no))
 (t/show-db (d/db *conn*))
-
 
 ; (println "exit")
 ; (System/exit 1)
