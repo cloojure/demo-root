@@ -215,23 +215,42 @@
   [:db/retract entity-spec attribute value] )
 
 (s/defn retraction-entity :- Vec2
-  "Returns the tx-data to retract all attribute-value pairs for an entity.  
+  "Returns the tx-data to retract all attribute-value pairs for an entity, as well as all references
+   to the entity by other entities. Usage:
    
     (d/transact *conn* [
       (retraction-entity entity-spec)
     ] )
    
-  For any of the entity's attributes with :db/isComponent=true, the corresponding entities 
-  will be recursively retracted as well."
+  If the retracted entity refers to any other entity through an attribute with :db/isComponent=true,
+  the referenced entity will be recursively retracted as well."
   [entity-spec  :- EntitySpec ]
   [:db.fn/retractEntity entity-spec] )
 
+;---------------------------------------------------------------------------------------------------
+; Informational functions
+
 (s/defn entity-map :- {s/Keyword s/Any}
-  "Eagerly returns an entity's attribute-value pairs in a clojure map.  A simpler, eager version of
-   datomic/entity."
+  "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
   [db-val         :- s/Any  ; #todo
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
+
+(s/defn partition-name :- s/Keyword
+  "Returns the name of a DB partition (its :db/ident value)"
+  [db-val       :- s/Any  ; #todo
+   entity-spec  :- EntitySpec ]
+  (d/ident db-val (d/part entity-spec)))
+
+(s/defn transactions :- [ {s/Keyword s/Any} ]
+  "Returns a collection of all DB transactions"
+  [db-val :- s/Any ]
+  (let [result-set    (d/q  '{:find  [?eid]
+                              :where [ [?eid :db/txInstant] ] } 
+                            db-val) ]
+    ; return a lazy seq
+    (for [[eid] result-set]   ; destructure as we loop
+      (entity-map db-val eid))))
 
 ; #todo need test
 (s/defn eids :- [long]
@@ -246,26 +265,10 @@
         result  (it-> datoms        ; since all datoms in tx have same txid
                       (first it)    ; we only need the first datom
                       (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
-  ]
+  ] 
     (when false  ; for testing
       (let [txids   (for [it datoms] (nth it 3)) ]
         (spyxx txids)
         (assert (apply = txids))))
     result ))
-
-(s/defn partition-name :- s/Keyword
-  "Returns the name of a DB partition (its :db/ident value)"
-  [db-val       :- s/Any  ; #todo
-   entity-spec  :- EntitySpec ]
-  (d/ident db-val (d/part entity-spec)))
-
-(s/defn transactions :- [ {s/Keyword s/Any} ]
-  "Returns a collection of all DB transactions"
-  [db-val :- s/Any ]
-  (let [result-set    (d/q  '{:find  [?eid]
-                              :where [ [?eid :db/txInstant] ] } 
-                            db-val)
-        tx-ents       (for [[eid] result-set]
-                        (entity-map db-val eid)) ]
-        tx-ents))
 
