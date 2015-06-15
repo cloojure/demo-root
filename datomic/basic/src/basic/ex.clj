@@ -21,28 +21,28 @@
 
 ; Create a partition :people (we could namespace like :db.part/people if we wanted)
 (d/transact *conn* [
-  (t/partition :people )   
+  (t/new-partition :people )   
 ] )
 
 ; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is
 ; not predefined anywhere).  
 (d/transact *conn* [
-  (t/attribute :person/name        :db.type/string        :db.unique/value)
-  (t/attribute :person/secret-id   :db.type/long          :db.unique/value)
-  (t/attribute :person/ssn-usa     :db.type/string        :db.unique/value)
-  (t/attribute :person/ssn-uk      :db.type/string        :db.unique/value)
-  (t/attribute :person/ssn-hell    :db.type/string        :db.unique/value)
-  (t/attribute :data/src           :db.type/string)
-  (t/attribute :location           :db.type/string)
+  (t/new-attribute :person/name        :db.type/string        :db.unique/value)
+  (t/new-attribute :person/secret-id   :db.type/long          :db.unique/value)
+  (t/new-attribute :person/ssn-usa     :db.type/string        :db.unique/value)
+  (t/new-attribute :person/ssn-uk      :db.type/string        :db.unique/value)
+  (t/new-attribute :person/ssn-hell    :db.type/string        :db.unique/value)
+  (t/new-attribute :data/src           :db.type/string)
+  (t/new-attribute :location           :db.type/string)
 ] )
 
 ; enum values
 (d/transact *conn* [
-  (t/enum :weapon/gun )
-  (t/enum :weapon/knife )
-  (t/enum :weapon/guile )
-  (t/enum :weapon/curse )
+  (t/new-enum :weapon/gun )
+  (t/new-enum :weapon/knife )
+  (t/new-enum :weapon/guile )
+  (t/new-enum :weapon/curse )
 ] )
 
 ; load 2 antagonists into the db
@@ -61,8 +61,8 @@
 ; Add some new attributes. This must be done in a separate tx before we attempt to use the new
 ; attributes.  Having a namespace is optional for the attribute name (it's :db/ident value).
 (d/transact *conn* [
-  (t/attribute :weapon/type      :db.type/keyword :db.cardinality/many )
-  (t/attribute :favorite-weapon  :db.type/keyword ) 
+  (t/new-attribute :weapon/type      :db.type/keyword :db.cardinality/many )
+  (t/new-attribute :favorite-weapon  :db.type/keyword ) 
 ] )
 
 ; Since the name is :db.unique/value, we can use that to update our entities instead of the EID.
@@ -152,7 +152,7 @@
 (pprint (t/entity (d/db *conn*) james-eid))
 
 ; Add a new weapon type
-(d/transact *conn* [ (t/enum :weapon/feminine-charm) ] )
+(d/transact *conn* [ (t/new-enum :weapon/feminine-charm) ] )
 
 ; Add Honey Rider & annotate the tx
 (newline) (println "adding Honey")
@@ -181,7 +181,7 @@
 (newline) (println "Honey pull")
 (spyxx honey-pull)
 
-(let [honey-eid (d/q  '{:find [?e .]
+(let [honey-eid (d/q  '{:find [?e .]  ; scalar result
                         :in [$ ?n]
                         :where [ [?e :person/name ?n] ]
                        }
@@ -208,7 +208,7 @@
                   (t/eids it)
                   (first it)))
 (newline) 
-(println "Added dr-no  EID:" dr-no "   partition:" (t/partition (d/db *conn*) dr-no))
+(println "Added dr-no  EID:" dr-no "   partition:" (t/partition-name (d/db *conn*) dr-no))
 (t/show-db (d/db *conn*))
 
 ; (println "exit")

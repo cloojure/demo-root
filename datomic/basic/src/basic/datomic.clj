@@ -75,8 +75,8 @@
 (def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
 ;---------------------------------------------------------------------------------------------------
-(s/defn partition :- TxResult
-  "Returns the tx-data for a new partition in the DB. Usage:
+(s/defn new-partition :- {s/Keyword s/Any}
+  "Returns the tx-data to create a new partition in the DB. Usage:
 
     (d/transact *conn* [
       (partition ident)
@@ -89,8 +89,8 @@
     :db.install/_partition    :db.part/db   ; ceremony so Datomic "installs" our new partition
     :db/ident                 ident } )     ; the "name" of our new partition
 
-(s/defn attribute    :- {s/Keyword s/Any}
-  "Returns tx-data for a new attribute.  Usage:
+(s/defn new-attribute    :- {s/Keyword s/Any}
+  "Returns the tx-data to create a new attribute in the DB.  Usage:
 
     (d/transact *conn* [
       (attribute ident value-type & options)
@@ -141,7 +141,7 @@
 
 ; #todo need test
 (s/defn new-entity  :- { s/Any s/Any }
-  "Returns tx-data for a new entity  Usage:
+  "Returns the tx-data to create a new entity in the DB. Usage:
 
     (d/transact *conn* [
       (new-entity attr-val-map)                 ; default partition -> :db.part/user 
@@ -157,22 +157,23 @@
     (into {:db/id (d/tempid -partition) } attr-val-map)))
 
 ; #todo need test
-(s/defn enum :- { s/Any s/Any }   ; #todo add namespace version
-  "Create an enumerated-type entity"
+(s/defn new-enum :- { s/Any s/Any }   ; #todo add namespace version
+  "Returns the tx-data to create a new enumeration entity in the DB. Usage:
+
+    (d/transact *conn* [
+      (new-entity ident)
+    ] )
+
+  where ident is the (keyword) name for the new enumeration entity.  "
   [ident :- s/Keyword]
   (when-not (keyword? ident)
     (throw (IllegalArgumentException. (str "attribute ident must be keyword: " ident ))))
   (new-entity {:db/ident ident} ))
 
-; #todo need test
-(s/defn eids :- [long]
-  [tx-result :- TxResult]
-  (vals (grab :tempids tx-result)))
-
-;--------------------------------------------
-
+; #todo  -  document entity-spec as EID or refspec in all doc-strings
+; #todo  -  document use of "ident" in all doc-strings
 (s/defn update :- { s/Any s/Any }
-  "Returns tx-data to update an existing entity  Usage:
+  "Returns the tx-data to update an existing entity  Usage:
 
     (d/transact *conn* [
       (update entity-spec attr-val-map)
@@ -187,7 +188,7 @@
     (into {:db/id entity-spec} attr-val-map))
 
 (s/defn retraction :- Vec4
-  "Returns tx-data to retract an attribute-value pair for an entity. Usage:
+  "Returns the tx-data to retract an attribute-value pair for an entity. Usage:
 
     (d/transact *conn* [
       (retraction entity-spec attribute value)
@@ -200,7 +201,7 @@
   [:db/retract entity-spec attribute value] )
 
 (s/defn retraction-entity :- Vec2
-  "Returns tx-data to retract all attribute-value pairs for an entity.  
+  "Returns the tx-data to retract all attribute-value pairs for an entity.  
    
     (d/transact *conn* [
       (retraction-entity entity-spec)
@@ -213,13 +214,19 @@
 
 (s/defn entity :- {s/Keyword s/Any}
   "Eagerly returns an entity's attribute-value pairs in a clojure map.  A simpler, eager version of
-   datomic/entity. "
+   datomic/entity."
   [db-val         :- s/Any  ; #todo
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
+; #todo need test
+(s/defn eids :- [long]
+  "Returns a collection of the EIDs created in a transaction."
+  [tx-result :- TxResult]
+  (vals (grab :tempids tx-result)))
+
 (s/defn txid  :- Eid
-  "Returns the transaction EID for a tx-result"
+  "Returns the EID of a transaction"
   [tx-result]
   (let [datoms  (grab :tx-data tx-result)
         result  (it-> datoms        ; since all datoms in tx have same txid
@@ -232,18 +239,21 @@
         (assert (apply = txids))))
     result ))
 
-(s/defn partition :- s/Keyword
-  "Returns the name (:db/ident value) of a partition in the DB"
+(s/defn partition-name :- s/Keyword
+  "Returns the name of a DB partition (its :db/ident value)"
   [db-val       :- s/Any  ; #todo
    entity-spec  :- EntitySpec ]
   (d/ident db-val (d/part entity-spec)))
 
-(s/defn transactions
-  "Returns a collection of EIDs for all transactions in the DB"
-  [db-val]
-  (d/q  '{:find  [?eid ...]
-          :where [ [?eid :db/txInstant] ] }
-        db-val ))
+(s/defn transactions :- [ {s/Keyword s/Any} ]
+  "Returns a collection of all DB transactions"
+  [db-val :- s/Any ]
+  (let [result-set    (d/q  '{:find  [?eid]
+                              :where [ [?eid :db/txInstant] ] } 
+                            db-val)
+        tx-ents       (for [[eid] result-set]
+                        (entity db-val eid)) ]
+        tx-ents))
 
 ;---------------------------------------------------------------------------------------------------
 
@@ -269,11 +279,8 @@
   [db-val]
   (println "-----------------------------------------------------------------------------")
   (println "Database Transactions")
-  (let [res-2  (for [eid (transactions db-val) ]
-                 (entity db-val eid))
-        res-4  (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
-                     res-2)
-  ]
-    (doseq [it res-4]
+  (let [result    (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
+                        (transactions db-val)) ]
+    (doseq [it result]
       (pprint it))))
 
