@@ -203,8 +203,6 @@
   (spy :msg "Honey is missing" (t/entity (d/db *conn*) honey-eid))
 )
 
-; #todo need a function like swap!, reset!
-; #toto test "scalar get" [?e .] ensure throws if > 1 result (or write qone to do it)
 ; write qset -> (into #{} (d/q ...))
 
 (def dr-no  (it-> (t/new-entity :people { :person/name    "Dr No"
