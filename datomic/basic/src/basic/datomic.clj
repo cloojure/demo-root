@@ -15,15 +15,16 @@
   "Entity ID (EID) type definition"
   Long)
 
+; #todo - clarify in all doc-strings that entity-spec = [EID or lookup-ref]
+(def LookupRef  [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] )
+(def EntitySpec (s/either Eid LookupRef ))
+
 (def TxResult
   "Transaction Result type definition"
   { :db-before    s/Any
     :db-after     s/Any
     :tx-data      s/Any
     :tempids      s/Any } )
-
-(def EntitySpec (s/either long
-                          [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] ))
 
 (def special-attrvals
  "A map that defines the set of permissible values for use in attribute definition.

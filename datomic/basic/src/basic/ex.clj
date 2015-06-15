@@ -19,14 +19,14 @@
 (d/create-database uri)
 (def ^:dynamic *conn* (d/connect uri))
 
-; Create a partition :people (we could namespace like :db.part/people if we wanted)
+; Create a partition named :people (we could namespace it like :db.part/people if we wished)
 (d/transact *conn* [
-  (t/new-partition :people )   
+  (t/new-partition :people )
 ] )
 
 ; Attribute definitions.  The attribute name (it's :db/ident value) is an (optionally namespaced)
 ; keyword of the form <namespace>/<name> or just <name>.  This keyword-name can be anything (it is
-; not predefined anywhere).  
+; not predefined anywhere).
 (d/transact *conn* [
   (t/new-attribute :person/name        :db.type/string        :db.unique/value)
   (t/new-attribute :person/secret-id   :db.type/long          :db.unique/value)
@@ -55,22 +55,22 @@
 
 (d/transact *conn* [
   (t/new-entity { :person/name      "Mephistopheles"
-                  :person/ssn-hell  "123-45-6789" } )
+                  :person/ssn-hell  "666-66-6666" } )
 ] )
 
 ; Add some new attributes. This must be done in a separate tx before we attempt to use the new
 ; attributes.  Having a namespace is optional for the attribute name (it's :db/ident value).
 (d/transact *conn* [
   (t/new-attribute :weapon/type      :db.type/keyword :db.cardinality/many )
-  (t/new-attribute :favorite-weapon  :db.type/keyword ) 
+  (t/new-attribute :favorite-weapon  :db.type/keyword )
 ] )
 
-; Since the name is :db.unique/value, we can use that to update our entities instead of the EID.
-; Since :weapon/type is :db.cardinality/many, we must use a a set to specify multiple values of a
-; single attribute.
+; Since the :person/name attribute is :db.unique/value, we can use a lookup-ref [:person/name
+; <name-str>] as the entity-spec to update our entities instead of the EID.  Since :weapon/type is
+; :db.cardinality/many, we must use a set to specify multiple values in a single update.
 (d/transact *conn* [
   (t/update ; Give James some weapons
-    [:person/name "James Bond"]
+    [:person/name "James Bond"]  ; a lookup-ref
     { :weapon/type        #{ :weapon/gun :weapon/knife :weapon/guile }
       :favorite-weapon    :weapon/gun
       :person/secret-id   007  } ) ; '007' is interpreted as octal -> still 7 (whew!)
@@ -98,10 +98,10 @@
   (pprint (t/entity db-val james-eid))
 )
 
-; Updated James' name. Note that we can use the current value of name for lookup, then add in the
-; new name w/o conflict.
+; Updated James' name. Note that we can use the current value of name in a lookup-ref, then assert
+; the new name w/o conflict.
 (d/transact *conn* [
-  (t/update [:person/name "James Bond"] { :person/name "Bond, James Bond" } )
+  (t/update [:person/name "James Bond"] {:person/name "Bond, James Bond"} )
 ] )
 
 ; James drops his knife...
@@ -112,7 +112,7 @@
 (t/show-db (d/db *conn*))
 
 ; James changes his favorite weapon
-(let [tx-result @(d/transact *conn* [ 
+(let [tx-result @(d/transact *conn* [
                    (t/update james-eid {:favorite-weapon :weapon/guile} ) ] ) ]
   (newline) (println "James changes his favorite weapon - db-before:")
   (t/show-db (grab :db-before tx-result))
@@ -181,33 +181,31 @@
 (newline) (println "Honey pull")
 (spyxx honey-pull)
 
-(let [honey-eid (d/q  '{:find [?e .]  ; scalar result
+; vanquish the devil
+(let [devil-eid (d/q  '{:find [?e .]  ; scalar result
                         :in [$ ?n]
-                        :where [ [?e :person/name ?n] ]
-                       }
-                     (d/db *conn*) "Honey Rider"  )
-      _ (spyxx honey-eid)
-      honey     (t/entity (d/db *conn*) honey-eid)
-      _ (spyxx honey)
-      tx-result @(d/transact *conn* [ (t/retraction-entity honey-eid) ] )
+                        :where [ [?e :person/name ?n] ] }
+                     (d/db *conn*) "Mephistopheles" )
+      _ (spyxx devil-eid)
+      devil     (t/entity (d/db *conn*) devil-eid)
+      _ (spyxx devil)
+      tx-result @(d/transact *conn* [ (t/retraction-entity devil-eid) ] )
   ]
-  (newline) (println "removed honey" )
+  (newline) (println "removed devil" )
   (spyxx tx-result)
   (t/show-db (d/db *conn*))
 
-  ; try to find honey now
-  (spyx honey-eid)
-  (spy :msg "Honey is missing" (t/entity (d/db *conn*) honey-eid))
+  ; try to find devil now
+  (spyx devil-eid)
+  (spy :msg "devil is missing" (t/entity (d/db *conn*) devil-eid))
 )
-
-; write qset -> (into #{} (d/q ...))
 
 (def dr-no  (it-> (t/new-entity :people { :person/name    "Dr No"
                                           :weapon/type    :weapon/guile } )
                   @(d/transact *conn* [it] )
                   (t/eids it)
                   (first it)))
-(newline) 
+(newline)
 (println "Added dr-no  EID:" dr-no "   partition:" (t/partition-name (d/db *conn*) dr-no))
 (t/show-db (d/db *conn*))
 
