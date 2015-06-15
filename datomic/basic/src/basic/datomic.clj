@@ -269,32 +269,3 @@
                         (entity-map db-val eid)) ]
         tx-ents))
 
-;---------------------------------------------------------------------------------------------------
-
-(defn show-db
-  "Display facts about all entities with a :person/name"
-  [db-val]
-  (println "-----------------------------------------------------------------------------")
-    (s/def res-1 :- #{ [Eid] }
-      (into #{}
-        (d/q '{:find  [?e]
-               :where [ [?e :person/name] ]
-              }
-             db-val )))
-    (doseq [it res-1]
-      (let [eid     (first it)
-            map-val (entity-map db-val eid)
-           ]
-        (newline)
-        (pprint map-val))))
-
-(defn show-db-tx
-  "Display all transactions in the DB"
-  [db-val]
-  (println "-----------------------------------------------------------------------------")
-  (println "Database Transactions")
-  (let [result    (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
-                        (transactions db-val)) ]
-    (doseq [it result]
-      (pprint it))))
-

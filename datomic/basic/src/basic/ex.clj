@@ -20,6 +20,7 @@
   "Display facts about all entities with a :person/name"
   [db-val]
   (println "-----------------------------------------------------------------------------")
+  (println "Database people:")
   (let [result-set  (s/validate #{ [t/Eid] }
                       (into #{} (d/q '{:find  [?e]
                                        :where [ [?e :person/name] ] }
@@ -32,10 +33,10 @@
   "Display all transactions in the DB"
   [db-val]
   (println "-----------------------------------------------------------------------------")
-  (println "Database Transactions")
-  (let [result    (into (sorted-set-by #(.compareTo (grab :db/txInstant %1) (grab :db/txInstant %2) ))
-                        (t/transactions db-val)) ]
-    (doseq [it result]
+  (println "Database Transactions:")
+  (let [all-tx      (t/transactions db-val)
+        sorted-tx   (sort-by #(grab :db/txInstant %) all-tx) ]
+    (doseq [it sorted-tx]
       (pprint it))))
 
 ;---------------------------------------------------------------------------------------------------
@@ -107,7 +108,7 @@
 ] )
 
 (newline) (println "initial db")
-(t/show-db (d/db *conn*))
+(show-db (d/db *conn*))
 (newline) (println "James 'e' value:")
 (spyxx james-eid)
 
@@ -134,15 +135,15 @@
   (t/retraction [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
 ] )
 (newline) (println "James dropped knife + new name")
-(t/show-db (d/db *conn*))
+(show-db (d/db *conn*))
 
 ; James changes his favorite weapon
 (let [tx-result @(d/transact *conn* [
                    (t/update james-eid {:favorite-weapon :weapon/guile} ) ] ) ]
   (newline) (println "James changes his favorite weapon - db-before:")
-  (t/show-db (grab :db-before tx-result))
+  (show-db (grab :db-before tx-result))
   (newline) (println "James changes his favorite weapon - db-after:")
-  (t/show-db (grab :db-after  tx-result))
+  (show-db (grab :db-after  tx-result))
   (newline) (println "James changes his favorite weapon - datoms:")
   (pprint (grab :tx-data   tx-result))
   (newline) (println "James changes his favorite weapon - tempids")
@@ -192,8 +193,8 @@
   (println "Temp IDs:")
   (spyxx (grab :tempids tx-result))
 )
-(t/show-db    (d/db *conn*))
-(t/show-db-tx (d/db *conn*))
+(show-db    (d/db *conn*))
+(show-db-tx (d/db *conn*))
 
 ; Give Honey a knife
 (d/transact *conn* [ (t/update [:person/name "Honey Rider"] {:weapon/type :weapon/knife} ) ] )
@@ -218,7 +219,7 @@
   ]
   (newline) (println "removed devil" )
   (spyxx tx-result)
-  (t/show-db (d/db *conn*))
+  (show-db (d/db *conn*))
 
   ; try to find devil now
   (spyx devil-eid)
@@ -232,7 +233,7 @@
                   (first it)))
 (newline)
 (println "Added dr-no  EID:" dr-no "   partition:" (t/partition-name (d/db *conn*) dr-no))
-(t/show-db (d/db *conn*))
+(show-db (d/db *conn*))
 
 ; (println "exit")
 ; (System/exit 1)
