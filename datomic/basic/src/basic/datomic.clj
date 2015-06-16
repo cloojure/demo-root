@@ -269,7 +269,7 @@
   [db-val :- s/Any]
   (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
     (for [datom tx-datoms]
-        (entity-map db-val (grab :e (datom-map datom)))))) ; (first datom) crashes
+      (entity-map db-val (:e datom)))))
 
 ; #todo need test
 (s/defn eids :- [long]
