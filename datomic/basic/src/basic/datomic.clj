@@ -35,6 +35,8 @@
     :tx-data      s/Any
     :tempids      s/Any } )
 
+(def KeyMap {s/Keyword s/Any} )
+
 (def Datom 
   "The raw Datom type (a 5-tuple) returned by (d/datoms ...)"
 ; [ eid  attr-eid  value  tx-eid  added? ]   <- interpretation
@@ -93,7 +95,7 @@
 ;---------------------------------------------------------------------------------------------------
 ; Core functions
 
-(s/defn new-partition :- {s/Keyword s/Any}
+(s/defn new-partition :- KeyMap
   "Returns the tx-data to create a new partition in the DB. Usage:
 
     (d/transact *conn* [
@@ -107,7 +109,7 @@
     :db.install/_partition    :db.part/db   ; ceremony so Datomic "installs" our new partition
     :db/ident                 ident } )     ; the "name" of our new partition
 
-(s/defn new-attribute    :- {s/Keyword s/Any}
+(s/defn new-attribute    :- KeyMap
   "Returns the tx-data to create a new attribute in the DB.  Usage:
 
     (d/transact *conn* [
@@ -160,7 +162,7 @@
   ))
 
 ; #todo need test
-(s/defn new-entity  :- { s/Any s/Any }
+(s/defn new-entity  :- KeyMap
   "Returns the tx-data to create a new entity in the DB. Usage:
 
     (d/transact *conn* [
@@ -170,14 +172,14 @@
 
    where attr-val-map is a Clojure map containing attribute-value pairs to be added to the new
    entity."
-  ( [ attr-val-map    :- {s/Any s/Any} ]
+  ( [ attr-val-map    :- KeyMap ]
    (new-entity :db.part/user attr-val-map))
   ( [ -partition      :- s/Keyword
-      attr-val-map    :- {s/Any s/Any} ]
+      attr-val-map    :- KeyMap ]
     (into {:db/id (d/tempid -partition) } attr-val-map)))
 
 ; #todo need test
-(s/defn new-enum :- { s/Any s/Any }   ; #todo add namespace version
+(s/defn new-enum :- KeyMap   ; #todo add namespace version
   "Returns the tx-data to create a new enumeration entity in the DB. Usage:
 
     (d/transact *conn* [
@@ -192,7 +194,7 @@
 
 ; #todo  -  document entity-spec as EID or refspec in all doc-strings
 ; #todo  -  document use of "ident" in all doc-strings
-(s/defn update :- { s/Any s/Any }
+(s/defn update :- KeyMap
   "Returns the tx-data to update an existing entity  Usage:
 
     (d/transact *conn* [
@@ -204,7 +206,7 @@
    retracted prior to the insertion of the new value. For attributes with :db.cardinality/many, the
    new value will be accumulated into the current set of values.  "
   [entity-spec    :- EntitySpec
-   attr-val-map   :- {s/Any s/Any} ]
+   attr-val-map   :- KeyMap ]
     (into {:db/id entity-spec} attr-val-map))
 
 (s/defn retraction :- Vec4
@@ -236,14 +238,14 @@
 ;---------------------------------------------------------------------------------------------------
 ; Informational functions
 
-(s/defn entity-map :- {s/Keyword s/Any}
+(s/defn entity-map :- KeyMap
   "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
   [db-val         :- s/Any  ; #todo
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
 ; #todo - need test
-(s/defn datom-map :- {s/Keyword s/Any}
+(s/defn datom-map :- KeyMap
   "Returns a plain Clojure map of an datom's attribute-value pairs. A datom map is structured as:
       { :e        entity id (eid)
         :a        attribute eid
@@ -264,7 +266,7 @@
    entity-spec  :- EntitySpec ]
   (d/ident db-val (d/part entity-spec)))
 
-(s/defn transactions :- [ {s/Keyword s/Any} ]
+(s/defn transactions :- [ KeyMap ]
   "Returns a lazy-seq of entity-maps for all DB transactions"
   [db-val :- s/Any]
   (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
