@@ -279,7 +279,7 @@
 
 (s/defn txid  :- Eid
   "Returns the EID of a transaction"
-  [tx-result]
+  [tx-result :- TxResult]
   (let [datoms  (grab :tx-data tx-result)
         txids   (mapv :tx datoms)
         _ (assert (apply = txids))  ; all datoms in tx have same txid
