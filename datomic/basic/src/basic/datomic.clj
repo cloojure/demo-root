@@ -1,7 +1,7 @@
 (ns basic.datomic
   (:refer-clojure :exclude [update partition])
   (:require [datomic.api      :as d]
-            [cooljure.core    :refer [truthy? safe-> it-> spyx spyxx grab]]
+            [cooljure.core    :refer [truthy? safe-> it-> spy spyx spyxx grab]]
             [schema.core      :as s] )
   (:use   clojure.pprint)
   (:gen-class))
@@ -241,6 +241,23 @@
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
+; #todo - switch to defrecord
+; #todo - need test
+(s/defn datom-map :- {s/Keyword s/Any}
+  "Returns a plain Clojure map of an datom's attribute-value pairs. A datom map is structured as:
+      { :e        entity id (eid)
+        :a        attribute eid
+        :v        value
+        :tx       transaction eid
+        :added    true/false (assertion/retraction) }
+  "
+  [datom :- s/Any] ; #todo
+  { :e      (:e     datom)
+    :a      (:a     datom)
+    :v      (:v     datom)
+    :tx     (:tx    datom)
+    :added  (:added datom) } )
+
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
   [db-val       :- s/Any  ; #todo
@@ -251,8 +268,8 @@
   "Returns a lazy-seq of entity-maps for all DB transactions"
   [db-val :- s/Any]
   (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
-    (for [datom tx-datoms]  ; datom is [e a v t added?]
-        (entity-map db-val (:e datom))))) ; (first datom) crashes
+    (for [datom tx-datoms]
+        (entity-map db-val (grab :e (datom-map datom)))))) ; (first datom) crashes
 
 ; #todo need test
 (s/defn eids :- [long]
@@ -266,10 +283,11 @@
   (let [datoms  (grab :tx-data tx-result)
         result  (it-> datoms        ; since all datoms in tx have same txid
                       (first it)    ; we only need the first datom
-                      (nth it 3))   ; tx EID is at index 3 in [e a v tx added] vector
+                      (grab :tx (datom-map it)))
   ] 
-    (when false  ; for testing
-      (let [txids   (for [it datoms] (nth it 3)) ]
+    (newline)
+    (when true  ; for testing
+      (let [txids   (for [it datoms] (grab :tx (datom-map it))) ]
         (spyxx txids)
         (assert (apply = txids))))
     result ))
