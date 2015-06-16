@@ -281,14 +281,9 @@
   "Returns the EID of a transaction"
   [tx-result]
   (let [datoms  (grab :tx-data tx-result)
-        result  (it-> datoms        ; since all datoms in tx have same txid
-                      (first it)    ; we only need the first datom
-                      (grab :tx (datom-map it)))
+        txids   (mapv :tx datoms)
+        _ (assert (apply = txids))  ; all datoms in tx have same txid
+        result  (first txids)       ; we only need the first datom
   ] 
-    (newline)
-    (when true  ; for testing
-      (let [txids   (for [it datoms] (grab :tx (datom-map it))) ]
-        (spyxx txids)
-        (assert (apply = txids))))
     result ))
 
