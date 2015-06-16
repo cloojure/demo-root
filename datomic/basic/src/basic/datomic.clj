@@ -38,7 +38,8 @@
 (def Datom 
   "The raw Datom type (a 5-tuple) returned by (d/datoms ...)"
 ; [ eid  attr-eid  value  tx-eid  added? ]   <- interpretation
-  [ Eid       Eid  s/Any     Eid  s/Bool ] ; <- actual types
+; [ :e        :a    :v      :tx  :added  ]   <- "map" keys
+  [ Eid       Eid  s/Any    Eid  s/Bool  ] ; <- actual types
 )
 
 (def special-attrvals
@@ -241,7 +242,6 @@
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
-; #todo - switch to defrecord
 ; #todo - need test
 (s/defn datom-map :- {s/Keyword s/Any}
   "Returns a plain Clojure map of an datom's attribute-value pairs. A datom map is structured as:
