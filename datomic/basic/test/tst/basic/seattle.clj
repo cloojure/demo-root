@@ -125,7 +125,28 @@
                                        "Capitol Hill Housing"
                                        "CHS Capitol Hill Seattle Blog"
                                        "Capitol Hill Triangle"] ))
+
+        ; Find all tuples of [community-eid community-name] and collect results into a regular
+        ; Clojure set (the native Datomic return type is set-like but not a Clojure set, so it
+        ; doesn't work right with Prismatic Schema specs)
+        comms-and-names     (s/validate  #{ [ (s/one t/Eid "comm-eid") (s/one s/Str "comm-name") ] } ; verify expected shape
+                              (t/result-set
+                                (d/q '{:find  [?comm-eid ?comm-name] ; <- shape of output RS tuples
+                                       :where [ [?comm-eid :community/name ?comm-name ] ] } 
+                                     db-val )))
+        _ (assert (= 150 (spyx (count comms-and-names))))   ; all communities
+        ; Pull out just the community names (w/o EID) & remove duplicate names.
+        names-only          (s/validate  #{s/Str} ; verify expected shape
+                              (into (sorted-set) (map second comms-and-names)))
+        _ (assert (= 132 (count names-only)))   ; unique names
+        _ (is (= (take 5 names-only)  [ "15th Ave Community"
+                                        "Admiral Neighborhood Association"
+                                        "Alki News"
+                                        "Alki News/Alki Community Council"
+                                        "All About Belltown" ] ))
+
   ]
+
 
   ))
 

@@ -1,16 +1,4 @@
 
-; Find all communities and collect results into a regular Clojure set (the native Datomic return
-; type is set-like but not a Clojure set, so it doesn't work right with Prismatic Schema specs)
-(newline)
-(print "comms & names: ")   ; a set of tuples
-(s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
-  (into #{} 
-    (d/q '[:find ?c ?n 
-           :where [?c :community/name ?n]] 
-         db-val )))
-(assert (= 150 (spyx (count com-and-names))))
-(pprint com-and-names)
-
 ; Some name strings are used by more than one entity
 (def names-set
   (reduce   (fn [accum newval] (conj accum (second newval)))
