@@ -47,11 +47,18 @@
         _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
                                 :community/orgtype  :community/type :community/url] ))
         entity-maps   (for [[eid] rs2]  ; destructure as we loop
-                        (t/entity-map db-val eid))  ; convert to clojure map
+                        (t/entity-map db-val eid))  ; return clojure map from eid
         first-3   (it-> entity-maps
                         (sort-by :community/name it)
-                        (take 3 it)
-                        (map #(assoc % :community/neighborhood {:db/id -1}) it))  ; dummy EID 
+                        (take 3 it))
+
+        ; The value for :community/neighborhood is datomic.query.EntityMap like {:db/id <eid>},
+        ; where the <eid> is volatile.  We must replace with a dummy <eid> value, and convert to a
+        ; plain clojure map.
+        sample-comm-nbr  (:community/neighborhood (first entity-maps))
+        _ (is (= datomic.query.EntityMap (class sample-comm-nbr)))
+        first-3   (map #(assoc % :community/neighborhood {:db/id -1})
+                       first-3)
     ]
       (is (=  first-3
               [ {:community/category #{"15th avenue residents"},
