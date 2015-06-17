@@ -100,10 +100,10 @@
                                entity-maps )
         results           (take 5 (sort comm-nbr-names))
     ]
-      (is (= results  [ ["15th Ave Community"                 "Capitol Hill"              ]
-                        ["Admiral Neighborhood Association"   "Admiral (West Seattle)"    ]
-                        ["Alki News"                          "Alki"                      ]
-                        ["Alki News/Alki Community Council"   "Alki"                      ]
-                        ["All About Belltown"                 "Belltown"                  ] ] ))
+      (is (= results  [ ["15th Ave Community"                 "Capitol Hill"            ]
+                        ["Admiral Neighborhood Association"   "Admiral (West Seattle)"  ]
+                        ["Alki News"                          "Alki"                    ]
+                        ["Alki News/Alki Community Council"   "Alki"                    ]
+                        ["All About Belltown"                 "Belltown"                ] ] ))
   ))
 
