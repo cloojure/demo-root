@@ -68,8 +68,8 @@
   values. Permissible values for other special attributes are defined by a predicate function.  "
   { :db/valueType
       #{ :db.type/keyword   :db.type/string   :db.type/boolean  :db.type/long     :db.type/bigint 
-         :db.type/float     :db.type/double   :db.type/bigdec   :db.type/ref      :db.type/instant  
-         :db.type/uuid      :db.type/uri      :db.type/bytes }
+         :db.type/float     :db.type/double   :db.type/bigdec   :db.type/bytes 
+         :db.type/instant   :db.type/uuid     :db.type/uri      :db.type/ref }
 
     :db/cardinality   #{ :db.cardinality/one :db.cardinality/many }
 
