@@ -35,7 +35,9 @@
 
 (deftest t1
   (let [db-val  (d/db *conn*)
-        rs1     (d/q '[:find ?c :where [?c :community/name]] db-val)
+        rs1     (d/q '{:find  [?c]     ; always prefer the map-query syntax
+                       :where [ [?c :community/name] ] } 
+                     db-val)
         rs2     (s/validate  t/ResultSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
         _ (is (= 150 (count rs1)))
         _ (is (= 150 (count rs2)))
@@ -87,7 +89,9 @@
 (deftest t2
   ; get a list community & neighborhood names
   (let [db-val            (d/db *conn*)
-        rs                (it-> (d/q '[:find ?c :where [?c :community/name]] db-val)
+        rs                (it-> (d/q '{:find  [?c] 
+                                       :where [ [?c :community/name] ] }
+                                     db-val)
                             (t/result-set it))
         entity-maps       (for [[eid] rs]
                             (t/entity-map db-val eid))
