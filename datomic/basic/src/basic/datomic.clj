@@ -245,20 +245,27 @@
   (into (sorted-map) (d/entity db-val entity-spec)))
 
 ; #todo - need test
-(s/defn datom-map :- KeyMap
-  "Returns a plain Clojure map of an datom's attribute-value pairs. A datom map is structured as:
+(s/defn datoms :- [ KeyMap ]
+  "Returns a sequence of Clojure maps of an datom's attribute-value pairs. 
+   A datom map is structured as:
+
       { :e        entity id (eid)
         :a        attribute eid
         :v        value
         :tx       transaction eid
         :added    true/false (assertion/retraction) }
-  "
-  [datom :- s/Any] ; #todo
-  { :e      (:e     datom)
-    :a      (:a     datom)
-    :v      (:v     datom)
-    :tx     (:tx    datom)
-    :added  (:added datom) } )
+
+   Like (d/datoms ...), but returns a seq of plain Clojure maps.  "
+  [db             :- s/Any
+   index          :- s/Keyword
+   & components ]  ; #todo
+  (let [datoms  (apply d/datoms db index components) ]
+    (for [datom datoms]
+      { :e      (:e     datom)
+        :a      (:a     datom)
+        :v      (:v     datom)
+        :tx     (:tx    datom)
+        :added  (:added datom) } )))
 
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
@@ -269,7 +276,7 @@
 (s/defn transactions :- [ KeyMap ]
   "Returns a lazy-seq of entity-maps for all DB transactions"
   [db-val :- s/Any]
-  (let [tx-datoms (d/datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
+  (let [tx-datoms (datoms db-val :aevt :db/txInstant) ] ; all datoms with attr :db/txInstant
     (for [datom tx-datoms]
       (entity-map db-val (:e datom)))))
 
