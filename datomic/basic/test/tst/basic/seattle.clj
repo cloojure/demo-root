@@ -82,8 +82,7 @@
                  :community/neighborhood {:db/id -1}
                  :community/orgtype :community.orgtype/community,
                  :community/type #{:community.type/email-list},
-                 :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))
-  ))
+                 :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))))
 
 (deftest t2
   ; Find all communities (any entity with a :community/name attribute), then return a list of tuples
@@ -101,10 +100,10 @@
                                entity-maps )
         results           (take 5 (sort comm-nbr-names))
     ]
-      (is (= results  [ ["15th Ave Community" "Capitol Hill"]
-                        ["Admiral Neighborhood Association" "Admiral (West Seattle)"]
-                        ["Alki News" "Alki"]
-                        ["Alki News/Alki Community Council" "Alki"]
-                        ["All About Belltown" "Belltown"] ] ))
+      (is (= results  [ ["15th Ave Community"                 "Capitol Hill"              ]
+                        ["Admiral Neighborhood Association"   "Admiral (West Seattle)"    ]
+                        ["Alki News"                          "Alki"                      ]
+                        ["Alki News/Alki Community Council"   "Alki"                      ]
+                        ["All About Belltown"                 "Belltown"                  ] ] ))
   ))
 
