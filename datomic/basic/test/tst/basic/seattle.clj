@@ -1,7 +1,7 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx it-> ]]
+            [cooljure.core    :refer [spyx spyxx it-> safe-> ]]
             [basic.datomic    :as t]
   )
   (:use clojure.pprint
@@ -33,7 +33,7 @@
     )))
 
 
-(deftest basic ; entity api
+(deftest t1
   (let [db-val  (d/db *conn*)
         rs1     (d/q '[:find ?c :where [?c :community/name]] db-val)
         rs2     (s/validate  t/ResultSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
@@ -42,8 +42,9 @@
         _ (is (= java.util.HashSet                (class rs1)))
         _ (is (= clojure.lang.PersistentHashSet   (class rs2)))
         _ (is (s/validate #{ [ t/Eid ] } rs2))
-        eid-1 (s/validate t/Eid (ffirst rs2))
-        entity (s/validate t/KeyMap (t/entity-map db-val eid-1))
+
+        eid-1   (s/validate t/Eid (ffirst rs2))
+        entity  (s/validate t/KeyMap (t/entity-map db-val eid-1))
         _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
                                 :community/orgtype  :community/type :community/url] ))
         entity-maps   (for [[eid] rs2]  ; destructure as we loop
@@ -81,5 +82,26 @@
                  :community/orgtype :community.orgtype/community,
                  :community/type #{:community.type/email-list},
                  :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))
+  ))
+
+(deftest t2
+  ; get a list community & neighborhood names
+  (let [db-val            (d/db *conn*)
+        rs                (it-> (d/q '[:find ?c :where [?c :community/name]] db-val)
+                            (t/result-set it))
+        entity-maps       (for [[eid] rs]
+                            (t/entity-map db-val eid))
+        comm-nbr-names    (map #(let [entity-map  %
+                                      comm-name   (safe-> entity-map :community/name)
+                                      nbr-name    (safe-> entity-map :community/neighborhood :neighborhood/name) ]
+                                  [comm-name nbr-name] )
+                               entity-maps )
+        results           (take 5 (sort comm-nbr-names))
+    ]
+      (is (= results  [ ["15th Ave Community" "Capitol Hill"]
+                        ["Admiral Neighborhood Association" "Admiral (West Seattle)"]
+                        ["Alki News" "Alki"]
+                        ["Alki News/Alki Community Council" "Alki"]
+                        ["All About Belltown" "Belltown"] ] ))
   ))
 

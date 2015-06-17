@@ -1,48 +1,4 @@
 
-(newline)
-(spyxx e-results)
-(spyxx (first e-results))
-
-(newline)
-(def x1  (ffirst e-results))
-(spyxx  x1)
-(s/def x2  :- datomic.query.EntityMap
-  (d/entity db-val x1))
-(spyxx  x2)
-; (s/validate Map x2)                     ; fails
-; (s/validate {s/Any s/Any} x2)           ; fails
-(s/validate {s/Any s/Any} (into {} x2))   ; ok
-
-(newline)
-(def x3  (:community/name x2))
-(spyxx x3)
-(spyxx x2)
-(def x2b (into {} x2))
-(spyxx x2b)
-
-;-----------------------------------------------------------------------------
-; pull api
-(def TupleMap     [ {s/Any s/Any} ] )
-
-(s/def pull-results  :- [TupleMap]
-  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] 
-       db-val))
-(newline)
-(spyx (count pull-results))
-(spyxx pull-results)
-(pprint (ffirst pull-results))
-
-;-----------------------------------------------------------------------------
-; back to entity api
-(newline)
-(println "Community & neighborhood names:")
-(pprint (map #(let [entity      (s/validate datomic.query.EntityMap
-                                  (d/entity db-val (first %)))
-                    comm-name   (safe-> entity :community/name)
-                    nbr-name    (safe-> entity :community/neighborhood :neighborhood/name) ]
-                [comm-name nbr-name] )
-          e-results ))
-
 ; for the first community, get its neighborhood, then for that neighborhood, get all its
 ; communities, and print out their names
 (s/def community      :- datomic.query.EntityMap
@@ -468,4 +424,16 @@
 (println "Retracting 'free stuff' for belltown")
 @(d/transact *conn* [ [:db/retract belltown-id-dot
                      :community/category "free stuff"] ] )    ; tuple syntax
+
+;-----------------------------------------------------------------------------
+; pull api
+(def TupleMap     [ {s/Any s/Any} ] )
+
+(s/def pull-results  :- [TupleMap]
+  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] 
+       db-val))
+(newline)
+(spyx (count pull-results))
+(spyxx pull-results)
+(pprint (ffirst pull-results))
 
