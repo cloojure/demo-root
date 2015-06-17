@@ -91,14 +91,15 @@
         rs                (d/q '{:find  [?c] 
                                  :where [ [?c :community/name] ] }
                                db-val)    ; we don't always need (t/result-set (d/q ...))
-        entity-maps       (for [[eid] rs]
-                            (t/entity-map db-val eid))
+        entity-maps       (sort-by :community/name 
+                            (for [[eid] rs]
+                              (t/entity-map db-val eid)))
         comm-nbr-names    (map #(let [entity-map  %
                                       comm-name   (safe-> entity-map :community/name)
                                       nbr-name    (safe-> entity-map :community/neighborhood :neighborhood/name) ]
                                   [comm-name nbr-name] )
                                entity-maps )
-        results           (take 5 (sort comm-nbr-names))
+        results           (take 5 comm-nbr-names)
   ]
       (is (= results  [ ["15th Ave Community"                 "Capitol Hill"            ]
                         ["Admiral Neighborhood Association"   "Admiral (West Seattle)"  ]
