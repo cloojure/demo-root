@@ -1,12 +1,4 @@
 
-; NOTE: the "entity" and the "entity ID" (EID) are the same thing
-;-----------------------------------------------------------------------------
-; entity api
-(def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
-(spyx (count e-results))
-(spyx (class e-results))
-(s/validate  #{ [ (s/one t/Eid "x") ] }  (into #{} e-results))
-
 (def eid-1 (ffirst e-results))
 (spyxx eid-1)
 (def entity (d/entity db-val eid-1))

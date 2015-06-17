@@ -4,6 +4,7 @@
             [cooljure.core    :refer [truthy? safe-> it-> spy spyx spyxx grab]]
             [schema.core      :as s] )
   (:use   clojure.pprint)
+  (:import [java.util HashSet] )
   (:gen-class))
 
 ;---------------------------------------------------------------------------------------------------
@@ -30,13 +31,27 @@
    either an EID or a LookupRef."
   (s/either Eid LookupRef))
 
+(def DatomMap
+  "The Clojure map representation of a Datom."
+  { :e Eid  :a Eid  :v s/Any  :tx Eid  :added s/Bool } )
+
 (def TxResult
   "A map returned by a successful transaction. Contains the keys 
    :db-before, :db-after, :tx-data, and :tempids"
-  { :db-before    s/Any
-    :db-after     s/Any
-    :tx-data      s/Any
-    :tempids      s/Any } )
+  { :db-before    datomic.db.Db
+    :db-after     datomic.db.Db
+    :tx-data      [s/Any]  ; #todo (seq of datom)
+    :tempids      Map } )  ; #todo
+
+(def ResultSet 
+  "The result of any Datomic using the Entity API is logically a hash-set of tuples (vectors).  
+   The contents and order of each tuple is determined by the find clause:
+
+        ----- query -----                         ----- tuples -----
+      (d/q '{:find [?e ?name ?age] ...)     ->    [?e ?name ?age] 
+   
+   "
+  #{ [s/Any] } )
 
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
@@ -232,15 +247,16 @@
 ;---------------------------------------------------------------------------------------------------
 ; Informational functions
 
+(s/defn result-set :- ResultSet
+  "Returns a ResultSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
+  [raw-resultset :- java.util.HashSet]
+  (into #{} raw-resultset))
+
 (s/defn entity-map :- KeyMap
   "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
   [db-val         :- datomic.db.Db
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
-
-(def DatomMap
-  "The Clojure map representation of a Datom."
-  { :e Eid  :a Eid  :v s/Any  :tx Eid  :added s/Bool } )
 
 ; #todo - need test
 (s/defn datom-map :- DatomMap

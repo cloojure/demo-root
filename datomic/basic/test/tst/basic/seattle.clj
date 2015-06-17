@@ -22,16 +22,11 @@
     (let [uri           "datomic:mem://seattle"
           _ (d/create-database uri)
           conn          (d/connect uri)
-
           schema-tx     (read-string (slurp "samples/seattle/seattle-schema.edn"))
-          _ (pprint schema-tx)
-          tx-result     (s/validate t/TxResult @(d/transact conn schema-tx))
-          _ (pprint tx-result)
           data-tx       (read-string (slurp "samples/seattle/seattle-data0.edn"))
-          _ @(d/transact conn schema-tx)
-          _ @(d/transact conn data-tx)
-
     ]
+      (s/validate t/TxResult @(d/transact conn schema-tx))
+      (s/validate t/TxResult @(d/transact conn data-tx))
       (binding [*conn* conn]
         (tst-fn))
       (d/delete-database uri)
@@ -41,5 +36,15 @@
 (deftest dummy
   (let [db-val    (d/db *conn*) ]
     (spyxx db-val)
-    (is true)))
+
+    ; entity api
+    (let [rs1     (d/q '[:find ?c :where [?c :community/name]] db-val)
+          rs2     (s/validate  t/ResultSet  (t/result-set rs1))
+    ]
+      (spyx (count rs1))
+      (spyx (class rs1))
+      (spyx (count rs2))
+      (spyx (class rs2))
+
+      (is true))))
 
