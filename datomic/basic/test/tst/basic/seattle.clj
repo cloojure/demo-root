@@ -55,32 +55,33 @@
                         (sort-by :community/name it)
                         (take 3 it))
 
-        ; The value for :community/neighborhood is datomic.query.EntityMap like {:db/id <eid>},
-        ; where the <eid> is volatile.  We must replace with a dummy <eid> value, and convert to a
-        ; plain clojure map.
+        ; The value for :community/neighborhood is another entity (datomic.query.EntityMap) like {:db/id <eid>},
+        ; where the <eid> is volatile.  Replace this degenerate & volatile value with a plain clojure map like
+        ; { :neighborhood/name <some-string> }
         sample-comm-nbr  (:community/neighborhood (first entity-maps))
         _ (is (= datomic.query.EntityMap (class sample-comm-nbr)))
-        first-3   (map #(assoc % :community/neighborhood {:db/id -1})
+        first-3   (map #(assoc % :community/neighborhood 
+                                   {:neighborhood/name (-> % :community/neighborhood :neighborhood/name) } )
                        first-3)
     ]
       (is (=  first-3
               [ {:community/category #{"15th avenue residents"},
                  :community/name "15th Ave Community",
-                 :community/neighborhood {:db/id -1},
+                 :community/neighborhood {:neighborhood/name "Capitol Hill"}
                  :community/orgtype :community.orgtype/community,
                  :community/type #{:community.type/email-list},
                  :community/url "http://groups.yahoo.com/group/15thAve_Community/"}
 
                 {:community/category #{"neighborhood association"},
                  :community/name "Admiral Neighborhood Association",
-                 :community/neighborhood {:db/id -1},
+                 :community/neighborhood {:neighborhood/name "Admiral (West Seattle)"}
                  :community/orgtype :community.orgtype/community,
                  :community/type #{:community.type/email-list},
                  :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"}
 
                 {:community/category #{"members of the Alki Community Council and residents of the Alki Beach neighborhood"},
                  :community/name "Alki News",
-                 :community/neighborhood {:db/id -1},
+                 :community/neighborhood {:neighborhood/name "Alki"}
                  :community/orgtype :community.orgtype/community,
                  :community/type #{:community.type/email-list},
                  :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))
