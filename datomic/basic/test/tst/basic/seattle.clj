@@ -1,7 +1,7 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx]]
+            [cooljure.core    :refer [spyx spyxx it-> ]]
             [basic.datomic    :as t]
   )
   (:use clojure.pprint
@@ -33,18 +33,50 @@
     )))
 
 
-(deftest dummy
-  (let [db-val    (d/db *conn*) ]
-    (spyxx db-val)
-
-    ; entity api
-    (let [rs1     (d/q '[:find ?c :where [?c :community/name]] db-val)
-          rs2     (s/validate  t/ResultSet  (t/result-set rs1))
+(deftest basic ; entity api
+  (let [db-val  (d/db *conn*)
+        rs1     (d/q '[:find ?c :where [?c :community/name]] db-val)
+        rs2     (s/validate  t/ResultSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
+        _ (is (= 150 (count rs1)))
+        _ (is (= 150 (count rs2)))
+        _ (is (= java.util.HashSet                (class rs1)))
+        _ (is (= clojure.lang.PersistentHashSet   (class rs2)))
+        _ (is (s/validate #{ [ t/Eid ] } rs2))
+        eid-1 (s/validate t/Eid (ffirst rs2))
+        _ (spyxx eid-1)
+        entity (s/validate t/KeyMap (t/entity-map db-val eid-1))
+        _ (spyx entity)
+        _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
+                                :community/orgtype  :community/type :community/url] ))
+        entity-maps   (for [[eid] rs2]  ; destructure as we loop
+                        (t/entity-map db-val eid))
+        _ (spyx entity-maps)
+        first-3   (it-> entity-maps
+                        (sort-by :community/name it)
+                        (take 3 it)
+                        (map #(assoc % :community/neighborhood {:db/id -1}) it))  ; dummy EID 
+        _ (spyx first-3)
     ]
-      (spyx (count rs1))
-      (spyx (class rs1))
-      (spyx (count rs2))
-      (spyx (class rs2))
+      (is (=  first-3
+              [ {:community/category #{"15th avenue residents"},
+                 :community/name "15th Ave Community",
+                 :community/neighborhood {:db/id -1},
+                 :community/orgtype :community.orgtype/community,
+                 :community/type #{:community.type/email-list},
+                 :community/url "http://groups.yahoo.com/group/15thAve_Community/"}
 
-      (is true))))
+                {:community/category #{"neighborhood association"},
+                 :community/name "Admiral Neighborhood Association",
+                 :community/neighborhood {:db/id -1},
+                 :community/orgtype :community.orgtype/community,
+                 :community/type #{:community.type/email-list},
+                 :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"}
+
+                {:community/category #{"members of the Alki Community Council and residents of the Alki Beach neighborhood"},
+                 :community/name "Alki News",
+                 :community/neighborhood {:db/id -1},
+                 :community/orgtype :community.orgtype/community,
+                 :community/type #{:community.type/email-list},
+                 :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))
+  ))
 

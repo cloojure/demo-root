@@ -1,11 +1,4 @@
 
-(def eid-1 (ffirst e-results))
-(spyxx eid-1)
-(def entity (d/entity db-val eid-1))
-(spyxx  entity)
-(spyx   (keys entity))
-(spyx   (:community/name entity))
-
 (newline)
 (spyxx e-results)
 (spyxx (first e-results))
