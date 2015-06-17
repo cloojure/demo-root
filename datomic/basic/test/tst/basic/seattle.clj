@@ -100,11 +100,32 @@
                                   [comm-name nbr-name] )
                                entity-maps )
         results           (take 5 comm-nbr-names)
+        _ (is (= results  [ ["15th Ave Community"                 "Capitol Hill"            ]
+                            ["Admiral Neighborhood Association"   "Admiral (West Seattle)"  ]
+                            ["Alki News"                          "Alki"                    ]
+                            ["Alki News/Alki Community Council"   "Alki"                    ]
+                            ["All About Belltown"                 "Belltown"                ] ] ))
+
+        ; for the first community, get its neighborhood, then for that neighborhood, get all its
+        ; communities, and print out their names
+        first-comm                (first entity-maps)
+        _ (is (= (:community/name first-comm) "15th Ave Community"))
+        neighborhood              (s/validate datomic.query.EntityMap
+                                    (safe-> first-comm :community/neighborhood))
+        _ (is (= (:neighborhood/name neighborhood) "Capitol Hill"))
+
+        ; Get list of communities that reference this neighborhood
+        communities               (s/validate #{datomic.query.EntityMap}    ; hash-set is not sorted
+                                    (safe-> neighborhood :community/_neighborhood))
+        ; Pull out their names
+        communities-names         (s/validate [s/Str] (mapv :community/name communities))
+        _ (is (= communities-names    ["Capitol Hill Community Council"     ; names from hash-set are not sorted
+                                       "KOMO Communities - Captol Hill"
+                                       "15th Ave Community"
+                                       "Capitol Hill Housing"
+                                       "CHS Capitol Hill Seattle Blog"
+                                       "Capitol Hill Triangle"] ))
   ]
-      (is (= results  [ ["15th Ave Community"                 "Capitol Hill"            ]
-                        ["Admiral Neighborhood Association"   "Admiral (West Seattle)"  ]
-                        ["Alki News"                          "Alki"                    ]
-                        ["Alki News/Alki Community Council"   "Alki"                    ]
-                        ["All About Belltown"                 "Belltown"                ] ] ))
+
   ))
 

@@ -1,24 +1,4 @@
 
-; for the first community, get its neighborhood, then for that neighborhood, get all its
-; communities, and print out their names
-(s/def community      :- datomic.query.EntityMap
-        (d/entity db-val (ffirst e-results)))
-(s/def neighborhood   :- datomic.query.EntityMap
-        (safe-> community :community/neighborhood))
-(s/def communities    :- #{datomic.query.EntityMap}
-        (safe-> neighborhood :community/_neighborhood ))
-(binding [*print-length* 20]
-  (newline)
-  (println "Community #1")
-  (pprint community)
-  (newline)
-  (println "Community #2")
-  (pprint (d/touch community))
-  (newline)
-  (println "Communities in same neighborhood as first:")
-  (pprint (mapv :community/name communities))
-)
-
 ; Find all communities and collect results into a regular Clojure set (the native Datomic return
 ; type is set-like but not a Clojure set, so it doesn't work right with Prismatic Schema specs)
 (newline)
