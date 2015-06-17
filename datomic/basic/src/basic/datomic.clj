@@ -37,13 +37,6 @@
 
 (def KeyMap {s/Keyword s/Any} )
 
-(def Datom 
-  "The raw Datom type (a 5-tuple) returned by (d/datoms ...)"
-; [ eid  attr-eid  value  tx-eid  added? ]   <- interpretation
-; [ :e        :a    :v      :tx  :added  ]   <- "map" keys
-  [ Eid       Eid  s/Any    Eid  s/Bool  ] ; <- actual types
-)
-
 (def special-attrvals
  "A map that defines the set of permissible values for use in attribute definition.
 
@@ -242,8 +235,12 @@
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
+(def DatomMap
+  "The Clojure map representation of a Datom."
+  { :e Eid  :a Eid  :v s/Any  :tx Eid  :added s/Bool } )
+
 ; #todo - need test
-(s/defn datoms :- [ KeyMap ]
+(s/defn datoms :- [ DatomMap ]
   "Returns a sequence of Clojure maps of an datom's attribute-value pairs. 
    A datom map is structured as:
 
@@ -259,11 +256,12 @@
    & components ]  ; #todo
   (let [datoms  (apply d/datoms db index components) ]
     (for [datom datoms]
-      { :e      (:e     datom)
-        :a      (:a     datom)
-        :v      (:v     datom)
-        :tx     (:tx    datom)
-        :added  (:added datom) } )))
+      (let [result  { :e            (:e     datom)
+                      :a      (long (:a     datom)) ; attr must cast Integer -> Long
+                      :v            (:v     datom)  ; #todo - add tests to catch changes
+                      :tx           (:tx    datom)
+                      :added        (:added datom) } ]
+        result ))))
 
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
