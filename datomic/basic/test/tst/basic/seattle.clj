@@ -87,12 +87,12 @@
   ))
 
 (deftest t2
-  ; get a list community & neighborhood names
+  ; Find all communities (any entity with a :community/name attribute), then return a list of tuples
+  ; like [ community-name & neighborhood-name ]
   (let [db-val            (d/db *conn*)
-        rs                (it-> (d/q '{:find  [?c] 
-                                       :where [ [?c :community/name] ] }
-                                     db-val)
-                            (t/result-set it))
+        rs                (d/q '{:find  [?c] 
+                                 :where [ [?c :community/name] ] }
+                               db-val)    ; we don't always need (t/result-set (d/q ...))
         entity-maps       (for [[eid] rs]
                             (t/entity-map db-val eid))
         comm-nbr-names    (map #(let [entity-map  %
