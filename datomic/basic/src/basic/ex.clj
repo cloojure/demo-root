@@ -63,10 +63,10 @@
 
 ; enum values
 (d/transact *conn* [
-  (t/new-enum :weapon/gun )
-  (t/new-enum :weapon/knife )
-  (t/new-enum :weapon/guile )
-  (t/new-enum :weapon/curse )
+  (t/new-enum :weapon/gun)
+  (t/new-enum :weapon/knife)
+  (t/new-enum :weapon/guile)
+  (t/new-enum :weapon/curse)
 ] )
 
 ; load 2 antagonists into the db

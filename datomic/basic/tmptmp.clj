@@ -1,34 +1,3 @@
-(ns basic.core
-  (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx]]
-            [schema.core      :as s]
-            [schema.coerce    :as coerce]
-  )
-  (:use   clojure.pprint
-          cooljure.core
-  )
-  (import [java.util Set Map List])
-  (:gen-class))
-
-(set! *print-length* 10)
-
-;-----------------------------------------------------------------------------
-; load data
-(def uri "datomic:mem://seattle")
-
-(d/create-database uri)
-(def conn (d/connect uri))
-
-(def schema-tx  (read-string (slurp "samples/seattle/seattle-schema.edn")))
-@(d/transact conn schema-tx)
-
-(def data-tx    (read-string (slurp "samples/seattle/seattle-data0.edn")))
-; (spyx (first data-tx))
-; (spyx (second data-tx))
-; (spyx (nth data-tx 2))
-@(d/transact conn data-tx)
-(def db-val (d/db conn))
-(spyxx db-val)
 
 ; NOTE: the "entity" and the "entity ID" (EID) are the same thing
 ;-----------------------------------------------------------------------------
@@ -473,8 +442,8 @@
 (spyx (count (d/q communities-query db-val)))
 
 ; submit new data tx
-@(d/transact conn new-data-tx)
-(def db-val-new (d/db conn))
+@(d/transact *conn* new-data-tx)
+(def db-val-new (d/db *conn*))
 
 ; find all communities currently in DB
 (spyx (count (d/q communities-query db-val-new)))
@@ -487,13 +456,13 @@
 
 (newline)
 (println "making :communities partition")
-@(d/transact conn [ {:db/id (d/tempid :db.part/db)
+@(d/transact *conn* [ {:db/id (d/tempid :db.part/db)
                      :db/ident  :communities
                      :db.install/_partition   :db.part/db} ] )
 
 (newline)
 (println "making Easton community")
-@(d/transact conn [ {:db/id (d/tempid :communities)
+@(d/transact *conn* [ {:db/id (d/tempid :communities)
                      :community/name "Easton"} ] )
 
 ;get id for a community, use to transact data
@@ -509,16 +478,9 @@
 
 (newline)
 (println "Adding 'free stuff' for belltown")
-@(d/transact conn [ {:db/id belltown-id-dot
+@(d/transact *conn* [ {:db/id belltown-id-dot
                      :community/category "free stuff"} ] )    ; map syntax
 (println "Retracting 'free stuff' for belltown")
-@(d/transact conn [ [:db/retract belltown-id-dot
+@(d/transact *conn* [ [:db/retract belltown-id-dot
                      :community/category "free stuff"] ] )    ; tuple syntax
 
-
-(defn -main []
-  (newline)
-  (println "main - enter")
-  (println "main - exit")
-  (shutdown-agents)
-)

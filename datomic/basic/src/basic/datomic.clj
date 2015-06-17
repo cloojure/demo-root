@@ -10,6 +10,9 @@
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
+(def Map      {s/Any      s/Any} )
+(def KeyMap   {s/Keyword  s/Any} )
+
 (def Eid
   "Each entity in the DB is uniquely specified its Entity ID (EID).  Indeed, allocation of a unique
    EID is what 'creates' an entity in the DB."
@@ -35,7 +38,13 @@
     :tx-data      s/Any
     :tempids      s/Any } )
 
-(def KeyMap {s/Keyword s/Any} )
+(def Vec1 [ (s/one s/Any "x1") ] )
+(def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
+(def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
+(def Vec4 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") ] )
+(def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
+
+;---------------------------------------------------------------------------------------------------
 
 (def special-attrvals
  "A map that defines the set of permissible values for use in attribute definition.
@@ -76,12 +85,6 @@
   ;   :db/isComponent #{ true false }
   ;   :db/noHistory #{ true false }
   } )
-
-(def Vec1 [ (s/one s/Any "x1") ] )
-(def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
-(def Vec3 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") ] )
-(def Vec4 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") ] )
-(def Vec5 [ (s/one s/Any "x1") (s/one s/Any "x2") (s/one s/Any "x3") (s/one s/Any "x4") (s/one s/Any "x5") ] )
 
 ;---------------------------------------------------------------------------------------------------
 ; Core functions
@@ -231,7 +234,7 @@
 
 (s/defn entity-map :- KeyMap
   "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
-  [db-val         :- s/Any  ; #todo
+  [db-val         :- datomic.db.Db
    entity-spec    :- EntitySpec ]
   (into (sorted-map) (d/entity db-val entity-spec)))
 
@@ -277,7 +280,7 @@
 
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
-  [db-val       :- s/Any  ; #todo
+  [db-val       :- datomic.db.Db
    entity-spec  :- EntitySpec ]
   (d/ident db-val (d/part entity-spec)))
 
