@@ -240,6 +240,24 @@
   { :e Eid  :a Eid  :v s/Any  :tx Eid  :added s/Bool } )
 
 ; #todo - need test
+(s/defn datom-map :- DatomMap
+  "Returns a plain of Clojure map of an datom's attribute-value pairs. 
+   A datom map is structured as:
+
+      { :e        entity id (eid)
+        :a        attribute eid
+        :v        value
+        :tx       transaction eid
+        :added    true/false (assertion/retraction) }
+   "
+  [datom :- s/Any]  ; #todo
+  { :e            (:e     datom)
+    :a      (long (:a     datom)) ; must cast Integer -> Long
+    :v            (:v     datom)  ; #todo - add tests to catch changes
+    :tx           (:tx    datom)
+    :added        (:added datom) } )
+
+; #todo - need test
 (s/defn datoms :- [ DatomMap ]
   "Returns a sequence of Clojure maps of an datom's attribute-value pairs. 
    A datom map is structured as:
@@ -255,13 +273,7 @@
    index          :- s/Keyword
    & components ]  ; #todo
   (let [datoms  (apply d/datoms db index components) ]
-    (for [datom datoms]
-      (let [result  { :e            (:e     datom)
-                      :a      (long (:a     datom)) ; attr must cast Integer -> Long
-                      :v            (:v     datom)  ; #todo - add tests to catch changes
-                      :tx           (:tx    datom)
-                      :added        (:added datom) } ]
-        result ))))
+    (map datom-map datoms)))
 
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
