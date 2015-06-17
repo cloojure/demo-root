@@ -66,11 +66,10 @@
   For each of these special attributes, this map defines the permissible values used for specifying
   user-defined attributes. Most special attributes are defined by a set of permissible keyword
   values. Permissible values for other special attributes are defined by a predicate function.  "
-  {
-    :db/valueType
-      #{ :db.type/keyword :db.type/string :db.type/boolean :db.type/long :db.type/bigint :db.type/float
-         :db.type/double :db.type/bigdec :db.type/ref :db.type/instant :db.type/uuid
-         :db.type/uri :db.type/bytes }
+  { :db/valueType
+      #{ :db.type/keyword   :db.type/string   :db.type/boolean  :db.type/long     :db.type/bigint 
+         :db.type/float     :db.type/double   :db.type/bigdec   :db.type/ref      :db.type/instant  
+         :db.type/uuid      :db.type/uri      :db.type/bytes }
 
     :db/cardinality   #{ :db.cardinality/one :db.cardinality/many }
 
@@ -83,8 +82,7 @@
   ;   :db/fulltext #{ true false }
   ;   :db/isComponent #{ true false }
   ;   :db/noHistory #{ true false }
-  }
-)
+  } )
 
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
