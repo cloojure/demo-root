@@ -43,19 +43,15 @@
         _ (is (= clojure.lang.PersistentHashSet   (class rs2)))
         _ (is (s/validate #{ [ t/Eid ] } rs2))
         eid-1 (s/validate t/Eid (ffirst rs2))
-        _ (spyxx eid-1)
         entity (s/validate t/KeyMap (t/entity-map db-val eid-1))
-        _ (spyx entity)
         _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
                                 :community/orgtype  :community/type :community/url] ))
         entity-maps   (for [[eid] rs2]  ; destructure as we loop
-                        (t/entity-map db-val eid))
-        _ (spyx entity-maps)
+                        (t/entity-map db-val eid))  ; convert to clojure map
         first-3   (it-> entity-maps
                         (sort-by :community/name it)
                         (take 3 it)
                         (map #(assoc % :community/neighborhood {:db/id -1}) it))  ; dummy EID 
-        _ (spyx first-3)
     ]
       (is (=  first-3
               [ {:community/category #{"15th avenue residents"},
