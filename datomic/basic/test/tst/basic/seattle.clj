@@ -243,44 +243,85 @@
              ["Alki News/Alki Community Council"    :region/sw]
              ["All About Belltown"                  :region/w] ] ))))
 
+(deftest t6
+  (let [db-val (d/db *conn*)
+    ; find all communities that are either twitter feeds or facebook pages, by calling a single query with a
+    ; parameterized type value
+    query-map     '{:find [ [?com-name ...] ]  ; collection syntax
+                    :in [$ ?type]
+                    :where [ [?com   :community/name   ?com-name]
+                             [?com   :community/type   ?type] ] }
+    com-twitter   (s/validate [s/Str]
+                    (d/q query-map db-val :community.type/twitter))
+    com-facebook  (s/validate [s/Str]
+                    (d/q query-map db-val :community.type/facebook-page ))
+  ]
+    (is (= 6 (count com-twitter)))
+    (is (= 9 (count com-facebook)))
+
+    (is (= (into #{} com-twitter)  #{ "Magnolia Voice"
+                                      "Columbia Citizens"
+                                      "Discover SLU"
+                                      "Fremont Universe"
+                                      "Maple Leaf Life"
+                                      "MyWallingford" } ))
+
+
+    (is (= (into #{} com-facebook)  #{ "Magnolia Voice"
+                                       "Columbia Citizens"
+                                       "Discover SLU"
+                                       "Fauntleroy Community Association"
+                                       "Eastlake Community Council"
+                                       "Fremont Universe"
+                                       "Maple Leaf Life"
+                                       "MyWallingford"
+                                       "Blogging Georgetown" } ))
+))
+
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
 #_(deftest xxxxxx
-  (let [db-val              (d/db *conn*)
+  (let [db-val (d/db *conn*)
+  ]
+  #_(binding [*print-length* nil] xxxxxxx)
+))
+
+#_(deftest xxxxxx
+  (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
