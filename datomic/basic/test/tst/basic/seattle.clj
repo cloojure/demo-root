@@ -517,20 +517,68 @@
                 "MyWallingford" "Nature Consortium"} )))))
 
 #_(deftest t-00
+  (testing "xxx"
   (let [db-val (d/db *conn*)
   ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+)))
 
 #_(deftest t-00
+  (testing "xxx"
   (let [db-val (d/db *conn*)
   ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+)))
 
 #_(deftest t-00
+  (testing "xxx"
   (let [db-val (d/db *conn*)
   ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db *conn*)
+  ]
+)))
 
