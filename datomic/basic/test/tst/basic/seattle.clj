@@ -184,6 +184,11 @@
                     ["All About Belltown"
                      {:community/category #{"community council"},
                       :community/url "http://www.belltown.org/"}] ] ))
+  ] ))
+
+(deftest t3
+  (let [db-val              (d/db *conn*)
+
   ]
 
 ))
