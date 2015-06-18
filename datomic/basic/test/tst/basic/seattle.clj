@@ -422,12 +422,13 @@
                                  db-val :community.type/website "food" )))
 
                           ; Sample tupelo/q
-                          #_(t/q (t/find ?com-name ?com-cat)   ; rename :find -> :select or :return???
+                          #_(t/q (t/params  db-val  :community.type/website   "food"       )
+                                 (t/in      $       ?com-type                 ?search-word )
+                                 (t/find ?com-name ?com-cat)   ; rename :find -> :select or :return???
                                  (t/where   [?com-eid  :community/name  ?com-name]
                                             [?com-eid  :community/type  ?com-type] )
                                  (t/where   [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]] ] )
-                                 (t/in      $       ?com-type                 ?search-word )
-                                 (t/params  db-val  :community.type/website   "food"       ))
+                              )
   ]
     (is (= 2 (count names-full-join)))
     (is (=  names-full-join

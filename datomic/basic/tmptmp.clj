@@ -2,15 +2,15 @@
 ; find all names of all communities that are twitter feeds, using rules
 (newline)
 (print "com-rules-tw")
-(def rules-twitter '[ [(twitter ?eid)
-                       [?eid :community/type :community.type/twitter]] ] )
+(def rules-twitter '[ [ (twitter ?eid)  ; rule declaration (<name> & <args>)
+                        [?eid :community/type :community.type/twitter]  ; rule match pattern
+                      ] ] )
 (s/def com-rules-tw  :- [s/Str]
   (d/q '[:find [?name ...]
          :in $ %
          :where [?eid :community/name ?name]
                 (twitter ?eid) ]
-       db-val
-       rules-twitter ))
+       db-val rules-twitter ))
 (spyx (count com-rules-tw))
 (pprint com-rules-tw)
 
