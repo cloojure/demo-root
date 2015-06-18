@@ -8,6 +8,7 @@
         clojure.test)
   (:gen-class))
 
+(set! *warn-on-reflection* false)
 (set! *print-length* 5)
 ;
 ;---------------------------------------------------------------------------------------------------
@@ -356,11 +357,74 @@
               ["Leschi Community Council"                     :community.type/email-list  :community.orgtype/community]
               ["Madrona Moms"                                 :community.type/email-list  :community.orgtype/community] } ))))
 
-#_(deftest t-00
+(deftest t-09
   (let [db-val (d/db *conn*)
+    ; find all community names coming before "C" in alphabetical order
+    names-abc     (s/validate [s/Str]
+                    (sort
+                      (d/q  '[:find [?name ...] ; <- collection (vector) result
+                              :where  [?com :community/name ?name]
+                                      [(.compareTo ?name "C") ?result]
+                                      [(neg? ?result)] ]
+                            db-val)))
   ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+    (is (= 25 (count names-abc)))
+    (is (= names-abc
+           [ "15th Ave Community"
+             "Admiral Neighborhood Association"
+             "Alki News"
+             "Alki News/Alki Community Council"
+             "All About Belltown"
+             "All About South Park"
+             "ArtsWest"
+             "At Large in Ballard"
+             "Aurora Seattle"
+             "Ballard Avenue"
+             "Ballard Blog"
+             "Ballard Chamber of Commerce"
+             "Ballard District Council"
+             "Ballard Gossip Girl"
+             "Ballard Historical Society"
+             "Ballard Moms"
+             "Ballard Neighbor Connection"
+             "Beach Drive Blog"
+             "Beacon Hill Alliance of Neighbors"
+             "Beacon Hill Blog"
+             "Beacon Hill Burglaries"
+             "Beacon Hill Community Site"
+             "Bike Works!"
+             "Blogging Georgetown"
+             "Broadview Community Council" ] )))
+
+  (let [db-val (d/db *conn*)
+    ; find the community whose names includes the string "Wallingford"
+    names-wall    (s/validate [s/Str]
+                    (d/q '[:find [?com-name ...]
+                           :where [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]  ; ignore last 2
+;                  Usage:  :where [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
+                          ]
+                         db-val ; <db> is the only param that isn't a literal here
+                    ))
+  ]
+    (is (= 1 (count names-wall)))
+    (is (= names-wall ["KOMO Communities - Wallingford"] )))
+
+  (let [db-val (d/db *conn*)
+    ; find all communities that are websites and that are about
+    ; food, passing in type and search string as parameters
+    names-full-join     (s/validate #{ [s/Str] }
+                          (t/result-set
+                            (d/q '[:find  ?com-name ?com-cat
+                                   :in    $ ?com-type ?search-word
+                                   :where   [?com-eid  :community/name  ?com-name]
+                                            [?com-eid  :community/type  ?com-type]
+                                            [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]]] ]
+                                 db-val :community.type/website "food" )))
+  ]
+    (is (= 2 (count names-full-join)))
+    (is (=  names-full-join
+            #{ ["Community Harvest of Southwest Seattle" "sustainable food"]
+               ["InBallard" "food"] } ))))
 
 #_(deftest t-00
   (let [db-val (d/db *conn*)
