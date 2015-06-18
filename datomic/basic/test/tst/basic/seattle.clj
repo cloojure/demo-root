@@ -152,12 +152,13 @@
         ; ---------- Pull API ----------
         ; find all community names & pull their urls
         comm-names-urls     (s/validate   [ [ (s/one s/Str ":community/name")  
-                                              { :community/category [s/Str]  ; pull returns a vec, not set
+                                              { :community/category [s/Str]  ; pull not return set for cardinality/many
                                                 :community/url s/Str }
                                             ] ]
                               (sort-by first 
-                                (d/q '{:find  [ ?n (pull ?c [:community/category :community/url] ) ] 
-                                       :where [ [?c :community/name ?n] ] }
+                                (d/q '{:find  [ ?comm-name 
+                                                (pull ?comm-eid [:community/category :community/url] ) ]
+                                       :where [ [?comm-eid :community/name ?comm-name] ] }
                                      db-val )))
         _ (is (= 150 (count comm-names-urls)))
 
