@@ -1,36 +1,3 @@
-
-;-----------------------------------------------------------------------------
-; find the names all communities in the NE region
-(newline)
-(print "com-ne: ")
-(s/def com-ne :- [ s/Str ]
-  (d/q '[:find [?name ...]
-         :where [?com   :community/name         ?name]
-                [?com   :community/neighborhood ?nbr]
-                [?nbr   :neighborhood/district  ?dist]
-                [?dist  :district/region        :region/ne] ]
-       db-val ))
-(spyx (count com-ne))
-(pprint com-ne)
-
-;-----------------------------------------------------------------------------
-; find the names and regions of all communities
-(newline)
-(print "com-name-reg ")
-(s/def com-name-reg :- #{ [ (s/one s/Str      "comm-name") 
-                            (s/one s/Keyword  "region-id") ] }
-  ; #awt #todo: re-do using pull api
-  (into #{}
-    (d/q '[:find ?com-name ?reg-id 
-           :where [?com   :community/name           ?com-name]
-                  [?com   :community/neighborhood   ?nbr]
-                  [?nbr   :neighborhood/district    ?dist]
-                  [?dist  :district/region          ?reg]
-                  [?reg   :db/ident                 ?reg-id] ] 
-          db-val )))
-(spyx (count com-name-reg))
-(pprint com-name-reg)
-
 ;-----------------------------------------------------------------------------
 ; find all communities that are either twitter feeds or facebook pages, by calling a single query with a
 ; parameterized type value
