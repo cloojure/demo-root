@@ -134,19 +134,52 @@
                                 (d/q '{:find  [?comm-eid ?comm-name] ; <- shape of output RS tuples
                                        :where [ [?comm-eid :community/name ?comm-name ] ] } 
                                      db-val )))
-        _ (assert (= 150 (spyx (count comms-and-names))))   ; all communities
+        _ (is (= 150 (count comms-and-names)))   ; all communities
         ; Pull out just the community names (w/o EID) & remove duplicate names.
         names-only          (s/validate  #{s/Str} ; verify expected shape
                               (into (sorted-set) (map second comms-and-names)))
-        _ (assert (= 132 (count names-only)))   ; unique names
+        _ (is (= 132 (count names-only)))   ; unique names
         _ (is (= (take 5 names-only)  [ "15th Ave Community"
                                         "Admiral Neighborhood Association"
                                         "Alki News"
                                         "Alki News/Alki Community Council"
                                         "All About Belltown" ] ))
 
+        ; find all community names & pull their urls
+        comm-names-urls     (s/validate   [ [ (s/one s/Str ":community/name")  
+                                              { :community/category [s/Str]  ; pull returns a vec, not set
+                                                :community/url s/Str }
+                                            ] ]
+                              (sort-by first 
+                                (d/q '{:find  [ ?n (pull ?c [:community/category :community/url] ) ] 
+                                       :where [ [?c :community/name ?n] ] }
+                                     db-val )))
+        _ (is (= 150 (count comm-names-urls)))
+
+        ; We must normalize the Pull API results for :community/category from a vector of string [s/Str] to
+        ; a hash-set so we can test for the expected results.
+        normalized-results    (take 5
+                                (for [entry comm-names-urls]
+                                  (update-in entry [1 :community/category]  ; 1 -> get 2nd item (map) in result tuple
+                                             #(into (sorted-set) %))))
+        _ (is (= normalized-results 
+                  [ ["15th Ave Community"
+                     {:community/category #{"15th avenue residents"},
+                      :community/url "http://groups.yahoo.com/group/15thAve_Community/"}]
+                    ["Admiral Neighborhood Association"
+                     {:community/category #{"neighborhood association"},
+                      :community/url
+                      "http://groups.yahoo.com/group/AdmiralNeighborhood/"}]
+                    ["Alki News"
+                     {:community/category #{"members of the Alki Community Council and residents of the Alki Beach neighborhood"},
+                      :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"}]
+                    ["Alki News/Alki Community Council"
+                     {:community/category #{"council meetings" "news"},
+                      :community/url "http://alkinews.wordpress.com/"}]
+                    ["All About Belltown"
+                     {:community/category #{"community council"},
+                      :community/url "http://www.belltown.org/"}] ] ))
   ]
 
-
-  ))
+))
 

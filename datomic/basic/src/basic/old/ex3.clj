@@ -1,4 +1,133 @@
 
+(def data-tx    (read-string (slurp "samples/seattle/seattle-data0.edn")))
+; (spyx (first data-tx))
+; (spyx (second data-tx))
+; (spyx (nth data-tx 2))
+
+@(d/transact conn schema-tx)
+@(d/transact conn data-tx)
+(def db-val (d/db conn))
+(spyxx db-val)
+
+; NOTE: the "entity" and the "entity ID" (EID) are the same thing
+;-----------------------------------------------------------------------------
+; entity api
+(def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
+(spyx (count e-results))
+(spyx (class e-results))
+(s/validate  #{ [ (s/one t/Eid "x") ] }  (into #{} e-results))
+
+(def eid-1 (ffirst e-results))
+(spyxx eid-1)
+(def entity (d/entity db-val eid-1))
+(spyxx  entity)
+(spyx   (keys entity))
+(spyx   (:community/name entity))
+
+(newline)
+(spyxx e-results)
+(spyxx (first e-results))
+
+(newline)
+(def x1  (ffirst e-results))
+(spyxx  x1)
+(s/def x2  :- datomic.query.EntityMap
+  (d/entity db-val x1))
+(spyxx  x2)
+; (s/validate Map x2)                     ; fails
+; (s/validate {s/Any s/Any} x2)           ; fails
+(s/validate {s/Any s/Any} (into {} x2))   ; ok
+
+(newline)
+(def x3  (:community/name x2))
+(spyxx x3)
+(spyxx x2)
+(def x2b (into {} x2))
+(spyxx x2b)
+
+;-----------------------------------------------------------------------------
+; pull api
+(def TupleMap     [ {s/Any s/Any} ] )
+
+(s/def pull-results  :- [TupleMap]
+  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] 
+       db-val))
+(newline)
+(spyx (count pull-results))
+(spyxx pull-results)
+(pprint (ffirst pull-results))
+
+;-----------------------------------------------------------------------------
+; back to entity api
+(newline)
+(println "Community & neighborhood names:")
+(pprint (map #(let [entity      (s/validate datomic.query.EntityMap
+                                  (d/entity db-val (first %)))
+                    comm-name   (safe-> entity :community/name)
+                    nbr-name    (safe-> entity :community/neighborhood :neighborhood/name) ]
+                [comm-name nbr-name] )
+          e-results ))
+
+; for the first community, get its neighborhood, then for that neighborhood, get all its
+; communities, and print out their names
+(s/def community      :- datomic.query.EntityMap
+        (d/entity db-val (ffirst e-results)))
+(s/def neighborhood   :- datomic.query.EntityMap
+        (safe-> community :community/neighborhood))
+(s/def communities    :- #{datomic.query.EntityMap}
+        (safe-> neighborhood :community/_neighborhood ))
+(binding [*print-length* 20]
+  (newline)
+  (println "Community #1")
+  (pprint community)
+  (newline)
+  (println "Community #2")
+  (pprint (d/touch community))
+  (newline)
+  (println "Communities in same neighborhood as first:")
+  (pprint (mapv :community/name communities))
+)
+
+; Find all communities and collect results into a regular Clojure set (the native Datomic return
+; type is set-like but not a Clojure set, so it doesn't work right with Prismatic Schema specs)
+(newline)
+(print "comms & names: ")   ; a set of tuples
+(s/def com-and-names :- #{ [ (s/one long "eid") (s/one s/Str "name") ] }
+  (into #{} 
+    (d/q '[:find ?c ?n 
+           :where [?c :community/name ?n]] 
+         db-val )))
+(assert (= 150 (spyx (count com-and-names))))
+(pprint com-and-names)
+
+; Some name strings are used by more than one entity
+(def names-set
+  (reduce   (fn [accum newval] (conj accum (second newval)))
+            #{}
+            com-and-names))
+(assert (= 132 (spyx (count names-set))))
+(pprint names-set)
+
+; find all communities and specify returning their names into a collection
+(newline)
+(print "All com. names: ")  ; a list of names (w/o duplicates)
+(s/def com-names-coll  :- [s/Str]
+  (d/q '[:find [?n ...] :where [_ :community/name ?n]] 
+       db-val))
+(assert (= 132 (spyx (count com-names-coll))))
+(pprint com-names-coll)
+
+; find all community names & pull their urls
+(newline)
+(print "com. names & urls: ")   ; a list of tuples like [ Str {} ]
+(s/def comm-names-urls :- [ [ (s/one s/Str ":community/name")  
+                              { :community/category [s/Str]  :community/url s/Str }
+                            ] ]
+  (d/q '[:find ?n (pull ?c [:community/category :community/url ]) 
+         :where [?c :community/name ?n] ]
+       db-val))
+(assert (= 150 (spyx (count comm-names-urls))))
+(pprint comm-names-urls)
 
 ;-----------------------------------------------------------------------------
 ; find all categories for the community named "belltown"
@@ -323,8 +452,8 @@
 (spyx (count (d/q communities-query db-val)))
 
 ; submit new data tx
-@(d/transact *conn* new-data-tx)
-(def db-val-new (d/db *conn*))
+@(d/transact conn new-data-tx)
+(def db-val-new (d/db conn))
 
 ; find all communities currently in DB
 (spyx (count (d/q communities-query db-val-new)))
@@ -337,13 +466,13 @@
 
 (newline)
 (println "making :communities partition")
-@(d/transact *conn* [ {:db/id (d/tempid :db.part/db)
+@(d/transact conn [ {:db/id (d/tempid :db.part/db)
                      :db/ident  :communities
                      :db.install/_partition   :db.part/db} ] )
 
 (newline)
 (println "making Easton community")
-@(d/transact *conn* [ {:db/id (d/tempid :communities)
+@(d/transact conn [ {:db/id (d/tempid :communities)
                      :community/name "Easton"} ] )
 
 ;get id for a community, use to transact data
@@ -359,21 +488,16 @@
 
 (newline)
 (println "Adding 'free stuff' for belltown")
-@(d/transact *conn* [ {:db/id belltown-id-dot
+@(d/transact conn [ {:db/id belltown-id-dot
                      :community/category "free stuff"} ] )    ; map syntax
 (println "Retracting 'free stuff' for belltown")
-@(d/transact *conn* [ [:db/retract belltown-id-dot
+@(d/transact conn [ [:db/retract belltown-id-dot
                      :community/category "free stuff"] ] )    ; tuple syntax
 
-;-----------------------------------------------------------------------------
-; pull api
-(def TupleMap     [ {s/Any s/Any} ] )
 
-(s/def pull-results  :- [TupleMap]
-  (d/q '[:find (pull ?c [*]) :where [?c :community/name]] 
-       db-val))
-(newline)
-(spyx (count pull-results))
-(spyxx pull-results)
-(pprint (ffirst pull-results))
-
+(defn -main []
+  (newline)
+  (println "main - enter")
+  (println "main - exit")
+  (shutdown-agents)
+)
