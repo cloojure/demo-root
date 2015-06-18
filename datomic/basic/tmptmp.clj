@@ -1,22 +1,4 @@
 
-; In a single query, find all communities that are twitter feeds or facebook pages, using a list of
-; parameters
-(newline)
-(print "com-twfb")    ; a set of tuples
-(s/def com-twfb :- #{ [ (s/one s/Str      "com-name")
-                        (s/one t/Eid      "comtype-eid")
-                        (s/one s/Keyword  "comtype-id") 
-                      ] }
-  (into #{}
-    (d/q '[:find ?com-name ?com-type ?type-id
-           :in $ [?type ...]
-           :where [?com :community/name ?com-name]
-                  [?com :community/type ?com-type]
-                  [?com-type :db/ident ?type-id] ]
-         db-val [:community.type/twitter :community.type/facebook-page] )))
-(spyx (count com-twfb))
-(pprint com-twfb)
-
 ;-----------------------------------------------------------------------------
 ; Find all communities that are non-commercial email-lists or commercial
 ; web-sites using a list of tuple parameters

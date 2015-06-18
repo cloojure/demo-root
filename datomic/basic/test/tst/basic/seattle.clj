@@ -33,7 +33,7 @@
     )))
 
 
-(deftest t1
+(deftest t-01
   (let [db-val  (d/db *conn*)
         rs1     (d/q '{:find  [?c]     ; always prefer the map-query syntax
                        :where [ [?c :community/name] ] } 
@@ -84,7 +84,7 @@
                  :community/type #{:community.type/email-list},
                  :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))))
 
-(deftest t2
+(deftest t-02
   ; Find all communities (any entity with a :community/name attribute), then return a list of tuples
   ; like [ community-name & neighborhood-name ]
   (let [db-val            (d/db *conn*)
@@ -127,7 +127,7 @@
                                        "Capitol Hill Triangle"] ))
   ] ))
 
-(deftest t2
+(deftest t-02
   (let [db-val              (d/db *conn*)
 
         ; Find all tuples of [community-eid community-name] and collect results into a regular
@@ -187,7 +187,7 @@
                       :community/url "http://www.belltown.org/"}] ] ))
   ] ))
 
-(deftest t3
+(deftest t-03
   (let [db-val              (d/db *conn*)
         ; find the names of all communities that are twitter feeds
         comm-names  (s/validate #{s/Str}
@@ -201,7 +201,7 @@
     (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
                           "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
 
-(deftest t4
+(deftest t-04
   (let [db-val              (d/db *conn*)
         ; find the names all communities in the NE region
         names-ne    (s/validate #{s/Str}
@@ -221,7 +221,7 @@
                         "Maple Leaf Community Council" "Maple Leaf Life"} ))
     (is (= 9 (count names-ne)))))
 
-(deftest t5
+(deftest t-05
   (let [db-val (d/db *conn*)
 ; find the names and regions of all communities
     com-name-reg    (s/validate #{ [ (s/one s/Str      "comm-name") 
@@ -243,7 +243,7 @@
              ["Alki News/Alki Community Council"    :region/sw]
              ["All About Belltown"                  :region/w] ] ))))
 
-(deftest t6
+(deftest t-06
   (let [db-val (d/db *conn*)
     ; find all communities that are either twitter feeds or facebook pages, by calling a single query with a
     ; parameterized type value
@@ -278,49 +278,87 @@
                                        "Blogging Georgetown" } ))
 ))
 
-#_(deftest xxxxxx
+(deftest t-07
+  (let [db-val (d/db *conn*)
+    ; In a single query, find all communities that are twitter feeds or facebook pages, using a list
+    ; of parameters
+    rs      (s/validate #{ [ (s/one s/Str      "com-name")
+                             (s/one t/Eid      "type-eid")
+                             (s/one s/Keyword  "type-ident") ] }
+              (into (sorted-set)
+                (t/result-set
+                  (d/q '{:find [?com-name ?type-eid ?type-ident]
+                         :in   [$ [?type-ident ...]]
+                         :where [ [?com        :community/name ?com-name]
+                                  [?com        :community/type ?type-eid]
+                                  [?type-eid   :db/ident       ?type-ident] ] }
+                       db-val 
+                       [:community.type/twitter :community.type/facebook-page] ))))
+
+                ; Need a linter!  The errors below produces 12069 results!!!
+                ; (d/q '[:find  ?com-name ?com-type ?comm-type-ident
+                ;        :in    $ [?type ...]
+                ;        :where   [?comm        :community/name ?com-name]
+                ;                 [?comm        :community/type ?com-type]
+                ;                 [?comm-type   :db/ident       ?comm-type-ident] ]
+                ;      db-val 
+                ;      [:community.type/twitter :community.type/facebook-page] ))))
+  ]
+    (is (= 15 (count rs)))
+    (is (= rs  #{ ["Blogging Georgetown"                 17592186045423   :community.type/facebook-page]
+                  ["Columbia Citizens"                   17592186045422   :community.type/twitter]
+                  ["Columbia Citizens"                   17592186045423   :community.type/facebook-page]
+                  ["Discover SLU"                        17592186045422   :community.type/twitter]
+                  ["Discover SLU"                        17592186045423   :community.type/facebook-page]
+                  ["Eastlake Community Council"          17592186045423   :community.type/facebook-page]
+                  ["Fauntleroy Community Association"    17592186045423   :community.type/facebook-page]
+                  ["Fremont Universe"                    17592186045422   :community.type/twitter]
+                  ["Fremont Universe"                    17592186045423   :community.type/facebook-page]
+                  ["Magnolia Voice"                      17592186045422   :community.type/twitter]
+                  ["Magnolia Voice"                      17592186045423   :community.type/facebook-page]
+                  ["Maple Leaf Life"                     17592186045422   :community.type/twitter]
+                  ["Maple Leaf Life"                     17592186045423   :community.type/facebook-page]
+                  ["MyWallingford"                       17592186045422   :community.type/twitter]
+                  ["MyWallingford"                       17592186045423   :community.type/facebook-page] } ))
+))
+
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
 ))
 
-#_(deftest xxxxxx
-  (let [db-val (d/db *conn*)
-  ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
-
-#_(deftest xxxxxx
+#_(deftest t-00
   (let [db-val (d/db *conn*)
   ]
   #_(binding [*print-length* nil] xxxxxxx)
