@@ -125,7 +125,10 @@
                                        "Capitol Hill Housing"
                                        "CHS Capitol Hill Seattle Blog"
                                        "Capitol Hill Triangle"] ))
+  ] ))
 
+(deftest t2
+  (let [
         ; Find all tuples of [community-eid community-name] and collect results into a regular
         ; Clojure set (the native Datomic return type is set-like but not a Clojure set, so it
         ; doesn't work right with Prismatic Schema specs)
