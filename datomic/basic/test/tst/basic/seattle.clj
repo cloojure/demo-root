@@ -329,11 +329,11 @@
                            (s/one s/Keyword  "orgtype") 
                          ] }
             (into (sorted-set)
-              (d/q '[:find  ?name ?type ?orgtype
-                     :in    $ [[?type ?orgtype]]
-                     :where   [?com :community/name     ?name]
+              (d/q '{:find  [?name ?type ?orgtype]
+                     :in    [$ [[?type ?orgtype]] ]
+                     :where [ [?com :community/name     ?name]
                               [?com :community/type     ?type]
-                              [?com :community/orgtype  ?orgtype] ]
+                              [?com :community/orgtype  ?orgtype] ] }
                    db-val
                    [ [:community.type/email-list  :community.orgtype/community] 
                      [:community.type/website     :community.orgtype/commercial] ] )))
