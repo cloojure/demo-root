@@ -18,7 +18,7 @@
 
 (def ^:dynamic *conn*)
 
-(use-fixtures :once 
+(use-fixtures :each
   (fn [tst-fn]
     ; Create the database & a connection to it
     (let [uri           "datomic:mem://seattle"
@@ -569,7 +569,7 @@
                         (d/q '[:find [?when ...] 
                                :where [_ :db/txInstant ?when] ]
                              db-val ))))
-      data-tx-inst      (first  tx-instants)  ; last
+      data1-tx-inst      (first  tx-instants)  ; last
       schema-tx-inst    (second tx-instants)  ; next-to-last
 
       ; query to find all communities
@@ -577,7 +577,7 @@
                               :where  [?com :community/name] ]
 
       db-asof-schema  (d/as-of db-val schema-tx-inst)
-      db-asof-data    (d/as-of db-val data-tx-inst)
+      db-asof-data    (d/as-of db-val data1-tx-inst)
 
       _ (is (=   0 (count (d/q communities-query db-asof-schema)))) ; all communities as of schema transaction
       _ (is (= 150 (count (d/q communities-query db-asof-data  )))) ; all communities as of seed data transaction
@@ -585,11 +585,24 @@
       db-since-schema     (d/since db-val schema-tx-inst)
       _ (is (= 150 (count (d/q communities-query db-since-schema)))) ; find all communities since schema transaction
 
-      db-since-data       (d/since db-val data-tx-inst)
-      _ (is (=   0 (count (d/q communities-query db-since-data  )))) ; find all communities since seed data transaction
+      db-since-data1      (d/since db-val data1-tx-inst)
+      _ (is (=   0 (count (d/q communities-query db-since-data1 )))) ; find all communities since seed data transaction
 
-    ]
-)))
+      ; parse additional seed data file
+      new-data-tx   (read-string (slurp "samples/seattle/seattle-data1.edn"))
+
+      db-if-new-data    (:db-after (d/with db-val new-data-tx))
+      _ (is (= 258 (count (d/q communities-query db-if-new-data)))) ; find all communities if new data is loaded
+      _ (is (= 150 (count (d/q communities-query db-val        )))) ; find all communities currently in DB
+
+      ; submit new data tx
+      _ @(d/transact *conn* new-data-tx)
+      db-val-new        (d/db *conn*)
+      db-since-data2    (d/since db-val-new data1-tx-inst)
+
+      _ (is (= 258 (count (d/q communities-query db-val-new))))     ; find all communities currently in DB
+      _ (is (= 108 (count (d/q communities-query db-since-data2)))) ; find all communities since original seed data load transaction
+    ] )))
 
 #_(deftest t-00
   (testing "xxx"

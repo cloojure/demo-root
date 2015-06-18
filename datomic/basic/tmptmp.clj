@@ -1,29 +1,4 @@
 
-
-      ; parse additional seed data file
-      (def new-data-tx (read-string (slurp "samples/seattle/seattle-data1.edn")))
-
-      ; find all communities if new data is loaded
-      (let [db-if-new-data (:db-after (d/with db-val new-data-tx)) ]
-        (spyx (count (d/q communities-query db-if-new-data))))
-
-      ; find all communities currently in DB
-      (spyx (count (d/q communities-query db-val)))
-
-      ; submit new data tx
-      @(d/transact *conn* new-data-tx)
-      (def db-val-new (d/db *conn*))
-
-      ; find all communities currently in DB
-      (spyx (count (d/q communities-query db-val-new)))
-
-      ; find all communities since original seed data load transaction
-      (let [db-since-data (d/since db-val-new data-tx-date)]
-        (spyx (count (d/q communities-query db-since-data))))
-
-  ]
-;-----------------------------------------------------------------------------
-
 (newline)
 (println "making :communities partition")
 @(d/transact *conn* [ {:db/id (d/tempid :db.part/db)
