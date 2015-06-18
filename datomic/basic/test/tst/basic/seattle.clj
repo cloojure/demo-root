@@ -581,8 +581,14 @@
 
       _ (is (=   0 (count (d/q communities-query db-asof-schema)))) ; all communities as of schema transaction
       _ (is (= 150 (count (d/q communities-query db-asof-data  )))) ; all communities as of seed data transaction
-    ]
 
+      db-since-schema     (d/since db-val schema-tx-inst)
+      _ (is (= 150 (count (d/q communities-query db-since-schema)))) ; find all communities since schema transaction
+
+      db-since-data       (d/since db-val data-tx-inst)
+      _ (is (=   0 (count (d/q communities-query db-since-data  )))) ; find all communities since seed data transaction
+
+    ]
 )))
 
 #_(deftest t-00

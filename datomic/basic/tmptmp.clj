@@ -1,12 +1,4 @@
 
-      ; find all communities since schema transaction
-      (let [db-since-schema (d/since db-val schema-tx-date) ]
-        (spyx (count (d/q communities-query db-since-schema))))
-
-      ; find all communities since seed data transaction
-      (let [db-since-data (d/since db-val data-tx-date) ]
-        (spyx (count (d/q communities-query db-since-data))))
-
 
       ; parse additional seed data file
       (def new-data-tx (read-string (slurp "samples/seattle/seattle-data1.edn")))
