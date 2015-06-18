@@ -189,8 +189,21 @@
 
 (deftest t3
   (let [db-val              (d/db *conn*)
-
+        ; find the names of all communities that are twitter feeds
+        comm-names  (s/validate #{s/Str}
+                      (into (sorted-set)
+                        (for [ [name]   (d/q '{:find  [?name]
+                                               :where [ [?comm-eid :community/name ?name]
+                                                        [?comm-eid :community/type :community.type/twitter] ] }
+                                             db-val ) ]
+                          name)))
   ]
+    (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
+                          "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
 
+(deftest t4
+  (let [db-val              (d/db *conn*)
+]
+    ; (binding [*print-length* nil] (pprint comm-names))
 ))
 
