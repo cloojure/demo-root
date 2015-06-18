@@ -362,10 +362,10 @@
     ; find all community names coming before "C" in alphabetical order
     names-abc     (s/validate [s/Str]
                     (sort
-                      (d/q  '[:find [?name ...] ; <- collection (vector) result
-                              :where  [?com :community/name ?name]
-                                      [(.compareTo ?name "C") ?result]
-                                      [(neg? ?result)] ]
+                      (d/q  '{:find [ [?name ...] ] ; <- collection (vector) result
+                              :where [ [?com :community/name ?name]
+                                       [(.compareTo ?name "C") ?result]
+                                       [(neg? ?result)] ] }
                             db-val)))
   ]
     (is (= 25 (count names-abc)))
@@ -399,10 +399,10 @@
   (let [db-val (d/db *conn*)
     ; find the community whose names includes the string "Wallingford"
     names-wall    (s/validate [s/Str]
-                    (d/q '[:find [?com-name ...]
-                           :where [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]  ; ignore last 2
-;                  Usage:  :where [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
-                          ]
+                    (d/q '{:find  [ [?com-name ...] ]
+                           :where [ [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]   ; ignore last 2
+;                  Usage:  :where   [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
+                                  ] }
                          db-val ; <db> is the only param that isn't a literal here
                     ))
   ]
@@ -414,11 +414,11 @@
     ; food, passing in type and search string as parameters
     names-full-join     (s/validate #{ [s/Str] }
                           (t/result-set
-                            (d/q '[:find  ?com-name ?com-cat
-                                   :in    $ ?com-type ?search-word
-                                   :where   [?com-eid  :community/name  ?com-name]
+                            (d/q '{:find [?com-name ?com-cat]   ; rename :find -> :select or :return???
+                                   :where [ [?com-eid  :community/name  ?com-name]
                                             [?com-eid  :community/type  ?com-type]
                                             [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]]] ]
+                                   :in   [$ ?com-type ?search-word] }
                                  db-val :community.type/website "food" )))
   ]
     (is (= 2 (count names-full-join)))
