@@ -275,8 +275,7 @@
                                        "Fremont Universe"
                                        "Maple Leaf Life"
                                        "MyWallingford"
-                                       "Blogging Georgetown" } ))
-))
+                                       "Blogging Georgetown" } ))))
 
 (deftest t-07
   (let [db-val (d/db *conn*)
@@ -302,7 +301,7 @@
                 ;                 [?comm        :community/type ?com-type]
                 ;                 [?comm-type   :db/ident       ?comm-type-ident] ]
                 ;      db-val 
-                ;      [:community.type/twitter :community.type/facebook-page] ))))
+                ;      [:community.type/twitter :community.type/facebook-page] )
   ]
     (is (= 15 (count rs)))
     (is (= rs  #{ ["Blogging Georgetown"                 17592186045423   :community.type/facebook-page]
@@ -319,14 +318,43 @@
                   ["Maple Leaf Life"                     17592186045422   :community.type/twitter]
                   ["Maple Leaf Life"                     17592186045423   :community.type/facebook-page]
                   ["MyWallingford"                       17592186045422   :community.type/twitter]
-                  ["MyWallingford"                       17592186045423   :community.type/facebook-page] } ))
-))
+                  ["MyWallingford"                       17592186045423   :community.type/facebook-page] } ))))
 
-#_(deftest t-00
+(deftest t-08
   (let [db-val (d/db *conn*)
+    ; Find all communities that are non-commercial email-lists or commercial
+    ; web-sites using a list of tuple parameters
+    rs    (s/validate #{ [ (s/one s/Str      "name")
+                           (s/one s/Keyword  "type") 
+                           (s/one s/Keyword  "orgtype") 
+                         ] }
+            (into (sorted-set)
+              (d/q '[:find  ?name ?type ?orgtype
+                     :in    $ [[?type ?orgtype]]
+                     :where   [?com :community/name     ?name]
+                              [?com :community/type     ?type]
+                              [?com :community/orgtype  ?orgtype] ]
+                   db-val
+                   [ [:community.type/email-list  :community.orgtype/community] 
+                     [:community.type/website     :community.orgtype/commercial] ] )))
   ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+    (is (= 15 (count rs)))
+    (is (= rs
+           #{ ["15th Ave Community"                           :community.type/email-list  :community.orgtype/community]
+              ["Admiral Neighborhood Association"             :community.type/email-list  :community.orgtype/community]
+              ["Alki News"                                    :community.type/email-list  :community.orgtype/community]
+              ["Ballard Moms"                                 :community.type/email-list  :community.orgtype/community]
+              ["Ballard Neighbor Connection"                  :community.type/email-list  :community.orgtype/community]
+              ["Beacon Hill Burglaries"                       :community.type/email-list  :community.orgtype/community]
+              ["Broadview Community Council"                  :community.type/email-list  :community.orgtype/community]
+              ["Discover SLU"                                 :community.type/website     :community.orgtype/commercial]
+              ["Fremont Arts Council"                         :community.type/email-list  :community.orgtype/community]
+              ["Georgetown Seattle"                           :community.type/email-list  :community.orgtype/community]
+              ["Greenwood Community Council Announcements"    :community.type/email-list  :community.orgtype/community]
+              ["Greenwood Community Council Discussion"       :community.type/email-list  :community.orgtype/community]
+              ["InBallard"                                    :community.type/website     :community.orgtype/commercial]
+              ["Leschi Community Council"                     :community.type/email-list  :community.orgtype/community]
+              ["Madrona Moms"                                 :community.type/email-list  :community.orgtype/community] } ))))
 
 #_(deftest t-00
   (let [db-val (d/db *conn*)

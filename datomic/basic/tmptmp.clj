@@ -1,25 +1,3 @@
-
-;-----------------------------------------------------------------------------
-; Find all communities that are non-commercial email-lists or commercial
-; web-sites using a list of tuple parameters
-(newline)
-(print "com-ntot")    ; a set of tuples
-(s/def com-ntot :- #{ [ (s/one s/Str      "name")
-                        (s/one s/Keyword  "type") 
-                        (s/one s/Keyword  "orgtype") 
-                      ] }
-  (into #{} 
-    (d/q '[:find ?name ?type ?orgtype
-           :in $  [[?type ?orgtype]]
-           :where [?com :community/name     ?name]
-                  [?com :community/type     ?type]
-                  [?com :community/orgtype  ?orgtype] ]
-         db-val
-         [ [:community.type/email-list  :community.orgtype/community] 
-           [:community.type/website     :community.orgtype/commercial] ] )))
-(spyx (count com-ntot))
-(pprint com-ntot)
-
 ; find all community names coming before "C" in alphabetical order
 (newline)
 (print "names-abc")
