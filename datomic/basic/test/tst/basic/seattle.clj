@@ -149,6 +149,7 @@
                                         "Alki News/Alki Community Council"
                                         "All About Belltown" ] ))
 
+        ; ---------- Pull API ----------
         ; find all community names & pull their urls
         comm-names-urls     (s/validate   [ [ (s/one s/Str ":community/name")  
                                               { :community/category [s/Str]  ; pull returns a vec, not set
