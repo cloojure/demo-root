@@ -10,6 +10,7 @@
 
 (set! *warn-on-reflection* false)
 (set! *print-length* 5)
+(set! *print-length* nil)
 ;
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
@@ -435,17 +436,85 @@
             #{ ["Community Harvest of Southwest Seattle" "sustainable food"]
                ["InBallard" "food"] } ))))
 
-#_(deftest t-00
-  (let [db-val (d/db *conn*)
-  ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+(deftest t-rules-1
+  (testing "find all names of all communities that are twitter feeds, using rules")
+    (let [
+      db-val (d/db *conn*)
+      rules-twitter '[ ; list of all rules 
+                       [ (is_comtype-twitter ?eid)                                   ; rule #1: declaration (<name> & <args>)
+                         [?eid :community/type :community.type/twitter]   ;          match pattern 1
+                       ] ; end #1
+                     ]
+      com-rules-tw  (s/validate [s/Str]
+                      (d/q '[:find [?name ...]    ; list output
+                             :in $ %
+                             :where   [?eid :community/name ?name]    ; match pattern
+                                      (is_comtype-twitter ?eid)       ; rule
+                            ]
+                           db-val rules-twitter ))
+    ]
+      (is (= 6 (count com-rules-tw)))
+      (is (= com-rules-tw   ["Magnolia Voice" "Columbia Citizens" "Discover SLU" "Fremont Universe" 
+                             "Maple Leaf Life" "MyWallingford"] ))))
 
-#_(deftest t-00
-  (let [db-val (d/db *conn*)
-  ]
-  #_(binding [*print-length* nil] xxxxxxx)
-))
+(deftest t-rules-2
+  (testing "find names of all communities in NE and SW regions, using rules to avoid repeating logic"
+    (let [
+      db-val       (d/db *conn*)
+      rules-list   '[  [ (com-region ?com-eid ?reg-ident)
+                         [?com-eid    :community/neighborhood   ?nbr]
+                         [?nbr        :neighborhood/district    ?dist]
+                         [?dist       :district/region          ?reg]
+                         [?reg        :db/ident                 ?reg-ident] ]
+                    ]
+                  ; map-format query
+      com-ne      (s/validate #{s/Str}
+                    (into (sorted-set)
+                      (d/q '{:find  [ [?name ...] ]  ; outer vec denotes bounds, inner vec is list-output
+                             :in    [$ %]
+                             :where [ [?com-eid :community/name ?name]
+                                      (com-region ?com-eid :region/ne) ] }
+                           db-val rules-list )))
+                  ; list-format query
+      com-sw      (s/validate #{s/Str}
+                    (into (sorted-set)
+                      (d/q '[:find [?name ...]
+                             :in $ %
+                             :where   [?com-eid :community/name ?name]
+                                      (com-region ?com-eid :region/sw) ]
+                           db-val rules-list )))
+    ]
+      (is (= 9  (count com-ne)))
+      (is (=  com-ne
+              #{"Aurora Seattle" "Hawthorne Hills Community Website"
+                "KOMO Communities - U-District" "KOMO Communities - View Ridge"
+                "Laurelhurst Community Club" "Magnuson Community Garden"
+                "Magnuson Environmental Stewardship Alliance"
+                "Maple Leaf Community Council" "Maple Leaf Life"} ))
+
+      (is (= 34 (count com-sw)))
+      (is (=  com-sw
+              #{"Admiral Neighborhood Association" "Alki News"
+                "Alki News/Alki Community Council" "ArtsWest" "Beach Drive Blog"
+                "Broadview Community Council"
+                "Community Harvest of Southwest Seattle"
+                "Delridge Grassroots Leadership"
+                "Delridge Neighborhoods Development Association"
+                "Delridge Produce Cooperative" "Fauntleroy Community Association"
+                "Friends of Green Lake" "Genesee-Schmitz Neighborhood Council"
+                "Greenlake Community Council" "Greenlake Community Wiki"
+                "Greenwood Aurora Involved Neighbors" "Greenwood Blog"
+                "Greenwood Community Council"
+                "Greenwood Community Council Announcements"
+                "Greenwood Community Council Discussion"
+                "Greenwood Phinney Chamber of Commerce"
+                "Highland Park Action Committee" "Highland Park Improvement Club"
+                "Junction Neighborhood Organization" "KOMO Communities - Green Lake"
+                "KOMO Communities - Greenwood-Phinney"
+                "KOMO Communities - Wallingford" "KOMO Communities - West Seattle"
+                "Licton Springs Neighborhood " "Longfellow Creek Community Website"
+                "Morgan Junction Community Association" "My Greenlake Blog"
+                "MyWallingford" "Nature Consortium"} )))))
 
 #_(deftest t-00
   (let [db-val (d/db *conn*)
