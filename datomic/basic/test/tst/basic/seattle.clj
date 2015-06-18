@@ -516,11 +516,49 @@
                 "Morgan Junction Community Association" "My Greenlake Blog"
                 "MyWallingford" "Nature Consortium"} )))))
 
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
+(deftest t-rules-or-logic
+  (testing "find names of all communities that are in any of the northern regions and are
+            social-media, using rules for OR logic"
+    (let [db-val (d/db *conn*)
+      or-rulelist       '[  
+                            ; rule #1
+                            [ (region ?com-eid ?reg-ident)
+                              [?com-eid    :community/neighborhood   ?nbr-eid]
+                              [?nbr-eid    :neighborhood/district    ?dist-eid]
+                              [?dist-eid   :district/region          ?reg-eid]
+                              [?reg-eid    :db/ident                 ?reg-ident] ]
+
+                            ; rule #2
+                            [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/twitter] ]
+                            [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/facebook-page] ]
+
+                            ; rule #3
+                            [ (northern?  ?com-eid) (region ?com-eid :region/ne) ]
+                            [ (northern?  ?com-eid) (region ?com-eid :region/e)  ]
+                            [ (northern?  ?com-eid) (region ?com-eid :region/nw) ]
+
+                            ; rule #4
+                            [ (southern?  ?com-eid) (region ?com-eid :region/se) ]
+                            [ (southern?  ?com-eid) (region ?com-eid :region/s)  ]
+                            [ (southern?  ?com-eid) (region ?com-eid :region/sw) ]
+                         ]
+      social-south    (s/validate #{s/Str}
+                        (into #{}
+                          (d/q  '{:find  [ [?name ...] ]
+                                  :in    [$ %]
+                                  :where [ [?com-eid :community/name ?name]
+                                           (southern? ?com-eid)
+                                           (social-media? ?com-eid) ] }
+                                db-val or-rulelist )))
+    ]
+      (newline)
+      (println "social-south")
+      (is (= 4 (count social-south)))
+      (is (=  social-south
+              #{"Columbia Citizens"
+                "Fauntleroy Community Association"
+                "MyWallingford"
+                "Blogging Georgetown"} )))))
 
 #_(deftest t-00
   (testing "xxx"
