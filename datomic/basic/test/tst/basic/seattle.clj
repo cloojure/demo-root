@@ -551,8 +551,6 @@
                                            (social-media? ?com-eid) ] }
                                 db-val or-rulelist )))
     ]
-      (newline)
-      (println "social-south")
       (is (= 4 (count social-south)))
       (is (=  social-south
               #{"Columbia Citizens"
@@ -560,10 +558,31 @@
                 "MyWallingford"
                 "Blogging Georgetown"} )))))
 
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
+(deftest t-using-transaction-times
+  (testing "searching for data before/after certain times"
+    (let [
+      db-val      (d/db *conn*)
+
+      tx-instants (s/validate [s/Any] ; all transaction times, sorted in reverse order
+                    (reverse 
+                      (sort 
+                        (d/q '[:find [?when ...] 
+                               :where [_ :db/txInstant ?when] ]
+                             db-val ))))
+      data-tx-inst      (first  tx-instants)  ; last
+      schema-tx-inst    (second tx-instants)  ; next-to-last
+
+      ; query to find all communities
+      communities-query     '[:find   [?com ...]  
+                              :where  [?com :community/name] ]
+
+      db-asof-schema  (d/as-of db-val schema-tx-inst)
+      db-asof-data    (d/as-of db-val data-tx-inst)
+
+      _ (is (=   0 (count (d/q communities-query db-asof-schema)))) ; all communities as of schema transaction
+      _ (is (= 150 (count (d/q communities-query db-asof-data  )))) ; all communities as of seed data transaction
+    ]
+
 )))
 
 #_(deftest t-00

@@ -1,59 +1,35 @@
-;-----------------------------------------------------------------------------
-; Find all transaction times, sort them in reverse order
-(newline)
-(println "tx-instants")
-(s/def tx-instants :- [s/Any]
-  (reverse (sort 
-    (d/q '[:find [?when ...] 
-           :where [_ :db/txInstant ?when] ]
-         db-val ))))
-(spyx (count tx-instants))
-(pprint tx-instants)
-(def data-tx-date   (first tx-instants))
-(def schema-tx-date (second tx-instants))
 
-; make query to find all communities
-(def communities-query '[:find [?com ...]  :where [?com :community/name] ] )
+      ; find all communities since schema transaction
+      (let [db-since-schema (d/since db-val schema-tx-date) ]
+        (spyx (count (d/q communities-query db-since-schema))))
 
-; find all communities as of schema transaction
-(let [db-asof-schema (d/as-of db-val schema-tx-date) ]
-  (spyx (count (d/q communities-query db-asof-schema))))
-
-; find all communities as of seed data transaction
-(let [db-asof-data (d/as-of db-val data-tx-date) ]
-  (spyx (count (d/q communities-query db-asof-data))))
+      ; find all communities since seed data transaction
+      (let [db-since-data (d/since db-val data-tx-date) ]
+        (spyx (count (d/q communities-query db-since-data))))
 
 
-; find all communities since schema transaction
-(let [db-since-schema (d/since db-val schema-tx-date) ]
-  (spyx (count (d/q communities-query db-since-schema))))
+      ; parse additional seed data file
+      (def new-data-tx (read-string (slurp "samples/seattle/seattle-data1.edn")))
 
-; find all communities since seed data transaction
-(let [db-since-data (d/since db-val data-tx-date) ]
-  (spyx (count (d/q communities-query db-since-data))))
+      ; find all communities if new data is loaded
+      (let [db-if-new-data (:db-after (d/with db-val new-data-tx)) ]
+        (spyx (count (d/q communities-query db-if-new-data))))
 
+      ; find all communities currently in DB
+      (spyx (count (d/q communities-query db-val)))
 
-; parse additional seed data file
-(def new-data-tx (read-string (slurp "samples/seattle/seattle-data1.edn")))
+      ; submit new data tx
+      @(d/transact *conn* new-data-tx)
+      (def db-val-new (d/db *conn*))
 
-; find all communities if new data is loaded
-(let [db-if-new-data (:db-after (d/with db-val new-data-tx)) ]
-  (spyx (count (d/q communities-query db-if-new-data))))
+      ; find all communities currently in DB
+      (spyx (count (d/q communities-query db-val-new)))
 
-; find all communities currently in DB
-(spyx (count (d/q communities-query db-val)))
+      ; find all communities since original seed data load transaction
+      (let [db-since-data (d/since db-val-new data-tx-date)]
+        (spyx (count (d/q communities-query db-since-data))))
 
-; submit new data tx
-@(d/transact *conn* new-data-tx)
-(def db-val-new (d/db *conn*))
-
-; find all communities currently in DB
-(spyx (count (d/q communities-query db-val-new)))
-
-; find all communities since original seed data load transaction
-(let [db-since-data (d/since db-val-new data-tx-date)]
-  (spyx (count (d/q communities-query db-since-data))))
-
+  ]
 ;-----------------------------------------------------------------------------
 
 (newline)
