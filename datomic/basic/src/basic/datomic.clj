@@ -19,6 +19,10 @@
    EID is what 'creates' an entity in the DB."
   Long)
 
+(def HashSetGeneric
+  "Either a Clojure hash-set or a java.util.HashSet"
+  (s/either #{s/Any} java.util.HashSet))
+
 ; #todo - clarify in all doc-strings that entity-spec = [EID or lookup-ref]
 (def LookupRef  
   "If an entity has an attribute with either :db.unique/value or :db.unique/identity, that entity
@@ -52,6 +56,8 @@
    
    "
   #{ [s/Any] } )
+
+(def TupleMap     [ {s/Any s/Any} ] ) ; pull api
 
 (def Vec1 [ (s/one s/Any "x1") ] )
 (def Vec2 [ (s/one s/Any "x1") (s/one s/Any "x2") ] )
@@ -261,8 +267,28 @@
 
 (s/defn result-set :- ResultSet
   "Returns a ResultSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
-  [raw-resultset :- java.util.HashSet]
+  [raw-resultset :- HashSetGeneric]
   (into #{} raw-resultset))
+
+(s/defn result-only :- [s/Any]
+  "Returns a single tuple result built from the output of a Datomic query using the Entity API"
+  [raw-resultset :- HashSetGeneric]
+  (let [rs          (result-set raw-resultset)
+        num-tuples  (count rs) ]
+    (when-not (= 1 num-tuples)
+      (throw (IllegalStateException. 
+               (format "ResultSet must have exactly one tuple; count = %d" num-tuples))))
+    (first rs)))
+
+(s/defn result-scalar :- s/Any
+  "Returns a single scalar result built from the output of a Datomic query using the Entity API"
+  [raw-resultset :- HashSetGeneric]
+  (let [tuple       (result-only raw-resultset)
+        tuple-len   (count tuple) ]
+    (when-not (= 1 tuple-len)
+      (throw (IllegalStateException. 
+               (format "ResultSet must be one tuple of one element; tuple-len = %d" ))))
+    (first tuple)))
 
 (s/defn entity-map :- KeyMap
   "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
@@ -324,7 +350,6 @@
   (let [tx-data       (:tx-data tx-result)  ; a seq of datoms
         fn-datom      (fn [arg]
                         (let [datom1  (datom-map arg)
-                              _ (spyxx datom1)
                               attr-eid    (:a datom1)
                               attr-ident  (eid->ident db-val attr-eid)
                               datom2  (assoc datom1 :a attr-ident)
@@ -332,7 +357,6 @@
                           datom2 ))
         tx-datoms      (mapv fn-datom tx-data)
     ]
-      (spyxx tx-datoms)
       tx-datoms ))
 
 (s/defn partition-name :- s/Keyword

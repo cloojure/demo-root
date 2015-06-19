@@ -619,27 +619,33 @@
                                             :where [ [?id :community/name "belltown"] ] } (d/db *conn*) )
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
-      tx-result     @(t/transact *conn*   
-                      (t/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
+      tx-1-result     @(t/transact *conn*   
+                        (t/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
+      tx-1-datoms     (t/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
 
-      tx-data   (:tx-data tx-result)
-      datoms    (t/tx-datoms (d/db *conn*) tx-result)
-      _ (spyxx datoms)
+      freestuff-rs-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      _ (is (= 1 (count freestuff-rs-1)))
+      freestuff-eid-1    (t/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
+      _ (is (s/validate t/Eid freestuff-eid-1))
 
-      freestuff-eid-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
-      _ (spyxx freestuff-eid-1)
+      tx-2-result       @(t/transact *conn* 
+                          (t/retraction belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
+      tx-2-datoms       (t/tx-datoms (d/db *conn*) tx-2-result)  ; #todo add to demo
 
-;     _ @(t/transact *conn* 
-;         (t/retraction   belltown-eid-scalar  :community/category "free stuff"  )) ; Retract "free stuff"
-;     freestuff-eid-2     (ffirst (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) )))
-;     _ (spyxx freestuff-eid-2)
+      freestuff-rs-2    (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      _ (is (= 0 (count freestuff-rs-2)))
   ] )))
 
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
+(deftest t-pull-1
+  (testing "demo for pull api"
+  (let [db-val            (d/db *conn*)
+        pull-results      (s/validate [t/TupleMap]
+                            (d/q '[:find  (pull ?c [*]) 
+                                   :where [?c :community/name] ]
+                                 db-val ))
   ]
-)))
+    (is (s/validate [t/TupleMap] pull-results))
+    (is (= 150 (count pull-results))))))
 
 #_(deftest t-00
   (testing "xxx"
