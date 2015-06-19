@@ -323,7 +323,9 @@
                   ["MyWallingford"                       17592186045423   :community.type/facebook-page] } ))))
 
 (deftest t-08
-  (let [db-val (d/db *conn*)
+  (let [
+    db-val (d/db *conn*)
+
     ; Find all communities that are non-commercial email-lists or commercial
     ; web-sites using a list of tuple parameters
     rs    (s/validate #{ [ (s/one s/Str      "name")
@@ -607,55 +609,33 @@
 (deftest t-partitions
   (testing "adding & using a new partition"
     (t/transact *conn* (t/new-partition :communities) ) ; create a new partition
+    ; add Easton to new partition
+    (t/transact *conn* (t/new-entity :communities {:community/name "Easton"} ) )
     (let [
-      ; add Easton to new partition
-      _ @(t/transact *conn* 
-          (t/new-entity :communities {:community/name "Easton"} ) )
-
       ; show format difference between query result-set and scalar "dot" output
-      db-val                (d/db *conn*)
       belltown-eid-rs       (ffirst (d/q '{ :find  [?id]
-                                            :where [ [?id :community/name "belltown"] ] } db-val ))
+                                            :where [ [?id :community/name "belltown"] ] } (d/db *conn*) ))
       belltown-eid-scalar           (d/q '{ :find  [?id .]
-                                            :where [ [?id :community/name "belltown"] ] } db-val )
+                                            :where [ [?id :community/name "belltown"] ] } (d/db *conn*) )
       _ (is (= belltown-eid-rs belltown-eid-scalar))
+
+      tx-result     @(t/transact *conn*   
+                      (t/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
+      _ (spyxx tx-result)
+
+      tx-data   (:tx-data tx-result)
+      _ (spyxx tx-data)
+      datoms    (t/tx-datoms (d/db *conn*) tx-result)
+      _ (spyxx datoms)
+
+;     freestuff-eid-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+;     _ (spyxx freestuff-eid-1)
+
+;     _ @(t/transact *conn* 
+;         (t/retraction   belltown-eid-scalar  :community/category "free stuff"  )) ; Retract "free stuff"
+;     freestuff-eid-2     (ffirst (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) )))
+;     _ (spyxx freestuff-eid-2)
   ] )))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
 
 #_(deftest t-00
   (testing "xxx"

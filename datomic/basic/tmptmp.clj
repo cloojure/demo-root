@@ -1,16 +1,3 @@
-;get id for a community, use to transact data
-(newline)
-(spyxx belltown-id-entity)
-(spyxx belltown-id-dot)
-
-(newline)
-(println "Adding 'free stuff' for belltown")
-@(d/transact *conn* [ {:db/id belltown-id-dot
-                       :community/category "free stuff"} ] )    ; map syntax
-(println "Retracting 'free stuff' for belltown")
-@(d/transact *conn* [ [:db/retract belltown-id-dot
-                       :community/category "free stuff"] ] )    ; tuple syntax
-
 ;-----------------------------------------------------------------------------
 ; pull api
 (def TupleMap     [ {s/Any s/Any} ] )

@@ -306,6 +306,35 @@
   (let [datoms  (apply d/datoms db index components) ]
     (map datom-map datoms)))
 
+(s/defn eid->ident :- s/Keyword
+  "Returns the keyword ident value given an EID value"
+  [db-val     :- s/Any  ; #todo
+   eid-val    :- Eid]
+  (let [result  (d/q '[:find ?ident .
+                       :in $ ?eid
+                       :where [?eid :db/ident ?ident] ]
+                     db-val eid-val )
+  ]
+    result))
+
+(s/defn tx-datoms :- s/Any
+  "Returns a seq of datom-maps from a TxResult"
+  [db-val     :- s/Any  ; #todo
+   tx-result  :- TxResult ]
+  (let [tx-data       (:tx-data tx-result)  ; a seq of datoms
+        fn-datom      (fn [arg]
+                        (let [datom1  (datom-map arg)
+                              _ (spyxx datom1)
+                              attr-eid    (:a datom1)
+                              attr-ident  (eid->ident db-val attr-eid)
+                              datom2  (assoc datom1 :a attr-ident)
+                        ]
+                          datom2 ))
+        tx-datoms      (mapv fn-datom tx-data)
+    ]
+      (spyxx tx-datoms)
+      tx-datoms ))
+
 (s/defn partition-name :- s/Keyword
   "Returns the name of a DB partition (its :db/ident value)"
   [db-val       :- datomic.db.Db
