@@ -3,6 +3,7 @@
             [schema.core      :as s]
             [cooljure.core    :refer [spyx spyxx it-> safe-> ]]
             [basic.datomic    :as t]
+            [basic.seattle-schema  :as b.ss]
   )
   (:use clojure.pprint
         clojure.test)
@@ -19,7 +20,6 @@
 (def ^:dynamic *conn*)
 
 (def uri              "datomic:mem://seattle")
-(def seattle-schema   (read-string (slurp "samples/seattle/seattle-schema.edn")))
 (def seattle-data-0   (read-string (slurp "samples/seattle/seattle-data0.edn")))
 (def seattle-data-1   (read-string (slurp "samples/seattle/seattle-data1.edn")))
 
@@ -29,7 +29,8 @@
     ; Create the database & a connection to it
     (d/create-database uri)
     (let [conn (d/connect uri) ]
-      (s/validate t/TxResult @(d/transact conn seattle-schema))
+      (b.ss/add-schema conn)
+
       (s/validate t/TxResult @(d/transact conn seattle-data-0))
       (binding [*conn* conn]
         (tst-fn))

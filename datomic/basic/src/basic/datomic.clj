@@ -147,7 +147,7 @@
       :db/isComponent
       :db/noHistory
       :db/doc                 <- *** currently unimplemented ***
-  " 
+  "
   [ ident       :- s/Keyword
     value-type  :- s/Any
    & options ]  ; #todo type spec?
@@ -199,7 +199,7 @@
   "Returns the tx-data to create a new enumeration entity in the DB. Usage:
 
     (d/transact *conn* [
-      (new-entity ident)
+      (new-enum ident)
     ] )
 
   where ident is the (keyword) name for the new enumeration entity.  "
