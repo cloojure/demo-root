@@ -5,24 +5,31 @@
             [basic.datomic    :as t]
             [schema.core      :as s]))
 
+(set! *warn-on-reflection* false)
+(set! *print-length* 5)
+(set! *print-length* nil)
+;
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
-(def ^:dynamic *tst-conn*)
+(def ^:dynamic *conn*)
 
-(use-fixtures :once 
+(use-fixtures :each
   (fn [tst-fn]
     ; Create the database & a connection to it
-    (let [uri           "datomic:mem://testing"
-          _  (d/create-database uri)
+    (let [uri           "datomic:mem://seattle"
+          _ (d/create-database uri)
           conn          (d/connect uri)
-          schema-defs   (read-string (slurp "ex-schema.edn")) ; Load schema defs from file
+          schema-tx     (read-string (slurp "samples/seattle/seattle-schema.edn"))
+          data-tx       (read-string (slurp "samples/seattle/seattle-data0.edn"))
     ]
-      @(d/transact conn schema-defs)
-      (binding [*tst-conn* conn]
+      (s/validate t/TxResult @(d/transact conn schema-tx))
+      (s/validate t/TxResult @(d/transact conn data-tx))
+      (binding [*conn* conn]
         (tst-fn))
-      (d/delete-database uri))))
+      (d/delete-database uri)
+    )))
 
 
 (deftest t-vecs

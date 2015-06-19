@@ -1,6 +1,7 @@
 (ns basic.core
   (:require [datomic.api      :as d]
             [cooljure.core    :refer [spyx spyxx]]
+            [basic.datomic    :as t]
             [schema.core      :as s]
             [schema.coerce    :as coerce]
   )

@@ -47,7 +47,7 @@
     :tx-data      [s/Any]  ; #todo (seq of datom)
     :tempids      Map } )  ; #todo
 
-(def ResultSet 
+(def TupleSet 
   "The result of any Datomic using the Entity API is logically a hash-set of tuples (vectors).  
    The contents and order of each tuple is determined by the find clause:
 
@@ -265,8 +265,8 @@
 ;---------------------------------------------------------------------------------------------------
 ; Informational functions
 
-(s/defn result-set :- ResultSet
-  "Returns a ResultSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
+(s/defn result-set :- TupleSet
+  "Returns a TupleSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
   [raw-resultset :- HashSetGeneric]
   (into #{} raw-resultset))
 
@@ -277,7 +277,7 @@
         num-tuples  (count rs) ]
     (when-not (= 1 num-tuples)
       (throw (IllegalStateException. 
-               (format "ResultSet must have exactly one tuple; count = %d" num-tuples))))
+               (format "TupleSet must have exactly one tuple; count = %d" num-tuples))))
     (first rs)))
 
 (s/defn result-scalar :- s/Any
@@ -287,7 +287,7 @@
         tuple-len   (count tuple) ]
     (when-not (= 1 tuple-len)
       (throw (IllegalStateException. 
-               (format "ResultSet must be one tuple of one element; tuple-len = %d" ))))
+               (format "TupleSet must be one tuple of one element; tuple-len = %d" ))))
     (first tuple)))
 
 (s/defn entity-map :- KeyMap

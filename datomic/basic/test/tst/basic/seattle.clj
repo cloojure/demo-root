@@ -40,7 +40,7 @@
         rs1     (d/q '{:find  [?c]     ; always prefer the map-query syntax
                        :where [ [?c :community/name] ] } 
                      db-val)
-        rs2     (s/validate  t/ResultSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
+        rs2     (s/validate  t/TupleSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
         _ (is (= 150 (count rs1)))
         _ (is (= 150 (count rs2)))
         _ (is (= java.util.HashSet                (class rs1)))
