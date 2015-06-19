@@ -604,11 +604,22 @@
       _ (is (= 108 (count (d/q communities-query db-since-data2)))) ; find all communities since original seed data load transaction
     ] )))
 
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
+(deftest t-partitions
+  (testing "adding & using a new partition"
+    (t/transact *conn* (t/new-partition :communities) ) ; create a new partition
+    (let [
+      ; add Easton to new partition
+      _ @(t/transact *conn* 
+          (t/new-entity :communities {:community/name "Easton"} ) )
+
+      ; show format difference between query result-set and scalar "dot" output
+      db-val                (d/db *conn*)
+      belltown-eid-rs       (ffirst (d/q '{ :find  [?id]
+                                            :where [ [?id :community/name "belltown"] ] } db-val ))
+      belltown-eid-scalar           (d/q '{ :find  [?id .]
+                                            :where [ [?id :community/name "belltown"] ] } db-val )
+      _ (is (= belltown-eid-rs belltown-eid-scalar))
+  ] )))
 
 #_(deftest t-00
   (testing "xxx"

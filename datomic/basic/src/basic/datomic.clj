@@ -244,6 +244,18 @@
   [entity-spec  :- EntitySpec ]
   [:db.fn/retractEntity entity-spec] )
 
+; #todo need test
+(s/defn transact :- s/Any  ; #todo
+  "Like (d/transact [...] ), but does not require wrapping everything in a Clojure vector. Usage:
+   
+    (t/transact *conn*
+      (t/new-entity ident)
+      (t/update entity-spec-1 attr-val-map-1)
+      (t/update entity-spec-2 attr-val-map-2))
+   "
+  [conn & tx-specs]
+  (d/transact conn tx-specs))
+
 ;---------------------------------------------------------------------------------------------------
 ; Informational functions
 
