@@ -8,7 +8,7 @@
 (set! *warn-on-reflection* false)
 (set! *print-length* 5)
 (set! *print-length* nil)
-;
+
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs

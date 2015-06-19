@@ -21,19 +21,22 @@
 
 (def HashSetGeneric
   "Either a Clojure hash-set or a java.util.HashSet"
-  (s/either #{s/Any} java.util.HashSet))
+  (s/either #{s/Any} 
+            java.util.HashSet ))
 
 ; #todo - clarify in all doc-strings that entity-spec = [EID or lookup-ref]
 (def LookupRef  
   "If an entity has an attribute with either :db.unique/value or :db.unique/identity, that entity
    can be uniquely specified using a lookup-ref (LookupRef). A lookup-ref is an attribute-value pair
    expressed as a tuple:  [ <attribute> <value> ]"
-  [ (s/one s/Keyword "attr")  (s/one s/Any "val") ] )
+  [ (s/one s/Keyword  "attr")  
+    (s/one s/Any      "val" ) ] )
 
 (def EntitySpec 
   "An EntitySpec is used to uniquely specify an entity in the DB. It consists of 
    either an EID or a LookupRef."
-  (s/either Eid LookupRef))
+  (s/either Eid 
+            LookupRef))
 
 (def DatomMap
   "The Clojure map representation of a Datom."
