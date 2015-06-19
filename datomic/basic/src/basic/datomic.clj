@@ -162,18 +162,16 @@
                         :db/valueType           value-type }
         option-specs  (into (sorted-map)
                         (for [it options]
-                          (condp = it
-                            :db.unique/value       {:db/unique :db.unique/value}
-                            :db.unique/identity    {:db/unique :db.unique/identity}
-                            :db.cardinality/one    {:db/cardinality :db.cardinality/one}
-                            :db.cardinality/many   {:db/cardinality :db.cardinality/many}
-                            :db/index              {:db/index true}
-                            :db/fulltext           {:db/fulltext true}
-                            :db/isComponent        {:db/isComponent true}
-                            :db/noHistory          {:db/noHistory true}
-                            :db/doc
-                              (throw (IllegalArgumentException. ":db/doc not yet implemented"))
-                      )))
+                          (cond 
+                            (= it :db.unique/value)         {:db/unique :db.unique/value}
+                            (= it :db.unique/identity)      {:db/unique :db.unique/identity}
+                            (= it :db.cardinality/one)      {:db/cardinality :db.cardinality/one}
+                            (= it :db.cardinality/many)     {:db/cardinality :db.cardinality/many}
+                            (= it :db/index)                {:db/index true}
+                            (= it :db/fulltext)             {:db/fulltext true}
+                            (= it :db/isComponent)          {:db/isComponent true}
+                            (= it :db/noHistory)            {:db/noHistory true}
+                            (string? it)                    {:db/doc it})))
         tx-specs      (into base-specs option-specs)
   ]
     tx-specs

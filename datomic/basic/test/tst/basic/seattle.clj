@@ -27,16 +27,13 @@
 (use-fixtures :each
   (fn [tst-fn]
     ; Create the database & a connection to it
-    (let [uri           "datomic:mem://seattle"
-          _ (d/create-database uri)
-          conn          (d/connect uri)
-    ]
+    (d/create-database uri)
+    (let [conn (d/connect uri) ]
       (s/validate t/TxResult @(d/transact conn seattle-schema))
       (s/validate t/TxResult @(d/transact conn seattle-data-0))
       (binding [*conn* conn]
         (tst-fn))
-      (d/delete-database uri)
-    )))
+      (d/delete-database uri))))
 
 
 (deftest t-01
