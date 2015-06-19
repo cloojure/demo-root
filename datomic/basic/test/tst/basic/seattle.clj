@@ -621,15 +621,13 @@
 
       tx-result     @(t/transact *conn*   
                       (t/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
-      _ (spyxx tx-result)
 
       tx-data   (:tx-data tx-result)
-      _ (spyxx tx-data)
       datoms    (t/tx-datoms (d/db *conn*) tx-result)
       _ (spyxx datoms)
 
-;     freestuff-eid-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
-;     _ (spyxx freestuff-eid-1)
+      freestuff-eid-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      _ (spyxx freestuff-eid-1)
 
 ;     _ @(t/transact *conn* 
 ;         (t/retraction   belltown-eid-scalar  :community/category "free stuff"  )) ; Retract "free stuff"
