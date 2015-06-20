@@ -286,11 +286,10 @@
     ; In a single query, find all communities that are twitter feeds or facebook pages, using a list
     ; of parameters
     rs      (s/validate #{ [ (s/one s/Str      "com-name")
-                             (s/one t/Eid      "type-eid")
                              (s/one s/Keyword  "type-ident") ] }
               (into (sorted-set)
                 (t/result-set
-                  (d/q '{:find [?com-name ?type-eid ?type-ident]
+                  (d/q '{:find [?com-name ?type-ident]
                          :in   [$ [?type-ident ...]]
                          :where [ [?com        :community/name ?com-name]
                                   [?com        :community/type ?type-eid]
@@ -308,21 +307,21 @@
                 ;      [:community.type/twitter :community.type/facebook-page] )
   ]
     (is (= 15 (count rs)))
-    (is (= rs  #{ ["Blogging Georgetown"                 17592186045423   :community.type/facebook-page]
-                  ["Columbia Citizens"                   17592186045422   :community.type/twitter]
-                  ["Columbia Citizens"                   17592186045423   :community.type/facebook-page]
-                  ["Discover SLU"                        17592186045422   :community.type/twitter]
-                  ["Discover SLU"                        17592186045423   :community.type/facebook-page]
-                  ["Eastlake Community Council"          17592186045423   :community.type/facebook-page]
-                  ["Fauntleroy Community Association"    17592186045423   :community.type/facebook-page]
-                  ["Fremont Universe"                    17592186045422   :community.type/twitter]
-                  ["Fremont Universe"                    17592186045423   :community.type/facebook-page]
-                  ["Magnolia Voice"                      17592186045422   :community.type/twitter]
-                  ["Magnolia Voice"                      17592186045423   :community.type/facebook-page]
-                  ["Maple Leaf Life"                     17592186045422   :community.type/twitter]
-                  ["Maple Leaf Life"                     17592186045423   :community.type/facebook-page]
-                  ["MyWallingford"                       17592186045422   :community.type/twitter]
-                  ["MyWallingford"                       17592186045423   :community.type/facebook-page] } ))))
+    (is (= rs  #{ ["Blogging Georgetown"                 :community.type/facebook-page]
+                  ["Columbia Citizens"                   :community.type/twitter]
+                  ["Columbia Citizens"                   :community.type/facebook-page]
+                  ["Discover SLU"                        :community.type/twitter]
+                  ["Discover SLU"                        :community.type/facebook-page]
+                  ["Eastlake Community Council"          :community.type/facebook-page]
+                  ["Fauntleroy Community Association"    :community.type/facebook-page]
+                  ["Fremont Universe"                    :community.type/twitter]
+                  ["Fremont Universe"                    :community.type/facebook-page]
+                  ["Magnolia Voice"                      :community.type/twitter]
+                  ["Magnolia Voice"                      :community.type/facebook-page]
+                  ["Maple Leaf Life"                     :community.type/twitter]
+                  ["Maple Leaf Life"                     :community.type/facebook-page]
+                  ["MyWallingford"                       :community.type/twitter]
+                  ["MyWallingford"                       :community.type/facebook-page] } ))))
 
 (deftest t-08
   (let [
