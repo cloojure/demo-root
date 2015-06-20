@@ -12,12 +12,12 @@
 (s/def schema-attributes :- t/TupleList
   [
     ; community attributes
-    [:new-attribute :community/name            :db.type/string    :db/fulltext "A community's name" ]
-    [:new-attribute :community/url             :db.type/string    "A community's url" ]
-    [:new-attribute :community/neighborhood    :db.type/ref       "A community's neighborhood" ]
-    [:new-attribute :community/category        :db.type/string    :db.cardinality/many :db/fulltext "All community categories" ]
-    [:new-attribute :community/orgtype         :db.type/ref       "A community orgtype enum value" ]
-    [:new-attribute :community/type            :db.type/ref       :db.cardinality/many "Community type enum values" ]
+    [:new-attribute :community/name           :db.type/string   :db/fulltext "A community's name" ]
+    [:new-attribute :community/url            :db.type/string   "A community's url" ]
+    [:new-attribute :community/neighborhood   :db.type/ref      "A community's neighborhood" ]
+    [:new-attribute :community/category       :db.type/string   :db.cardinality/many :db/fulltext "All community categories" ]
+    [:new-attribute :community/orgtype        :db.type/ref      "A community orgtype enum value" ]
+    [:new-attribute :community/type           :db.type/ref      :db.cardinality/many "Community type enum values" ]
 
     ; neighborhood attributes
     [:new-attribute :neighborhood/name :db.type/string :db.unique/identity "A unique neighborhood name (upsertable)"]
