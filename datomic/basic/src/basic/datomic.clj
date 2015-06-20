@@ -50,6 +50,10 @@
     :tx-data      [s/Any]  ; #todo (seq of datom)
     :tempids      Map } )  ; #todo
 
+(def TupleList
+  "A sequence of tuples (typically a vector of vectors)"
+  [ [s/Any] ] )
+
 (def TupleSet 
   "The result of any Datomic using the Entity API is logically a hash-set of tuples (vectors).  
    The contents and order of each tuple is determined by the find clause:

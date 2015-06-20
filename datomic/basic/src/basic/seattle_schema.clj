@@ -9,7 +9,7 @@
   (:gen-class))
 
 ; A map that defines the datomic schema.  Format for each entry is [ :kw-fn-name <args>* ]
-(def schema-attributes
+(s/def schema-attributes :- t/TupleList
   [
     ; community attributes
     [:new-attribute :community/name            :db.type/string    :db/fulltext "A community's name" ]
@@ -28,7 +28,7 @@
     [:new-attribute :district/region :db.type/ref "A district region enum value"]
   ] )
 
-(def schema-enums
+(s/def schema-enums :- t/TupleList
   [
     ; community/org-type enum values
     [:new-enum :community.orgtype/community]
@@ -59,7 +59,7 @@
 
 (s/defn transact-data :- t/TxResult
   [conn         :- s/Any
-   tuple-list   :- [ [s/Any] ]  ; #todo -> TupleList ?
+   tuple-list   :- t/TupleList
   ]
   (let [tx-data     (forv [ [kw-fn & fn-args] tuple-list] ; destructure to fn & args
                       (condp  = kw-fn
