@@ -106,9 +106,9 @@
     ]
       (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
   (testing "reverse lookup"
-    (let [res                 (d/pull db-val [:artist/_country] :country/GB) 
-          _                   (s/validate {:artist/_country [ {:db/id t/Eid} ] } res )
-          eid-map-list        (:artist/_country res)
+    (let [result              (d/pull db-val [:artist/_country] :country/GB) 
+          _                   (s/validate {:artist/_country [ {:db/id t/Eid} ] } result )
+          eid-map-list        (:artist/_country result)
           artist-ents         (for [eid-map eid-map-list
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do 
@@ -117,7 +117,7 @@
           _                   (s/validate [t/KeyMap] artist-ents)
           artist-countries    (mapv :artist/country artist-ents)
     ]
-      (is (=  1 (count res)))
+      (is (=  1 (count result)))
       (is (=  482
               (count eid-map-list)
               (count artist-ents)
