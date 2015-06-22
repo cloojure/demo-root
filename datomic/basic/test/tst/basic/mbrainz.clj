@@ -11,8 +11,8 @@
 ; following the samples from https://github.com/Datomic/mbrainz-sample/wiki/Queries
 
 (set! *warn-on-reflection* false)
-(set! *print-length* nil)
 (set! *print-length* 9)
+(set! *print-length* nil)
 
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
@@ -125,11 +125,61 @@
       (is (apply = :country/GB artist-countries))))
 )
 
-#_(deftest t-00
-  (testing "xxx"
-  (let [
-  ]
-)))
+; #todo need a comparison like Prismatic Schema coercion:
+;   allow explicit matches like {:a 1} instead of {:a s/Any} or {:a Long}
+;   maybe pprint error messages
+;     get rid of 3rd param for (s/one ... "x") ?
+;   any way to allow glob-like counts:  
+;     Eid?    - 0/1         (maybe/zero-or-one/0-or-1/0-1)
+;     Eid*    - 0 or more   (zero-plus/zero-up/min-zero/0-or-more/0-plus)
+;     Eid+    - 1 or more   (one-plus/one-up/min-one/1-or-more/1-plus)
+
+; shape of pull result: 
+;     {:release/media 
+;       [
+;         { :db/id 17592186121277,
+;           :medium/format {:db/id 17592186045741},
+;           :medium/position 1,
+;           :medium/trackCount 10,
+;           :medium/tracks
+;             [  
+;               { :db/id 17592186121278,
+;                 :track/duration 68346,
+;                 :track/name "Speak to Me",
+;                 :track/position 1,
+;                 :track/artists [  {:db/id 17592186046909} ] }
+;               { :db/id 17592186121279,
+;                 :track/duration 168720,
+;                 :track/name "Breathe",
+;                 :track/position 2,
+;                 :track/artists [  {:db/id 17592186046909} ] }
+(deftest t-components
+  (testing "component defaults - horrible name!"  ; #todo
+    (let [result              (d/pull db-val [:release/media] dark-side-of-the-moon)
+          tracks-partial      (vec (sort-by :track/position
+                                (for [track-map (get-in result [:release/media 0 :medium/tracks] ) ]
+                                  (select-keys track-map [:track/duration :track/name :track/position]))))
+    ]
+      (s/validate {:release/media [s/Any]} result)
+      (s/validate {:release/media [ { :db/id t/Eid
+                                      :medium/format {:db/id t/Eid}
+                                      :medium/position  s/Any   ; #todo 1
+                                      :medium/trackCount s/Any  ; #todo 10
+                                      :medium/tracks [s/Any] } ] }
+                  result )
+      (is (= tracks-partial
+              [ {:track/duration 68346,  :track/name "Speak to Me",                   :track/position 1}
+                {:track/duration 168720, :track/name "Breathe",                       :track/position 2}
+                {:track/duration 230600, :track/name "On the Run",                    :track/position 3}
+                {:track/duration 409600, :track/name "Time",                          :track/position 4}
+                {:track/duration 284133, :track/name "The Great Gig in the Sky",      :track/position 5}
+                {:track/duration 382746, :track/name "Money",                         :track/position 6}
+                {:track/duration 469853, :track/name "Us and Them",                   :track/position 7}
+                {:track/duration 206213, :track/name "Any Colour You Like",           :track/position 8}
+                {:track/duration 226933, :track/name "Brain Damage",                  :track/position 9}
+                {:track/duration 131546, :track/name "Eclipse",                       :track/position 10} ] ))))
+)
+
 
 #_(deftest t-00
   (testing "xxx"
@@ -143,6 +193,7 @@
   ]
 )))
 
+; (let [result              (d/pull db-val [:release/media] dylan-harrison-cd)
 #_(deftest t-00
   (testing "xxx"
   (let [

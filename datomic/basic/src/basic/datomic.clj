@@ -404,3 +404,10 @@
   ] 
     result ))
 
+;---------------------------------------------------------------------------------------------------
+; Pull stuff
+; #todo:  pull-one
+; #todo:  pull-many
+; #todo:  pull-deep (pull-recursive) ; need a limit?
+
+
