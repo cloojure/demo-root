@@ -275,6 +275,11 @@
   [raw-resultset :- HashSetGeneric]
   (into #{} raw-resultset))
 
+(s/defn result-set-sort :- TupleSet
+  "Returns a TupleSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
+  [raw-resultset :- HashSetGeneric]
+  (into (sorted-set) raw-resultset))
+
 (s/defn result-only :- [s/Any]
   "Returns a single tuple result built from the output of a Datomic query using the Entity API"
   [raw-resultset :- HashSetGeneric]
@@ -296,6 +301,12 @@
     (first tuple)))
 
 (s/defn entity-map :- KeyMap
+  "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
+  [db-val         :- datomic.db.Db
+   entity-spec    :- EntitySpec ]
+  (into {} (d/entity db-val entity-spec)))
+
+(s/defn entity-map-sort :- KeyMap
   "Returns a map of an entity's attribute-value pairs. A simpler, eager version of datomic/entity."
   [db-val         :- datomic.db.Db
    entity-spec    :- EntitySpec ]

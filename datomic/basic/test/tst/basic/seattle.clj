@@ -42,19 +42,19 @@
         rs1     (d/q '{:find  [?c]     ; always prefer the map-query syntax
                        :where [ [?c :community/name] ] } 
                      db-val)
-        rs2     (s/validate  t/TupleSet  (t/result-set rs1))  ; convert to clojure #{ [...] }
+        rs2     (s/validate  t/TupleSet  (t/result-set-sort rs1))  ; convert to clojure #{ [...] }
         _ (is (= 150 (count rs1)))
         _ (is (= 150 (count rs2)))
         _ (is (= java.util.HashSet                (class rs1)))
-        _ (is (= clojure.lang.PersistentHashSet   (class rs2)))
+        _ (is (= clojure.lang.PersistentTreeSet   (class rs2)))
         _ (is (s/validate #{ [ t/Eid ] } rs2))
 
         eid-1   (s/validate t/Eid (ffirst rs2))
-        entity  (s/validate t/KeyMap (t/entity-map db-val eid-1))
+        entity  (s/validate t/KeyMap (t/entity-map-sort db-val eid-1))
         _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
                                 :community/orgtype  :community/type :community/url] ))
         entity-maps   (for [[eid] rs2]  ; destructure as we loop
-                        (t/entity-map db-val eid))  ; return clojure map from eid
+                        (t/entity-map-sort db-val eid))  ; return clojure map from eid
         first-3   (it-> entity-maps
                         (sort-by :community/name it)
                         (take 3 it))
@@ -97,7 +97,7 @@
                                db-val)    ; we don't always need (t/result-set (d/q ...))
         entity-maps       (sort-by :community/name 
                             (for [[eid] rs]
-                              (t/entity-map db-val eid)))
+                              (t/entity-map-sort db-val eid)))
         comm-nbr-names    (map #(let [entity-map  %
                                       comm-name   (safe-> entity-map :community/name)
                                       nbr-name    (safe-> entity-map :community/neighborhood :neighborhood/name) ]
@@ -138,7 +138,7 @@
         ; Clojure set (the native Datomic return type is set-like but not a Clojure set, so it
         ; doesn't work right with Prismatic Schema specs)
         comms-and-names     (s/validate  #{ [ (s/one t/Eid "comm-eid") (s/one s/Str "comm-name") ] } ; verify expected shape
-                              (t/result-set
+                              (t/result-set-sort
                                 (d/q '{:find  [?comm-eid ?comm-name] ; <- shape of output RS tuples
                                        :where [ [?comm-eid :community/name ?comm-name ] ] } 
                                      db-val )))
@@ -288,7 +288,7 @@
     rs      (s/validate #{ [ (s/one s/Str      "com-name")
                              (s/one s/Keyword  "type-ident") ] }
               (into (sorted-set)
-                (t/result-set
+                (t/result-set-sort
                   (d/q '{:find [?com-name ?type-ident]
                          :in   [$ [?type-ident ...]]
                          :where [ [?com        :community/name ?com-name]
@@ -417,7 +417,7 @@
     ; find all communities that are websites and that are about
     ; food, passing in type and search string as parameters
     names-full-join     (s/validate #{ [s/Str] }
-                          (t/result-set
+                          (t/result-set-sort
                             (d/q '{:find [?com-name ?com-cat]   ; rename :find -> :select or :return???
                                    :where [ [?com-eid  :community/name  ?com-name]
                                             [?com-eid  :community/type  ?com-type]
@@ -622,7 +622,7 @@
                         (t/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
       tx-1-datoms     (t/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
 
-      freestuff-rs-1     (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      freestuff-rs-1     (t/result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
       _ (is (= 1 (count freestuff-rs-1)))
       freestuff-eid-1    (t/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
       _ (is (s/validate t/Eid freestuff-eid-1))
@@ -631,7 +631,7 @@
                           (t/retraction belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
       tx-2-datoms       (t/tx-datoms (d/db *conn*) tx-2-result)  ; #todo add to demo
 
-      freestuff-rs-2    (t/result-set (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      freestuff-rs-2    (t/result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
       _ (is (= 0 (count freestuff-rs-2)))
   ] )))
 
