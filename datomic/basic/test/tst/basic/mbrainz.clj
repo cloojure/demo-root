@@ -1,7 +1,7 @@
 (ns tst.basic.mbrainz
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx it-> safe-> ]]
+            [cooljure.core    :refer [spyx spyxx it-> safe-> grab ]]
             [basic.datomic    :as t]
   )
   (:use clojure.pprint
@@ -11,8 +11,8 @@
 ; following the samples from https://github.com/Datomic/mbrainz-sample/wiki/Queries
 
 (set! *warn-on-reflection* false)
-(set! *print-length* 5)
 (set! *print-length* nil)
+(set! *print-length* 9)
 
 ;---------------------------------------------------------------------------------------------------
 ; Prismatic Schema type definitions
@@ -23,28 +23,27 @@
 (def conn       (d/connect uri))
 (def db-val     (d/db conn))
 
-; entities used in pull examples
+; specify lookup-ref values for test entities
 (def led-zeppelin               [:artist/gid  #uuid "678d88b2-87b0-403b-b63d-5da7465aecc3"])
 (def mccartney                  [:artist/gid  #uuid "ba550d0e-adac-4864-b88b-407cab5e76af"])
 (def dark-side-of-the-moon      [:release/gid #uuid "24824319-9bb8-3d1e-a2c5-b8b864dafd1b"])
 (def concert-for-bangla-desh    [:release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5"])
 (def dylan-harrison-sessions    [:release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"])
+
+; test entitie EID values found by entity query
 (def dylan-harrison-cd    (d/q  '[:find ?medium .
                                   :in $ ?release
                                   :where
                                   [?release :release/media ?medium]]
                                 db-val
-                                (java.util.ArrayList. dylan-harrison-sessions)))
+                                dylan-harrison-sessions))
 (s/validate t/Eid dylan-harrison-cd)
-(def ghost-riders (d/q '[:find ?track .
-                         :in $ ?release ?trackno
-                         :where
-                         [?release :release/media ?medium]
-                         [?medium :medium/tracks ?track]
-                         [?track :track/position ?trackno]]
-                       db-val
-                       dylan-harrison-sessions
-                       11))
+(def ghost-riders       (d/q '{:find [?track .]
+                               :in [$ ?release ?trackno]
+                               :where  [ [?release :release/media ?medium]
+                                         [?medium :medium/tracks ?track]
+                                         [?track :track/position ?trackno] ] }
+                             db-val dylan-harrison-sessions 11 ))
 (s/validate t/Eid ghost-riders)
 
 ;---------------------------------------------------------------------------------------------------
@@ -94,17 +93,37 @@
 
 
 (deftest t-attribute-name
-  (testing "xxx"
+  (testing "scalar value lookup"
     (let [res1          (d/pull db-val [:artist/name :artist/startYear]   led-zeppelin)
-          res2          (d/pull db-val [:artist/country]                  led-zeppelin)
+    ]
+      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))))
+  (testing "entity ref lookup"
+    (let [res2          (d/pull db-val [:artist/country]                  led-zeppelin)
 
           ; since :artist/country is a nested entity, we convert the EID (long) value to the
           ; :db/ident (keyword) value
           res-ident     (update-in res2  [:artist/country :db/id] #(t/eid->ident db-val %) )
     ]
-      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))
-      (is (= res-ident  {:artist/country {:db/id :country/GB}} ))
-)))
+      (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
+  (testing "reverse lookup"
+    (let [res                 (d/pull db-val [:artist/_country] :country/GB) 
+          _                   (s/validate {:artist/_country [ {:db/id t/Eid} ] } res )
+          eid-map-list        (:artist/_country res)
+          artist-ents         (for [eid-map eid-map-list
+                                    :let [eid (grab :db/id eid-map)] ]
+                                (do 
+                                  (s/validate t/Eid eid)
+                                  (t/entity-map-sort db-val eid)))
+          _                   (s/validate [t/KeyMap] artist-ents)
+          artist-countries    (mapv :artist/country artist-ents)
+    ]
+      (is (=  1 (count res)))
+      (is (=  482
+              (count eid-map-list)
+              (count artist-ents)
+              (count artist-countries)))
+      (is (apply = :country/GB artist-countries))))
+)
 
 #_(deftest t-00
   (testing "xxx"
