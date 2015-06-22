@@ -18,21 +18,44 @@
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
-(def ^:dynamic *conn*)
-
 ; (def uri              "datomic:mem://seattle")
-(def uri              "datomic:dev://localhost:4334/mbrainz-1968-1973")
+(def uri        "datomic:dev://localhost:4334/mbrainz-1968-1973")
+(def conn       (d/connect uri))
+(def db-val     (d/db conn))
 
-(use-fixtures :once     ; #todo: what happens if more than 1 use-fixtures in test ns file ???
-  (fn [tst-fn]
-    (binding [*conn* (d/connect uri)]
-      (tst-fn))
-    ))
+; entities used in pull examples
+(def led-zeppelin               [:artist/gid  #uuid "678d88b2-87b0-403b-b63d-5da7465aecc3"])
+(def mccartney                  [:artist/gid  #uuid "ba550d0e-adac-4864-b88b-407cab5e76af"])
+(def dark-side-of-the-moon      [:release/gid #uuid "24824319-9bb8-3d1e-a2c5-b8b864dafd1b"])
+(def concert-for-bangla-desh    [:release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5"])
+(def dylan-harrison-sessions    [:release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"])
+(def dylan-harrison-cd    (d/q  '[:find ?medium .
+                                  :in $ ?release
+                                  :where
+                                  [?release :release/media ?medium]]
+                                db-val
+                                (java.util.ArrayList. dylan-harrison-sessions)))
+(s/validate t/Eid dylan-harrison-cd)
+(def ghost-riders (d/q '[:find ?track .
+                         :in $ ?release ?trackno
+                         :where
+                         [?release :release/media ?medium]
+                         [?medium :medium/tracks ?track]
+                         [?track :track/position ?trackno]]
+                       db-val
+                       dylan-harrison-sessions
+                       11))
+(s/validate t/Eid ghost-riders)
 
+;---------------------------------------------------------------------------------------------------
+; (use-fixtures :once     ; #todo: what happens if more than 1 use-fixtures in test ns file ???
+;   (fn [tst-fn]
+;       (tst-fn))
+;     ))
+;---------------------------------------------------------------------------------------------------
 (deftest t-connection-verify
   (testing "can we connect to the Datomic db"
-    (let [db-val    (d/db *conn*)
-          rs        (t/result-set-sort
+    (let [rs        (t/result-set-sort
                       (d/q '[:find ?title
                              :in $ ?artist-name
                              :where
@@ -70,9 +93,58 @@
     )))
 
 
+(deftest t-attribute-name
+  (testing "xxx"
+    (let [res1          (d/pull db-val [:artist/name :artist/startYear]   led-zeppelin)
+          res2          (d/pull db-val [:artist/country]                  led-zeppelin)
+
+          ; since :artist/country is a nested entity, we convert the EID (long) value to the
+          ; :db/ident (keyword) value
+          res-ident     (update-in res2  [:artist/country :db/id] #(t/eid->ident db-val %) )
+    ]
+      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))
+      (is (= res-ident  {:artist/country {:db/id :country/GB}} ))
+)))
+
 #_(deftest t-00
   (testing "xxx"
-  (let [db-val (d/db *conn*)
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [
+  ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+  (let [db-val (d/db conn)
   ]
 )))
 
