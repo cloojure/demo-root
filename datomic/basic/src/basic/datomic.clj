@@ -50,9 +50,14 @@
     :tx-data      [s/Any]  ; #todo (seq of datom)
     :tempids      Map } )  ; #todo
 
+(def Tuple
+  "A specific type of sequential collection, typically a vector of constant length where each
+   element has a pre-defined interpretation."
+  [s/Any] )
+
 (def TupleList
   "A sequence of tuples (typically a vector of vectors)"
-  [ [s/Any] ] )
+  [ Tuple ] )
 
 (def TupleSet 
   "The result of any Datomic using the Entity API is logically a hash-set of tuples (vectors).  
@@ -62,7 +67,7 @@
       (d/q '{:find [?e ?name ?age] ...)     ->    [?e ?name ?age] 
    
    "
-  #{ [s/Any] } )
+  #{ Tuple } )
 
 (def TupleMap     [ {s/Any s/Any} ] ) ; pull api
 
@@ -409,5 +414,4 @@
 ; #todo:  pull-one
 ; #todo:  pull-many
 ; #todo:  pull-deep (pull-recursive) ; need a limit?
-
 
