@@ -232,7 +232,43 @@
                                   {:db/id _  :artist/name "George Harrison"} ] ]
                               [:track/name "Ghost Riders in the Sky"] ]   true
                             :else false))
-    )))
+    ))
+  (testing "nested map specifications"
+    (let [res   (vec (sort (d/pull db-val 
+                    [ { :release/media
+                        [ { :medium/tracks
+                            [:track/name {:track/artists [:artist/name] } ] } ] } ]
+                    concert-for-bangla-desh )))
+    ]
+      (is (= res
+            [[:release/media
+              [{:medium/tracks
+                [{:track/name "George Harrison / Ravi Shankar Introduction", :track/artists [{:artist/name "Ravi Shankar"} {:artist/name "George Harrison"}]}
+                 {:track/name "Bangla Dhun", :track/artists [{:artist/name "Ravi Shankar"}]}]}
+               {:medium/tracks
+                [{:track/name "Wah-Wah", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "My Sweet Lord", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Awaiting on You All", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "That's the Way God Planned It", :track/artists [{:artist/name "Billy Preston"}]}]}
+               {:medium/tracks
+                [{:track/name "It Don't Come Easy", :track/artists [{:artist/name "Ringo Starr"}]}
+                 {:track/name "Beware of Darkness", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Introduction of the Band", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "While My Guitar Gently Weeps", :track/artists [{:artist/name "George Harrison"}]}]}
+               {:medium/tracks
+                [{:track/name "Jumpin' Jack Flash / Youngblood", :track/artists [{:artist/name "Leon Russell"}]}
+                 {:track/name "Here Comes the Sun", :track/artists [{:artist/name "George Harrison"}]}]}
+               {:medium/tracks
+                [{:track/name "A Hard Rain's Gonna Fall", :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Blowin' in the Wind", :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Mr. Tambourine Man", :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Just Like a Woman", :track/artists [{:artist/name "Bob Dylan"}]}]}
+               {:medium/tracks
+                [{:track/name "Something", :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Bangla Desh", :track/artists [{:artist/name "George Harrison"}]}]}]]]
+          ))))
+)
 
 
 #_(deftest t-00
