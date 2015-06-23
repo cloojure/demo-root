@@ -1,6 +1,7 @@
 (ns tst.basic.mbrainz
   (:require [datomic.api      :as d]
             [clojure.set      :as c.set]
+            [clojure.core.match     :refer [match] ]
             [schema.core      :as s]
             [cooljure.core    :refer [spyx spyxx it-> safe-> grab submap? match?] ]
             [basic.datomic    :as t]
@@ -220,14 +221,19 @@
       ;             [ {:db/id 17592186048186, :artist/name "Bob Dylan"}
       ;               {:db/id 17592186049854, :artist/name "George Harrison"} ] ]
       ;             [:track/name "Ghost Riders in the Sky"]]
-      (is (match? res-1   [ [ :track/artists 
-                              [ {:db/id :*} 
-                                {:db/id :*} ] ]
-                            [ :track/name "Ghost Riders in the Sky"] ] ))
-      (is (match? res-2   [ [ :track/artists
-                              [ {:db/id :*, :artist/name "Bob Dylan"}
-                                {:db/id :*, :artist/name "George Harrison"} ] ]
-                              [:track/name "Ghost Riders in the Sky"] ] )))))
+      ;
+      (is (match    res-1   [ [ :track/artists 
+                                [ {:db/id _ } 
+                                  {:db/id _ } ] ]
+                              [ :track/name "Ghost Riders in the Sky"] ] true
+                            :else false))
+      (is (match  res-2     [ [ :track/artists
+                                [ {:db/id _  :artist/name "Bob Dylan"}
+                                  {:db/id _  :artist/name "George Harrison"} ] ]
+                              [:track/name "Ghost Riders in the Sky"] ]   true
+                            :else false))
+    )))
+
 
 #_(deftest t-00
   (testing "xxx"

@@ -4,6 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies   [ [org.clojure/clojure      "1.7.0-RC2"]
+                    [org.clojure/core.match   "0.3.0-alpha4"]
                     [prismatic/schema         "0.4.3"]
                     [cooljure                 "0.1.29"]
                     [com.datomic/datomic-pro  "0.9.5173" :exclusions [joda-time]]
