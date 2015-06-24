@@ -1,10 +1,10 @@
 (ns tst.basic.mbrainz
-  (:require [datomic.api      :as d]
-            [clojure.set      :as c.set]
-            [clojure.core.match     :refer [match] ]
-            [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx it-> safe-> grab submap? match?] ]
-            [basic.datomic    :as t]
+  (:require [datomic.api            :as d]
+            [clojure.set            :as c.set]
+            [clojure.core.match     :as ccm]
+            [schema.core            :as s]
+            [cooljure.core          :refer [spyx spyxx it-> safe-> grab submap? matches?] ]
+            [basic.datomic          :as t]
   )
   (:use clojure.pprint
         clojure.test)
@@ -96,7 +96,8 @@
 
 (deftest t-attribute-name
   (testing "scalar value lookup"
-    (let [res1          (d/pull db-val [:artist/name :artist/startYear]   led-zeppelin)
+    (let [res1          (d/pull db-val [:artist/name :artist/startYear]   ; The pattern is a vector (of keywords) indicating the attr-vals to retrieve
+                                        led-zeppelin) ; entity spec
     ]
       (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))))
   (testing "entity ref lookup"
@@ -108,7 +109,8 @@
     ]
       (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
   (testing "reverse lookup"
-    (let [result              (d/pull db-val [:artist/_country] :country/GB)
+    (let [result              (d/pull db-val [:artist/_country]   ; pattern vec
+                                              :country/GB)        ; entity spec
           _                   (s/validate {:artist/_country [ {:db/id t/Eid} ] } result )
           eid-map-list        (:artist/_country result)
           artist-ents         (for [eid-map eid-map-list
@@ -157,10 +159,8 @@
 ;                 :track/artists [  {:db/id 17592186046909} ] }
 (deftest t-components
   (testing "component defaults - horrible name!"  ; #todo
-    (let [result              (d/pull db-val [:release/media] dark-side-of-the-moon)
-          tracks-partial      (vec (sort-by :track/position
-                                (for [track-map (get-in result [:release/media 0 :medium/tracks] ) ]
-                                  (select-keys track-map [:track/duration :track/name :track/position]))))
+    (let [result  (d/pull db-val [:release/media]         ; desirec pattern vec
+                                 dark-side-of-the-moon)  ; entity spec
     ]
       (s/validate {:release/media [s/Any]} result)
       (s/validate {:release/media [ { :db/id t/Eid
@@ -169,19 +169,25 @@
                                       :medium/trackCount s/Any  ; #todo 10
                                       :medium/tracks [s/Any] } ] }
                   result )
-      (is (= tracks-partial
-              [ {:track/duration 68346  :track/name "Speak to Me"                   :track/position 1}
-                {:track/duration 168720 :track/name "Breathe"                       :track/position 2}
-                {:track/duration 230600 :track/name "On the Run"                    :track/position 3}
-                {:track/duration 409600 :track/name "Time"                          :track/position 4}
-                {:track/duration 284133 :track/name "The Great Gig in the Sky"      :track/position 5}
-                {:track/duration 382746 :track/name "Money"                         :track/position 6}
-                {:track/duration 469853 :track/name "Us and Them"                   :track/position 7}
-                {:track/duration 206213 :track/name "Any Colour You Like"           :track/position 8}
-                {:track/duration 226933 :track/name "Brain Damage"                  :track/position 9}
-                {:track/duration 131546 :track/name "Eclipse"                       :track/position 10} ] ))))
+      (is (matches? result
+            {:release/media
+              [ { :db/id _ :medium/format {:db/id _} :medium/position 1 :medium/trackCount 10
+                  :medium/tracks
+                    [ {:db/id _ :track/duration  68346 :track/name "Speak to Me"                   :track/position  1 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 168720 :track/name "Breathe"                       :track/position  2 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 230600 :track/name "On the Run"                    :track/position  3 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 409600 :track/name "Time"                          :track/position  4 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 284133 :track/name "The Great Gig in the Sky"      :track/position  5 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 382746 :track/name "Money"                         :track/position  6 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 469853 :track/name "Us and Them"                   :track/position  7 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 206213 :track/name "Any Colour You Like"           :track/position  8 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 226933 :track/name "Brain Damage"                  :track/position  9 :track/artists [{:db/id _} ] }
+                      {:db/id _ :track/duration 131546 :track/name "Eclipse"                       :track/position 10 :track/artists [{:db/id _} ] } ]}]}
+          ))))
+
   (testing "reverse component lookup"
-    (let [result        (d/pull db-val [:release/_media] dylan-harrison-cd)
+    (let [result        (d/pull db-val [:release/_media]    ; pattern vec
+                                        dylan-harrison-cd)  ; entity spec
           _             (s/validate {:release/_media {:db/id t/Eid}} result)
           res-entity    (t/entity-map      db-val (safe-> result :release/_media :db/id))
           ;  fails -->  (t/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
@@ -210,63 +216,77 @@
 
 (deftest t-map-spec
   (testing "map specifications"
-    (let [res-1       (vec (sort (d/pull db-val [:track/name :track/artists] ghost-riders)))
-          res-2       (vec (sort (d/pull db-val [:track/name {:track/artists [:db/id :artist/name] } ] ghost-riders)))
+    (let [res-1       (d/pull db-val [:track/name :track/artists]        ; plain pattern spec
+                                                ghost-riders)                     ; source eid
+          res-2       (d/pull db-val [:track/name {:track/artists [:db/id :artist/name] } ]  ; nested map pattern spec
+                                                ghost-riders)                     ; source eid
     ]
-      ; res-1 = [ [ :track/artists 
-      ;             [ {:db/id 17592186048186} 
-      ;               {:db/id 17592186049854} ] ]
-      ;           [ :track/name "Ghost Riders in the Sky"] ]
-      ; res-2 = [ [ :track/artists
-      ;             [ {:db/id 17592186048186, :artist/name "Bob Dylan"}
-      ;               {:db/id 17592186049854, :artist/name "George Harrison"} ] ]
-      ;             [:track/name "Ghost Riders in the Sky"]]
-      ;
-      (is (match    res-1   [ [ :track/artists 
+      (is (matches? res-1     { :track/artists    ; we ignore the :db/id EID value (long int)
                                 [ {:db/id _ } 
-                                  {:db/id _ } ] ]
-                              [ :track/name "Ghost Riders in the Sky"] ] true
-                            :else false))
-      (is (match  res-2     [ [ :track/artists
+                                  {:db/id _ } ]
+                                :track/name "Ghost Riders in the Sky" } ))
+      (is (matches? res-2     { :track/artists    ; we ignore the :db/id EID value (long int)
                                 [ {:db/id _  :artist/name "Bob Dylan"}
-                                  {:db/id _  :artist/name "George Harrison"} ] ]
-                              [:track/name "Ghost Riders in the Sky"] ]   true
-                            :else false))
+                                  {:db/id _  :artist/name "George Harrison"} ]
+                                :track/name "Ghost Riders in the Sky" } ))
     ))
   (testing "nested map specifications"
-    (let [res   (vec (sort (d/pull db-val 
-                    [ { :release/media
-                        [ { :medium/tracks
-                            [:track/name {:track/artists [:artist/name] } ] } ] } ]
-                    concert-for-bangla-desh )))
+    (println "nested map specifications")
+    (let [res   (d/pull db-val 
+                    [ { :release/media        ; for each :release/media entity recurse to
+                        [ { :medium/tracks      ; for each medium/tracks entity recurse to
+                            [:track/name          ; simple value attr
+                             {:track/artists      ; recurse through :track/artists
+                              [:artist/name]        ; to :artist/name
+                             } ] } ] } ]
+                    concert-for-bangla-desh )
     ]
       (is (= res
-            [[:release/media
+            {:release/media
               [{:medium/tracks
-                [{:track/name "George Harrison / Ravi Shankar Introduction", :track/artists [{:artist/name "Ravi Shankar"} {:artist/name "George Harrison"}]}
-                 {:track/name "Bangla Dhun", :track/artists [{:artist/name "Ravi Shankar"}]}]}
+                [{:track/name "George Harrison / Ravi Shankar Introduction", 
+                  :track/artists [{:artist/name "Ravi Shankar"} {:artist/name "George Harrison"}]}
+                 {:track/name "Bangla Dhun", 
+                  :track/artists [{:artist/name "Ravi Shankar"}]}]}
                {:medium/tracks
-                [{:track/name "Wah-Wah", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "My Sweet Lord", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "Awaiting on You All", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "That's the Way God Planned It", :track/artists [{:artist/name "Billy Preston"}]}]}
+                [{:track/name "Wah-Wah", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "My Sweet Lord", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Awaiting on You All", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "That's the Way God Planned It", 
+                  :track/artists [{:artist/name "Billy Preston"}]}]}
                {:medium/tracks
-                [{:track/name "It Don't Come Easy", :track/artists [{:artist/name "Ringo Starr"}]}
-                 {:track/name "Beware of Darkness", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "Introduction of the Band", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "While My Guitar Gently Weeps", :track/artists [{:artist/name "George Harrison"}]}]}
+                [{:track/name "It Don't Come Easy", 
+                  :track/artists [{:artist/name "Ringo Starr"}]}
+                 {:track/name "Beware of Darkness", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Introduction of the Band", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "While My Guitar Gently Weeps", 
+                  :track/artists [{:artist/name "George Harrison"}]}]}
                {:medium/tracks
-                [{:track/name "Jumpin' Jack Flash / Youngblood", :track/artists [{:artist/name "Leon Russell"}]}
-                 {:track/name "Here Comes the Sun", :track/artists [{:artist/name "George Harrison"}]}]}
+                [{:track/name "Jumpin' Jack Flash / Youngblood", 
+                  :track/artists [{:artist/name "Leon Russell"}]}
+                 {:track/name "Here Comes the Sun", 
+                  :track/artists [{:artist/name "George Harrison"}]}]}
                {:medium/tracks
-                [{:track/name "A Hard Rain's Gonna Fall", :track/artists [{:artist/name "Bob Dylan"}]}
-                 {:track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", :track/artists [{:artist/name "Bob Dylan"}]}
-                 {:track/name "Blowin' in the Wind", :track/artists [{:artist/name "Bob Dylan"}]}
-                 {:track/name "Mr. Tambourine Man", :track/artists [{:artist/name "Bob Dylan"}]}
-                 {:track/name "Just Like a Woman", :track/artists [{:artist/name "Bob Dylan"}]}]}
+                [{:track/name "A Hard Rain's Gonna Fall", 
+                  :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", 
+                  :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Blowin' in the Wind", 
+                  :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Mr. Tambourine Man", 
+                  :track/artists [{:artist/name "Bob Dylan"}]}
+                 {:track/name "Just Like a Woman", 
+                  :track/artists [{:artist/name "Bob Dylan"}]}]}
                {:medium/tracks
-                [{:track/name "Something", :track/artists [{:artist/name "George Harrison"}]}
-                 {:track/name "Bangla Desh", :track/artists [{:artist/name "George Harrison"}]}]}]]]
+                [{:track/name "Something", 
+                  :track/artists [{:artist/name "George Harrison"}]}
+                 {:track/name "Bangla Desh", 
+                  :track/artists [{:artist/name "George Harrison"}]}]}]}
           ))))
 )
 
