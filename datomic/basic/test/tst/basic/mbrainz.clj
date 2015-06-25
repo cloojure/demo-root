@@ -3,7 +3,7 @@
             [clojure.set            :as c.set]
             [clojure.core.match     :as ccm]
             [schema.core            :as s]
-            [cooljure.core          :refer [spyx spyxx it-> safe-> grab submap? matches?] ]
+            [cooljure.core          :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
             [basic.datomic          :as t]
   )
   (:use clojure.pprint
@@ -326,114 +326,65 @@
                    :track/name "Bangla Dhun",
                    :track/position 2,
                    :track/artists [{:db/id _}]}]}  ))
+      (is (wild-match? result
+              {:release/name "The Concert for Bangla Desh",
+               :release/artists [{:db/id :*}],
+               :release/country {:db/id :*},
+               :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
+               :release/day 20,
+               :release/status "Official",
+               :release/month 12,
+               :release/artistCredit "George Harrison",
+               :db/id :*,
+               :release/year 1971,
+               :release/media
+               [{:db/id :*, :medium/format {:db/id :*}, :medium/position 1, :medium/trackCount 2,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 376000, :track/name "George Harrison / Ravi Shankar Introduction", :track/position 1, :track/artists [{:db/id :*} {:db/id :*}]}
+                  {:db/id :*, :track/duration 979000, :track/name "Bangla Dhun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*,
+                 :medium/format {:db/id :*},
+                 :medium/position 3,
+                 :medium/trackCount 4,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 195000, :track/name "Wah-Wah", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 256000, :track/name "My Sweet Lord", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 157000, :track/name "Awaiting on You All", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 245000, :track/name "That's the Way God Planned It", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*,
+                 :medium/format {:db/id :*},
+                 :medium/position 5,
+                 :medium/trackCount 4,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 158000, :track/name "It Don't Come Easy", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 206000, :track/name "Beware of Darkness", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 180000, :track/name "Introduction of the Band", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 279000, :track/name "While My Guitar Gently Weeps", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*,
+                 :medium/format {:db/id :*},
+                 :medium/position 6,
+                 :medium/trackCount 2,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 551000, :track/name "Jumpin' Jack Flash / Youngblood", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 171000, :track/name "Here Comes the Sun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*,
+                 :medium/format {:db/id :*},
+                 :medium/position 4,
+                 :medium/trackCount 5,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 304000, :track/name "A Hard Rain's Gonna Fall", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 174000, :track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 214000, :track/name "Blowin' in the Wind", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 246000, :track/name "Mr. Tambourine Man", :track/position 4, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Just Like a Woman", :track/position 5, :track/artists [{:db/id :*}]}]}
+                {:db/id :*,
+                 :medium/format {:db/id :*},
+                 :medium/position 2,
+                 :medium/trackCount 2,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 185000, :track/name "Something", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Bangla Desh", :track/position 2, :track/artists [{:db/id :*}]}]}]} ))
   )))
-  ; result=
-  ;   {:release/name "The Concert for Bangla Desh",
-  ;    :release/artists [{:db/id 17592186049854}],
-  ;    :release/country {:db/id 17592186045452},
-  ;    :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
-  ;    :release/day 20,
-  ;    :release/status "Official",
-  ;    :release/month 12,
-  ;    :release/artistCredit "George Harrison",
-  ;    :db/id 17592186072003,
-  ;    :release/year 1971,
-  ;    :release/media
-  ;    [{:db/id 17592186072004, :medium/format {:db/id 17592186045741}, :medium/position 1, :medium/trackCount 2,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072005, :track/duration 376000, :track/name "George Harrison / Ravi Shankar Introduction",
-  ;        :track/position 1, :track/artists [{:db/id 17592186048829} {:db/id 17592186049854}]}
-  ;       {:db/id 17592186072006, :track/duration 979000, :track/name "Bangla Dhun", :track/position 2,
-  ;        :track/artists [{:db/id 17592186048829}]}]}
-  ;     {:db/id 17592186072007,
-  ;      :medium/format {:db/id 17592186045688},
-  ;      :medium/position 3,
-  ;      :medium/trackCount 4,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072008, :track/duration 195000, :track/name "Wah-Wah", :track/position 1,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072009, :track/duration 256000, :track/name "My Sweet Lord", :track/position 2,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072010, :track/duration 157000, :track/name "Awaiting on You All", :track/position 3,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072011, :track/duration 245000, :track/name "That's the Way God Planned It", :track/position 4,
-  ;        :track/artists [{:db/id 17592186046812}]}]}
-  ;     {:db/id 17592186072012,
-  ;      :medium/format {:db/id 17592186045688},
-  ;      :medium/position 5,
-  ;      :medium/trackCount 4,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072013, :track/duration 158000, :track/name "It Don't Come Easy", :track/position 1,
-  ;        :track/artists [{:db/id 17592186046867}]}
-  ;       {:db/id 17592186072014, :track/duration 206000, :track/name "Beware of Darkness", :track/position 2,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072015, :track/duration 180000, :track/name "Introduction of the Band", :track/position 3,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072016,
-  ;        :track/duration 279000,
-  ;        :track/name "While My Guitar Gently Weeps",
-  ;        :track/position 4,
-  ;        :track/artists [{:db/id 17592186049854}]}]}
-  ;     {:db/id 17592186072017,
-  ;      :medium/format {:db/id 17592186045688},
-  ;      :medium/position 6,
-  ;      :medium/trackCount 2,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072018,
-  ;        :track/duration 551000,
-  ;        :track/name "Jumpin' Jack Flash / Youngblood",
-  ;        :track/position 1,
-  ;        :track/artists [{:db/id 17592186047711}]}
-  ;       {:db/id 17592186072019,
-  ;        :track/duration 171000,
-  ;        :track/name "Here Comes the Sun",
-  ;        :track/position 2,
-  ;        :track/artists [{:db/id 17592186049854}]}]}
-  ;     {:db/id 17592186072020,
-  ;      :medium/format {:db/id 17592186045688},
-  ;      :medium/position 4,
-  ;      :medium/trackCount 5,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072021,
-  ;        :track/duration 304000,
-  ;        :track/name "A Hard Rain's Gonna Fall",
-  ;        :track/position 1,
-  ;        :track/artists [{:db/id 17592186048186}]}
-  ;       {:db/id 17592186072022,
-  ;        :track/duration 174000,
-  ;        :track/name "It Takes a Lot to Laugh / It Takes a Train to Cry",
-  ;        :track/position 2,
-  ;        :track/artists [{:db/id 17592186048186}]}
-  ;       {:db/id 17592186072023,
-  ;        :track/duration 214000,
-  ;        :track/name "Blowin' in the Wind",
-  ;        :track/position 3,
-  ;        :track/artists [{:db/id 17592186048186}]}
-  ;       {:db/id 17592186072024,
-  ;        :track/duration 246000,
-  ;        :track/name "Mr. Tambourine Man",
-  ;        :track/position 4,
-  ;        :track/artists [{:db/id 17592186048186}]}
-  ;       {:db/id 17592186072025,
-  ;        :track/duration 254000,
-  ;        :track/name "Just Like a Woman",
-  ;        :track/position 5,
-  ;        :track/artists [{:db/id 17592186048186}]}]}
-  ;     {:db/id 17592186072026,
-  ;      :medium/format {:db/id 17592186045688},
-  ;      :medium/position 2,
-  ;      :medium/trackCount 2,
-  ;      :medium/tracks
-  ;      [{:db/id 17592186072027,
-  ;        :track/duration 185000,
-  ;        :track/name "Something",
-  ;        :track/position 1,
-  ;        :track/artists [{:db/id 17592186049854}]}
-  ;       {:db/id 17592186072028,
-  ;        :track/duration 254000,
-  ;        :track/name "Bangla Desh",
-  ;        :track/position 2,
-  ;        :track/artists [{:db/id 17592186049854}]}]}]}
 
 (deftest t-wild-map
   (testing "wildcard & map spec"
