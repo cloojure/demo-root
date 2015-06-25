@@ -275,6 +275,10 @@
 ;---------------------------------------------------------------------------------------------------
 ; Informational functions
 
+; (defn find-tuples   ...)       -> TupleSet
+; (defn find-scalars  ...)       -> Set
+; (defn find-one      ...)       -> scalar
+
 (s/defn result-set :- TupleSet
   "Returns a TupleSet (hash-set of tuples) built from the output of a Datomic query using the Entity API"
   [raw-resultset :- HashSetGeneric]

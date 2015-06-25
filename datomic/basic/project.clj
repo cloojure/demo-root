@@ -15,4 +15,5 @@
   :main ^:skip-aot basic.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}}
+  :jvm-opts ["-Xmx8g"]
 )
