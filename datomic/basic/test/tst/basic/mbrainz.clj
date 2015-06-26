@@ -423,27 +423,15 @@
       (is (= 128 (count (grab :track/_artists res-1))))))
 )
 
-#_(deftest t-00
-  (testing "xxx"
-    (let [
-    ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-    (let [
-    ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-    (let [
-    ]
-)))
-
-#_(deftest t-00
-  (testing "xxx"
-    (let [
-    ]
+(deftest t-empty
+  (testing "empty results"
+    (let [res   (d/pull db-val '[:penguins] led-zeppelin) ]
+      (is (nil? res))
+    (let [res-1   (d/pull db-val '[ {:track/artists [:artist/name] } ] ghost-riders)
+          res-2   (d/pull db-val '[ {:track/artists [:penguins]    } ] ghost-riders) ]
+      (is (= res-1  { :track/artists
+                      [ {:artist/name "Bob Dylan"} 
+                        {:artist/name "George Harrison"} ] } ))
+      (is (nil? res-2)))
 )))
 
