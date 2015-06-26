@@ -1,12 +1,11 @@
 (ns basic.core
   (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx]]
-            [basic.datomic    :as t]
+            [tupelo.datomic    :as t]
             [schema.core      :as s]
             [schema.coerce    :as coerce]
   )
   (:use   clojure.pprint
-          cooljure.core
+          tupelo.core
   )
   (import [java.util Set Map List])
   (:gen-class))

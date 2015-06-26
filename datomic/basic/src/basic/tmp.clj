@@ -1,6 +1,6 @@
 (ns basic.tmp
   (:use   clojure.pprint
-          cooljure.core)
+          tupelo.core)
   (:gen-class))
 (newline)
 

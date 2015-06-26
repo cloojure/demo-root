@@ -1,10 +1,9 @@
 (ns tst.basic.mbrainz
   (:require [datomic.api            :as d]
             [clojure.set            :as c.set]
-            [clojure.core.match     :as ccm]
             [schema.core            :as s]
-            [cooljure.core          :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
-            [basic.datomic          :as t]
+            [tupelo.core            :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
+            [tupelo.datomic         :as t]
   )
   (:use clojure.pprint
         clojure.test)

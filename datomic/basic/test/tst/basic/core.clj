@@ -1,6 +1,6 @@
 (ns tst.basic.core
   (:use basic.core
-        cooljure.core
+        tupelo.core
         clojure.test ))
 
 (deftest a-test

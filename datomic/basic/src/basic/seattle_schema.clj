@@ -1,8 +1,8 @@
 (ns basic.seattle-schema
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx it-> safe-> pp-str forv]]
-            [basic.datomic    :as t]
+            [tupelo.core      :refer [spyx spyxx it-> safe-> pp-str forv]]
+            [tupelo.datomic   :as t]
   )
   (:use clojure.pprint
         clojure.test)

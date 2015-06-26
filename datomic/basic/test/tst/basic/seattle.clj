@@ -1,8 +1,8 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [cooljure.core    :refer [spyx spyxx it-> safe-> ]]
-            [basic.datomic    :as t]
+            [tupelo.core      :refer [spyx spyxx it-> safe-> ]]
+            [tupelo.datomic   :as t]
             [basic.seattle-schema  :as b.ss]
   )
   (:use clojure.pprint

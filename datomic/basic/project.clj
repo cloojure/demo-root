@@ -6,7 +6,7 @@
   :dependencies   [ [org.clojure/clojure      "1.7.0-RC2"]
                     [org.clojure/core.match   "0.3.0-alpha4"]
                     [prismatic/schema         "0.4.3"]
-                    [cooljure                 "0.1.29"]
+                    [tupelo                   "0.1.40"]
                     [com.datomic/datomic-pro  "0.9.5173" :exclusions [joda-time]]
                   ]
 ; :repositories {"my.datomic.com" {:url "https://my.datomic.com/repo"

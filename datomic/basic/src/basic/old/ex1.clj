@@ -1,11 +1,10 @@
 (ns basic.ex
   (:require [datomic.api      :as d]
-            [cooljure.core    :refer [spyx spyxx]]
-            [basic.datomic    :refer :all]
+            [tupelo.datomic    :refer :all]
             [schema.core      :as s]
             [schema.coerce    :as coerce] )
   (:use   clojure.pprint
-          cooljure.core)
+          tupelo.core)
   (:gen-class))
 
 ;---------------------------------------------------------------------------------------------------
