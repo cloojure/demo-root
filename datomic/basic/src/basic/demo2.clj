@@ -171,6 +171,12 @@
                   (d/db *conn*))
 ]
   (pprint result))
+(println "pulling without defaults")
+(let [result    (d/q  '{:find   [ (pull ?eid [:person/name :person/secret-id] ) ]
+                        :where  [ [?eid :person/name ?name] ] }
+                  (d/db *conn*))
+]
+  (pprint result))
 
 (newline)
 (println "update error")

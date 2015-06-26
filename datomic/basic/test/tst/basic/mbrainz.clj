@@ -232,7 +232,6 @@
                                 :track/name "Ghost Riders in the Sky" } ))
     ))
   (testing "nested map specifications"
-    (println "nested map specifications")
     (let [res   (d/pull db-val 
                     [ { :release/media        ; for each :release/media entity recurse to
                         [ { :medium/tracks      ; for each medium/tracks entity recurse to
@@ -326,7 +325,7 @@
                    :track/name "Bangla Dhun",
                    :track/position 2,
                    :track/artists [{:db/id _}]}]}  ))
-      (is (matches? result
+    #_(is (matches? result
               {:release/name "The Concert for Bangla Desh", :release/artists [{:db/id _}], :release/country {:db/id _}, :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
                :release/day 20, :release/status "Official", :release/month 12, :release/artistCredit "George Harrison", :db/id _, :release/year 1971,
                :release/media
@@ -378,21 +377,73 @@
                [{:artist/name "Bob Dylan"} {:artist/name "George Harrison"}]} ))
 )))
 
+(deftest t-defaults
+  (testing "default expressions"
+    (let [res-1     (d/pull db-val '[:artist/name (default :artist/endYear 0)]       mccartney)
+          res-2     (d/pull db-val '[:artist/name (default :artist/endYear "N/A")]   mccartney)
+          res-3     (d/pull db-val '[:artist/name (default :died-in-1966?)]          mccartney)
+    ]
+      (is (= res-1  {:artist/name "Paul McCartney", :artist/endYear 0} ))
+      (is (= res-2  {:artist/name "Paul McCartney", :artist/endYear "N/A"} ))
+      (is (= res-3  {:artist/name "Paul McCartney"} )))))
+
+(deftest t-limit
+  (testing "limit"
+    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists 10) ]        led-zeppelin)
+          res-2   (d/pull db-val '[ { (limit :track/_artists 10) [:track/name] } ]  led-zeppelin)
+    ]
+      (is (matches?   res-1
+                      { :artist/name "Led Zeppelin",
+                        :track/_artists
+                        [ {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _}
+                          {:db/id _} ] } ))
+      (is (= res-2  { :track/_artists
+                      [ {:track/name "Whole Lotta Love"}
+                        {:track/name "What Is and What Should Never Be"}
+                        {:track/name "The Lemon Song"}
+                        {:track/name "Thank You"}
+                        {:track/name "Heartbreaker"}
+                        {:track/name "Living Loving Maid (She's Just a Woman)"}
+                        {:track/name "Ramble On"}
+                        {:track/name "Moby Dick"}
+                        {:track/name "Bring It on Home"}
+                        {:track/name "Whole Lotta Love"}]} ))))
+  (testing "nulllimit"
+    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) 
+    ]
+      (is (matches? res-1 {:artist/name "Led Zeppelin", :track/_artists _ } ))
+      (is (= 128 (count (grab :track/_artists res-1))))))
+)
+
 #_(deftest t-00
   (testing "xxx"
-  (let [
-  ]
+    (let [
+    ]
 )))
 
 #_(deftest t-00
   (testing "xxx"
-  (let [
-  ]
+    (let [
+    ]
 )))
 
 #_(deftest t-00
   (testing "xxx"
-  (let [db-val (d/db conn)
-  ]
+    (let [
+    ]
+)))
+
+#_(deftest t-00
+  (testing "xxx"
+    (let [
+    ]
 )))
 
