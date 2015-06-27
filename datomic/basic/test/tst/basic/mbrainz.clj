@@ -4,6 +4,7 @@
             [schema.core            :as s]
             [tupelo.core            :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
             [tupelo.datomic         :as t]
+            [tupelo.schema          :as ts]
   )
   (:use clojure.pprint
         clojure.test)
@@ -39,14 +40,14 @@
                                   [?release :release/media ?medium]]
                                 db-val
                                 dylan-harrison-sessions))
-(s/validate t/Eid dylan-harrison-cd)
+(s/validate ts/Eid dylan-harrison-cd)
 (def ghost-riders       (d/q '{:find [?track .]
                                :in [$ ?release ?trackno]
                                :where  [ [?release :release/media ?medium]
                                          [?medium :medium/tracks ?track]
                                          [?track :track/position ?trackno] ] }
                              db-val dylan-harrison-sessions 11 ))
-(s/validate t/Eid ghost-riders)
+(s/validate ts/Eid ghost-riders)
 
 ;---------------------------------------------------------------------------------------------------
 ; (use-fixtures :once     ; #todo: what happens if more than 1 use-fixtures in test ns file ???
@@ -111,14 +112,14 @@
   (testing "reverse lookup"
     (let [result              (d/pull db-val [:artist/_country]   ; pattern vec
                                               :country/GB)        ; entity spec
-          _                   (s/validate {:artist/_country [ {:db/id t/Eid} ] } result )
+          _                   (s/validate {:artist/_country [ {:db/id ts/Eid} ] } result )
           eid-map-list        (:artist/_country result)
           artist-ents         (for [eid-map eid-map-list
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do
-                                  (s/validate t/Eid eid)
+                                  (s/validate ts/Eid eid)
                                   (t/entity-map-sort db-val eid)))
-          _                   (s/validate [t/KeyMap] artist-ents)
+          _                   (s/validate [ts/KeyMap] artist-ents)
           artist-countries    (mapv :artist/country artist-ents)
     ]
       (is (=  1 (count result)))
@@ -163,8 +164,8 @@
                                  dark-side-of-the-moon)  ; entity spec
     ]
       (s/validate {:release/media [s/Any]} result)
-      (s/validate {:release/media [ { :db/id t/Eid
-                                      :medium/format {:db/id t/Eid}
+      (s/validate {:release/media [ { :db/id ts/Eid
+                                      :medium/format {:db/id ts/Eid}
                                       :medium/position  s/Any   ; #todo 1
                                       :medium/trackCount s/Any  ; #todo 10
                                       :medium/tracks [s/Any] } ] }
@@ -188,7 +189,7 @@
   (testing "reverse component lookup"
     (let [result        (d/pull db-val [:release/_media]    ; pattern vec
                                         dylan-harrison-cd)  ; entity spec
-          _             (s/validate {:release/_media {:db/id t/Eid}} result)
+          _             (s/validate {:release/_media {:db/id ts/Eid}} result)
           res-entity    (t/entity-map      db-val (safe-> result :release/_media :db/id))
           ;  fails -->  (t/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
 
@@ -196,7 +197,7 @@
                                        :release/artists #{ s/Any }
                                        :release/country s/Keyword     ; #todo :country/US
                                        :release/gid s/Uuid
-                                       :release/media #{ s/Any }  ; #todo {:db/id t/Eid} does not nest! ???
+                                       :release/media #{ s/Any }  ; #todo {:db/id ts/Eid} does not nest! ???
                                        :release/name s/Str
                                        :release/status s/Str
                                        :release/year Long}

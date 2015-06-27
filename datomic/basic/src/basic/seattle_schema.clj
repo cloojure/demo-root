@@ -3,13 +3,14 @@
             [schema.core      :as s]
             [tupelo.core      :refer [spyx spyxx it-> safe-> pp-str forv]]
             [tupelo.datomic   :as t]
+            [tupelo.schema    :as ts]
   )
   (:use clojure.pprint
         clojure.test)
   (:gen-class))
 
 ; A map that defines the datomic schema.  Format for each entry is [ :kw-fn-name <args>* ]
-(s/def schema-attributes :- t/TupleList
+(s/def schema-attributes :- ts/TupleList
   [
     ; community attributes
     [:new-attribute :community/name           :db.type/string   :db/fulltext "A community's name" ]
@@ -28,7 +29,7 @@
     [:new-attribute :district/region :db.type/ref "A district region enum value"]
   ] )
 
-(s/def schema-enums :- t/TupleList
+(s/def schema-enums :- ts/TupleList
   [
     ; community/org-type enum values
     [:new-enum :community.orgtype/community]
@@ -57,9 +58,9 @@
     [:new-enum :region/nw]
   ] )
 
-(s/defn transact-data :- t/TxResult
+(s/defn transact-data :- ts/TxResult
   [conn         :- s/Any
-   tuple-list   :- t/TupleList
+   tuple-list   :- ts/TupleList
   ]
   (let [tx-data     (forv [ [kw-fn & fn-args] tuple-list] ; destructure to fn & args
                       (condp  = kw-fn

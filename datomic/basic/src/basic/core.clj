@@ -1,6 +1,7 @@
 (ns basic.core
   (:require [datomic.api      :as d]
-            [tupelo.datomic    :as t]
+            [tupelo.datomic   :as t]
+            [tupelo.schema    :as ts]
             [schema.core      :as s]
             [schema.coerce    :as coerce]
   )
@@ -36,7 +37,7 @@
 (def e-results (d/q '[:find ?c :where [?c :community/name]] db-val ))
 (spyx (count e-results))
 (spyx (class e-results))
-(s/validate  #{ [ (s/one t/Eid "x") ] }  (into #{} e-results))
+(s/validate  #{ [ (s/one ts/Eid "x") ] }  (into #{} e-results))
 
 (def eid-1 (ffirst e-results))
 (spyxx eid-1)
@@ -280,7 +281,7 @@
 (newline)
 (print "com-twfb")    ; a set of tuples
 (s/def com-twfb :- #{ [ (s/one s/Str      "com-name")
-                        (s/one t/Eid      "comtype-eid")
+                        (s/one ts/Eid      "comtype-eid")
                         (s/one s/Keyword  "comtype-id") 
                       ] }
   (into #{}

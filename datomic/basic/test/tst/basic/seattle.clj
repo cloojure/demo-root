@@ -3,6 +3,7 @@
             [schema.core      :as s]
             [tupelo.core      :refer [spyx spyxx it-> safe-> ]]
             [tupelo.datomic   :as t]
+            [tupelo.schema    :as ts]
             [basic.seattle-schema  :as b.ss]
   )
   (:use clojure.pprint
@@ -31,7 +32,7 @@
     (let [conn (d/connect uri) ]
       (b.ss/add-schema conn)
 
-      (s/validate t/TxResult @(d/transact conn seattle-data-0))
+      (s/validate ts/TxResult @(d/transact conn seattle-data-0))
       (binding [*conn* conn]
         (tst-fn))
       (d/delete-database uri))))
@@ -42,15 +43,15 @@
         rs1     (d/q '{:find  [?c]     ; always prefer the map-query syntax
                        :where [ [?c :community/name] ] } 
                      db-val)
-        rs2     (s/validate  t/TupleSet  (t/result-set-sort rs1))  ; convert to clojure #{ [...] }
+        rs2     (s/validate  ts/TupleSet  (t/result-set-sort rs1))  ; convert to clojure #{ [...] }
         _ (is (= 150 (count rs1)))
         _ (is (= 150 (count rs2)))
         _ (is (= java.util.HashSet                (class rs1)))
         _ (is (= clojure.lang.PersistentTreeSet   (class rs2)))
-        _ (is (s/validate #{ [ t/Eid ] } rs2))
+        _ (is (s/validate #{ [ ts/Eid ] } rs2))
 
-        eid-1   (s/validate t/Eid (ffirst rs2))
-        entity  (s/validate t/KeyMap (t/entity-map-sort db-val eid-1))
+        eid-1   (s/validate ts/Eid (ffirst rs2))
+        entity  (s/validate ts/KeyMap (t/entity-map-sort db-val eid-1))
         _ (is (= (keys entity) [:community/category :community/name :community/neighborhood 
                                 :community/orgtype  :community/type :community/url] ))
         entity-maps   (for [[eid] rs2]  ; destructure as we loop
@@ -137,7 +138,7 @@
         ; Find all tuples of [community-eid community-name] and collect results into a regular
         ; Clojure set (the native Datomic return type is set-like but not a Clojure set, so it
         ; doesn't work right with Prismatic Schema specs)
-        comms-and-names     (s/validate  #{ [ (s/one t/Eid "comm-eid") (s/one s/Str "comm-name") ] } ; verify expected shape
+        comms-and-names     (s/validate  #{ [ (s/one ts/Eid "comm-eid") (s/one s/Str "comm-name") ] } ; verify expected shape
                               (t/result-set-sort
                                 (d/q '{:find  [?comm-eid ?comm-name] ; <- shape of output RS tuples
                                        :where [ [?comm-eid :community/name ?comm-name ] ] } 
@@ -625,7 +626,7 @@
       freestuff-rs-1     (t/result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
       _ (is (= 1 (count freestuff-rs-1)))
       freestuff-eid-1    (t/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
-      _ (is (s/validate t/Eid freestuff-eid-1))
+      _ (is (s/validate ts/Eid freestuff-eid-1))
 
       tx-2-result       @(t/transact *conn* 
                           (t/retraction belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
@@ -638,12 +639,12 @@
 (deftest t-pull-1
   (testing "demo for pull api"
   (let [db-val            (d/db *conn*)
-        pull-results      (s/validate [t/TupleMap]
+        pull-results      (s/validate [ts/TupleMap]
                             (d/q '[:find  (pull ?c [*]) 
                                    :where [?c :community/name] ]
                                  db-val ))
   ]
-    (is (s/validate [t/TupleMap] pull-results))
+    (is (s/validate [ts/TupleMap] pull-results))
     (is (= 150 (count pull-results))))))
 
 #_(deftest t-00
