@@ -1,6 +1,6 @@
 (ns basic.core
   (:require [datomic.api      :as d]
-            [tupelo.datomic    :as t]
+            [tupelo.datomic   :as t]
             [schema.core      :as s]
             [schema.coerce    :as coerce]
   )
