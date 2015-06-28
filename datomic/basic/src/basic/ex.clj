@@ -130,7 +130,7 @@
 
 ; James drops his knife...
 (d/transact *conn* [
-  (t/retraction [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
+  (t/retract-value [:person/name "Bond, James Bond"]  :weapon/type :weapon/knife)
 ] )
 (newline) (println "James dropped knife + new name")
 (show-people (d/db *conn*))
@@ -213,7 +213,7 @@
       _ (spyxx devil-eid)
       devil     (t/entity-map (d/db *conn*) devil-eid)
       _ (spyxx devil)
-      tx-result @(d/transact *conn* [ (t/retraction-entity devil-eid) ] )
+      tx-result @(d/transact *conn* [ (t/retract-entity devil-eid) ] )
   ]
   (newline) (println "removed devil" )
   (spyxx tx-result)

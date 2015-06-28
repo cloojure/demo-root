@@ -13,6 +13,7 @@
 ;                                  :creds :gpg}}
 
   :main ^:skip-aot basic.core
+  :global-vars {*warn-on-reflection* false }
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}}
   :jvm-opts [ "-Xms4g" "-Xmx12g" ]

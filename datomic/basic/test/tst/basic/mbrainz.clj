@@ -57,7 +57,7 @@
 ;---------------------------------------------------------------------------------------------------
 (deftest t-connection-verify
   (testing "can we connect to the Datomic db"
-    (let [rs        (t/result-set-sort
+    (let [rs        (t/result-set
                       (d/q '[:find ?title
                              :in $ ?artist-name
                              :where
@@ -118,7 +118,7 @@
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do
                                   (s/validate ts/Eid eid)
-                                  (t/entity-map-sort db-val eid)))
+                                  (t/entity-map db-val eid)))
           _                   (s/validate [ts/KeyMap] artist-ents)
           artist-countries    (mapv :artist/country artist-ents)
     ]
