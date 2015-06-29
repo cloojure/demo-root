@@ -389,15 +389,15 @@
              "Blogging Georgetown"
              "Broadview Community Council" ] )))
 
-  (let [db-val (d/db *conn*)
+  (let [
     ; find the community whose names includes the string "Wallingford"
     names-wall    (s/validate [s/Str]
-                    (d/q '{:find  [ [?com-name ...] ]
-                           :where [ [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]   ; ignore last 2
-;                  Usage:  :where   [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
-                                  ] }
-                         db-val ; <db> is the only param that isn't a literal here
-                    ))
+                    (td/result-only
+                      (td/query   :let    [$ (d/db *conn*)] ; <db> is the only param that isn't a literal here
+                                  :find   [?com-name]
+                                  :where  [ [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]   ; ignore last 2
+        ;                  Usage: :where    [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
+                                          ] )))
   ]
     (is (= 1 (count names-wall)))
     (is (= names-wall ["KOMO Communities - Wallingford"] )))
