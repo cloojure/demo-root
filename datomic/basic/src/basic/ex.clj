@@ -225,6 +225,31 @@
   (spy :msg "devil is missing" (td/entity-map (d/db *conn*) devil-eid))
 )
 
+; #todo Want it to look like
+#_(let [devil-eid (td/result-scalar
+                    (td/q   :let    [$      (d/db *conn*) 
+                                     ?name  "Mephistopheles"]
+                            :find   [?e]
+                            :where  [ [?e :person/name ?name] ] )) ] )  ; #todo remember 'with'
+; #todo
+; ***** reproduce this & verify (with) *****
+;  ;; incorrect query
+;  [:find (sum ?heads) .
+;
+;   :in [[_        ?heads]]]  - wrong way -> 4 heads
+;
+;     :with [?monster]        - right way -> 6 heads
+;     :in [[?monster ?heads]]]
+;  
+;  ;; inputs
+;  [["Cerberus" 3]
+;   ["Medusa" 1]
+;   ["Cyclops" 1]
+;   ["Chimera" 1]]
+;  
+;  ;; result
+;  4
+
 (def dr-no  (it-> (td/new-entity :people { :person/name    "Dr No"
                                           :weapon/type    :weapon/guile } )
                   @(td/transact *conn* it)
