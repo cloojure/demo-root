@@ -317,25 +317,20 @@
               ["MyWallingford"                       :community.type/twitter]
               ["MyWallingford"                       :community.type/facebook-page] } ))))
 
+; Find all communities that are non-commercial email-lists or commercial
+; web-sites using a list of tuple parameters
 (deftest t-08
-  (let [
-    db-val (d/db *conn*)
-
-    ; Find all communities that are non-commercial email-lists or commercial
-    ; web-sites using a list of tuple parameters
-    rs    (s/validate #{ [ (s/one s/Str      "name")
-                           (s/one s/Keyword  "type") 
-                           (s/one s/Keyword  "orgtype") 
-                         ] }
-            (into (sorted-set)
-              (d/q '{:find  [?name ?type ?orgtype]
-                     :in    [$ [[?type ?orgtype]] ]
-                     :where [ [?com :community/name     ?name]
-                              [?com :community/type     ?type]
-                              [?com :community/orgtype  ?orgtype] ] }
-                   db-val
-                   [ [:community.type/email-list  :community.orgtype/community] 
-                     [:community.type/website     :community.orgtype/commercial] ] )))
+  (let [db-val    (d/db *conn*)
+        rs        (s/validate #{ [ (s/one s/Str      "name")
+                                   (s/one s/Keyword  "type") 
+                                   (s/one s/Keyword  "orgtype") ] }
+                    (td/query   :let    [ $ db-val
+                                          [[?type ?orgtype]]   [ [:community.type/email-list  :community.orgtype/community] 
+                                                                 [:community.type/website     :community.orgtype/commercial] ] ]
+                                :find   [?name ?type ?orgtype]
+                                :where  [ [?com :community/name     ?name]
+                                          [?com :community/type     ?type]
+                                          [?com :community/orgtype  ?orgtype] ] ))
   ]
     (is (= 15 (count rs)))
     (is (= rs
