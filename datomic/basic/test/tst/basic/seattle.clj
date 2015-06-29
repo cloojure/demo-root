@@ -97,6 +97,7 @@
         rs                (td/query   :let    [$ db-val]
                                       :find   [?c] 
                                       :where  [ [?c :community/name] ] )
+        _ (s/validate ts/TupleSet rs)
         entity-maps       (sort-by :community/name 
                             (for [[eid] rs]
                               (td/entity-map db-val eid)))
@@ -195,63 +196,54 @@
 (deftest t-03
   (let [db-val              (d/db *conn*)
         ; find the names of all communities that are twitter feeds
-        comm-names  (s/validate #{s/Str}
-                      (into (sorted-set)
-                        (for [ [name]   (d/q '{:find  [?name]
-                                               :where [ [?comm-eid :community/name ?name]
-                                                        [?comm-eid :community/type :community.type/twitter] ] }
-                                             db-val ) ]
-                          name)))
+        comm-names  (td/query   :let    [$ db-val]
+                                :find   [?name]
+                                :where  [ [?comm-eid :community/name ?name]
+                                          [?comm-eid :community/type :community.type/twitter] ] )
   ]
-    (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
-                          "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
+    (is (= comm-names   #{["Columbia Citizens"] ["Discover SLU"] ["Fremont Universe"]
+                          ["Magnolia Voice"] ["Maple Leaf Life"] ["MyWallingford"]} ))))
 
 (deftest t-04
-  (let [db-val              (d/db *conn*)
-        ; find the names all communities in the NE region
-        names-ne    (s/validate #{s/Str}
-                      (into (sorted-set)
-                        (for [ [name]   (d/q '{:find  [?name]
-                                               :where [ [?com   :community/name         ?name]
-                                                        [?com   :community/neighborhood ?nbr]
-                                                        [?nbr   :neighborhood/district  ?dist]
-                                                        [?dist  :district/region        :region/ne] ] }
-                                             db-val ) ]
-                          name)))
-  ]
-    (is (= names-ne   #{"Aurora Seattle" "Hawthorne Hills Community Website"
-                        "KOMO Communities - U-District" "KOMO Communities - View Ridge"
-                        "Laurelhurst Community Club" "Magnuson Community Garden"
-                        "Magnuson Environmental Stewardship Alliance"
-                        "Maple Leaf Community Council" "Maple Leaf Life"} ))
-    (is (= 9 (count names-ne)))))
+  (testing "find the names all communities in the NE region"
+    (let [names-ne    (td/query   :let    [$ (d/db *conn*)]
+                                  :find   [?name]
+                                  :where  [ [?com   :community/name         ?name]
+                                            [?com   :community/neighborhood ?nbr]
+                                            [?nbr   :neighborhood/district  ?dist]
+                                            [?dist  :district/region        :region/ne] ] ) 
+    ]
+      (is (= 9 (count names-ne)))
+      (is (= names-ne   #{ ["Aurora Seattle"] ["Hawthorne Hills Community Website"]
+                           ["KOMO Communities - U-District"] ["KOMO Communities - View Ridge"]
+                           ["Laurelhurst Community Club"] ["Magnuson Community Garden"]
+                           ["Magnuson Environmental Stewardship Alliance"]
+                           ["Maple Leaf Community Council"] ["Maple Leaf Life"] } )))))
 
 (deftest t-05
-  (let [db-val (d/db *conn*)
-; find the names and regions of all communities
-    com-name-reg    (s/validate #{ [ (s/one s/Str      "comm-name") 
-                                     (s/one s/Keyword  "region-id") ] }
-                      (into (sorted-set)
-                        (d/q '{:find [?com-name ?reg-id] ; <- displays shape of result tuple
-                               :where [ [?com   :community/name           ?com-name]
-                                        [?com   :community/neighborhood   ?nbr]
-                                        [?nbr   :neighborhood/district    ?dist]
-                                        [?dist  :district/region          ?reg]
-                                        [?reg   :db/ident                 ?reg-id] ] }
-                              db-val )))
-  ]
-    (is (= 132 (count com-name-reg)))
-    (is (= (take 5 com-name-reg)
-           [ ["15th Ave Community"                  :region/e]
-             ["Admiral Neighborhood Association"    :region/sw]
-             ["Alki News"                           :region/sw]
-             ["Alki News/Alki Community Council"    :region/sw]
-             ["All About Belltown"                  :region/w] ] ))))
+  (testing "find the names and regions of all communities"
+    (let [com-name-reg  (s/validate #{ [ (s/one s/Str      "com-name") 
+                                         (s/one s/Keyword  "reg-id") ] }
+                          (td/query   :let    [$ (d/db *conn*)]
+                                      :find   [?com-name ?reg-id] ; <- shape of result tuple
+                                      :where  [ [?com   :community/name           ?com-name]
+                                                [?com   :community/neighborhood   ?nbr]
+                                                [?nbr   :neighborhood/district    ?dist]
+                                                [?dist  :district/region          ?reg]
+                                                [?reg   :db/ident                 ?reg-id] ] ))
+    ]
+      (is (= 132 (count com-name-reg)))
+      (is (= (take 5 (into (sorted-set) com-name-reg))
+             [ ["15th Ave Community"                  :region/e]
+               ["Admiral Neighborhood Association"    :region/sw]
+               ["Alki News"                           :region/sw]
+               ["Alki News/Alki Community Council"    :region/sw]
+               ["All About Belltown"                  :region/w] ] )))))
 
+; find all communities that are either twitter feeds or facebook pages, by calling a single query
+; with a parameterized type value
 (deftest t-06
   (let [db-val (d/db *conn*)
-    ; find all communities that are either twitter feeds or facebook pages, by calling a single query with a
-    ; parameterized type value
     query-map     '{:find [ [?com-name ...] ]  ; collection syntax
                     :in [$ ?type]
                     :where [ [?com   :community/name   ?com-name]
