@@ -350,16 +350,16 @@
               ["Leschi Community Council"                     :community.type/email-list  :community.orgtype/community]
               ["Madrona Moms"                                 :community.type/email-list  :community.orgtype/community] } ))))
 
+; find all community names coming before "C" in alphabetical order
 (deftest t-09
-  (let [db-val (d/db *conn*)
-    ; find all community names coming before "C" in alphabetical order
+  (let [
     names-abc     (s/validate [s/Str]
-                    (sort
-                      (d/q  '{:find [ [?name ...] ] ; <- collection (vector) result
-                              :where [ [?com :community/name ?name]
-                                       [(.compareTo ^String ?name "C") ?result]
-                                       [(neg? ?result)] ] }
-                            db-val)))
+                    (sort (td/TupleSet->Set
+                      (td/query :let    [$ (d/db *conn*)]
+                                :find   [?name]
+                                :where  [ [?com :community/name ?name]
+                                          [(.compareTo ^String ?name "C") ?result]
+                                          [(neg? ?result)] ] ))))
   ]
     (is (= 25 (count names-abc)))
     (is (= names-abc
