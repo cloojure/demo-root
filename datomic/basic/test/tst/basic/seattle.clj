@@ -1,7 +1,7 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [tupelo.core      :refer [spyx spyxx it-> safe-> ]]
+            [tupelo.core      :refer [spy spyx spyxx it-> safe-> ]]
             [tupelo.datomic   :as td]
             [tupelo.schema    :as ts]
             [basic.seattle-schema  :as b.ss]
@@ -241,56 +241,56 @@
                ["All About Belltown"                  :region/w] ] )))))
 
 ; find all communities that are either twitter feeds or facebook pages, by calling a single query
-; with a parameterized type value
+; with a parameterized type value.
+; This is possible but ugly, since we must use eval, syntax-quote, and hard-coded symbol names
 (deftest t-06
-  (let [db-val (d/db *conn*)
-    query-map     '{:find [ [?com-name ...] ]  ; collection syntax
-                    :in [$ ?type]
-                    :where [ [?com   :community/name   ?com-name]
-                             [?com   :community/type   ?type] ] }
-    com-twitter   (s/validate [s/Str]
-                    (d/q query-map db-val :community.type/twitter))
-    com-facebook  (s/validate [s/Str]
-                    (d/q query-map db-val :community.type/facebook-page ))
+  (let [query-fn      (fn [db-arg type-arg]
+                        (td/query :let    [$       db-arg
+                                           ?type   type-arg]
+                                  :find   [?com-name]
+                                  :where  [ [?com   :community/name   ?com-name]
+                                            [?com   :community/type   ?type] ] ))
+
+        com-twitter   (query-fn (d/db *conn*) :community.type/twitter)
+        com-facebook  (query-fn (d/db *conn*) :community.type/facebook-page)
   ]
     (is (= 6 (count com-twitter)))
+    (is (= (into #{} (map first com-twitter))  
+           #{ "Magnolia Voice"
+              "Columbia Citizens"
+              "Discover SLU"
+              "Fremont Universe"
+              "Maple Leaf Life"
+              "MyWallingford" } ))
+
     (is (= 9 (count com-facebook)))
+    (is (= (into #{} (mapv first com-facebook))
+           #{ "Magnolia Voice"
+              "Columbia Citizens"
+              "Discover SLU"
+              "Fauntleroy Community Association"
+              "Eastlake Community Council"
+              "Fremont Universe"
+              "Maple Leaf Life"
+              "MyWallingford"
+              "Blogging Georgetown" } ))))
 
-    (is (= (into #{} com-twitter)  #{ "Magnolia Voice"
-                                      "Columbia Citizens"
-                                      "Discover SLU"
-                                      "Fremont Universe"
-                                      "Maple Leaf Life"
-                                      "MyWallingford" } ))
-
-
-    (is (= (into #{} com-facebook)  #{ "Magnolia Voice"
-                                       "Columbia Citizens"
-                                       "Discover SLU"
-                                       "Fauntleroy Community Association"
-                                       "Eastlake Community Council"
-                                       "Fremont Universe"
-                                       "Maple Leaf Life"
-                                       "MyWallingford"
-                                       "Blogging Georgetown" } ))))
-
+; In a single query, find all communities that are twitter feeds or facebook pages, using a list
+; of parameters
 (deftest t-07
-  (let [db-val (d/db *conn*)
-    ; In a single query, find all communities that are twitter feeds or facebook pages, using a list
-    ; of parameters
-    rs      (s/validate #{ [ (s/one s/Str      "com-name")
-                             (s/one s/Keyword  "type-ident") ] }
-              (into (sorted-set)
-                (result-set-sort
-                  (d/q '{:find [?com-name ?type-ident]
-                         :in   [$ [?type-ident ...]]
-                         :where [ [?com        :community/name ?com-name]
-                                  [?com        :community/type ?type-eid]
-                                  [?type-eid   :db/ident       ?type-ident] ] }
-                       db-val 
-                       [:community.type/twitter :community.type/facebook-page] ))))
+  (let [db-val            (d/db *conn*)
+        type-ident-list   [:community.type/twitter :community.type/facebook-page]  
 
-                ; Need a linter!  The errors below produces 12069 results!!!
+        result-set        (s/validate #{ [ (s/one s/Str      "com-name")
+                                           (s/one s/Keyword  "type-ident") ] }
+                            (td/query  :let     [ $                  db-val
+                                                  [?type-ident ...]  type-ident-list ]
+                                       :find    [?com-name ?type-ident]
+                                       :where   [ [?com        :community/name ?com-name]
+                                                  [?com        :community/type ?type-eid]
+                                                  [?type-eid   :db/ident       ?type-ident] ] ))
+
+                ; #todo: Need a linter!  The errors below produces 12069 results!!!
                 ; (d/q '[:find  ?com-name ?com-type ?comm-type-ident
                 ;        :in    $ [?type ...]
                 ;        :where   [?comm        :community/name ?com-name]
@@ -299,22 +299,23 @@
                 ;      db-val 
                 ;      [:community.type/twitter :community.type/facebook-page] )
   ]
-    (is (= 15 (count rs)))
-    (is (= rs  #{ ["Blogging Georgetown"                 :community.type/facebook-page]
-                  ["Columbia Citizens"                   :community.type/twitter]
-                  ["Columbia Citizens"                   :community.type/facebook-page]
-                  ["Discover SLU"                        :community.type/twitter]
-                  ["Discover SLU"                        :community.type/facebook-page]
-                  ["Eastlake Community Council"          :community.type/facebook-page]
-                  ["Fauntleroy Community Association"    :community.type/facebook-page]
-                  ["Fremont Universe"                    :community.type/twitter]
-                  ["Fremont Universe"                    :community.type/facebook-page]
-                  ["Magnolia Voice"                      :community.type/twitter]
-                  ["Magnolia Voice"                      :community.type/facebook-page]
-                  ["Maple Leaf Life"                     :community.type/twitter]
-                  ["Maple Leaf Life"                     :community.type/facebook-page]
-                  ["MyWallingford"                       :community.type/twitter]
-                  ["MyWallingford"                       :community.type/facebook-page] } ))))
+    (is (= 15 (count result-set)))
+    (is (= result-set  
+           #{ ["Blogging Georgetown"                 :community.type/facebook-page]
+              ["Columbia Citizens"                   :community.type/twitter]
+              ["Columbia Citizens"                   :community.type/facebook-page]
+              ["Discover SLU"                        :community.type/twitter]
+              ["Discover SLU"                        :community.type/facebook-page]
+              ["Eastlake Community Council"          :community.type/facebook-page]
+              ["Fauntleroy Community Association"    :community.type/facebook-page]
+              ["Fremont Universe"                    :community.type/twitter]
+              ["Fremont Universe"                    :community.type/facebook-page]
+              ["Magnolia Voice"                      :community.type/twitter]
+              ["Magnolia Voice"                      :community.type/facebook-page]
+              ["Maple Leaf Life"                     :community.type/twitter]
+              ["Maple Leaf Life"                     :community.type/facebook-page]
+              ["MyWallingford"                       :community.type/twitter]
+              ["MyWallingford"                       :community.type/facebook-page] } ))))
 
 (deftest t-08
   (let [

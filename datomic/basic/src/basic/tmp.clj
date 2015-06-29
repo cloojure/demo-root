@@ -4,13 +4,10 @@
   (:gen-class))
 (newline)
 
-(def result
-  (cond-> #{}
-    true    (conj 1)
-    false   (conj 2)
-    :a      (conj :a)))
-(spyx result)
+(def cc '[1 2 (ff)] )
+(println cc)
+(println (eval `(let [~'ff (fn [] 9)] ~cc)))
 
-(newline)
 (defn -main []
+  (println "-main")
 )
