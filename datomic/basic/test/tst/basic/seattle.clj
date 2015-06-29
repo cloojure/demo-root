@@ -402,26 +402,18 @@
     (is (= 1 (count names-wall)))
     (is (= names-wall ["KOMO Communities - Wallingford"] )))
 
-  (let [db-val (d/db *conn*)
-    ; find all communities that are websites and that are about
-    ; food, passing in type and search string as parameters
-    names-full-join     (s/validate #{ [s/Str] }
-                          (result-set-sort
-                            (d/q '{:find [?com-name ?com-cat]   ; rename :find -> :select or :return???
-                                   :where [ [?com-eid  :community/name  ?com-name]
-                                            [?com-eid  :community/type  ?com-type]
-                                            [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]] ] ]
-                                   :in   [$ ?com-type ?search-word] }
-                                 db-val :community.type/website "food" )))
-
-                          ; Sample tupelo/q
-                          #_(t/q (t/params  db-val  :community.type/website   "food"       )
-                                 (t/in      $       ?com-type                 ?search-word )
-                                 (t/find ?com-name ?com-cat)   ; rename :find -> :select or :return???
-                                 (t/where   [?com-eid  :community/name  ?com-name]
-                                            [?com-eid  :community/type  ?com-type] )
-                                 (t/where   [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]] ] )
-                              )
+  ; find all communities that are websites and that are about
+  ; food, passing in type and search string as parameters
+  (let [
+    names-full-join     (s/validate #{ [ (s/one s/Str "com-name") 
+                                         (s/one s/Str "com-cat") ] }
+                          (td/query :let    [ $             (d/db *conn*)
+                                              ?com-type     :community.type/website 
+                                              ?search-word  "food" ]
+                                    :find   [?com-name ?com-cat]   ; rename :find -> :select or :return???
+                                    :where  [ [?com-eid  :community/name  ?com-name]
+                                              [?com-eid  :community/type  ?com-type]
+                                              [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]] ] ] ))
   ]
     (is (= 2 (count names-full-join)))
     (is (=  names-full-join
