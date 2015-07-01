@@ -540,46 +540,49 @@
 (deftest t-using-transaction-times
   (testing "searching for data before/after certain times"
     (let [
-      db-val      (d/db *conn*)
-
+      curr-db      (d/db *conn*)
       tx-instants (s/validate [s/Any] ; all transaction times, sorted in reverse order
-                    (reverse 
-                      (sort 
-                        (d/q '[:find [?when ...] 
-                               :where [_ :db/txInstant ?when] ]
-                             db-val ))))
-      data1-tx-inst     (first  tx-instants)  ; last
-      schema-tx-inst    (second tx-instants)  ; next-to-last
+                    (reverse (sort 
+                        (td/query-set   :let    [$ curr-db]
+                                        :find   [?when] 
+                                        :where  [ [_ :db/txInstant ?when] ] ))))
+      data1-tx-inst     (first  tx-instants)  ; last tx instant
+      schema-tx-inst    (second tx-instants)  ; next-to-last tx instant
 
       ; query to find all communities
-      communities-query     '[:find   [?com ...]  
-                              :where  [?com :community/name] ]
+      communities-query-fn  (fn [db-val]
+                              (td/query-set :let    [$ db-val]
+                                            :find   [?com]  
+                                            :where  [ [?com :community/name] ] ))
 
-      db-asof-schema  (d/as-of db-val schema-tx-inst)
-      db-asof-data    (d/as-of db-val data1-tx-inst)
+      db-asof-schema  (d/as-of curr-db schema-tx-inst)
+      db-asof-data    (d/as-of curr-db data1-tx-inst)
 
-      _ (is (=   0 (count (d/q communities-query db-asof-schema)))) ; all communities as of schema transaction
-      _ (is (= 150 (count (d/q communities-query db-asof-data  )))) ; all communities as of seed data transaction
+      _ (is (=   0 (count (communities-query-fn db-asof-schema)))) ; all communities as of schema transaction
+      _ (is (= 150 (count (communities-query-fn db-asof-data  )))) ; all communities as of seed data transaction
 
-      db-since-schema     (d/since db-val schema-tx-inst)
-      _ (is (= 150 (count (d/q communities-query db-since-schema)))) ; find all communities since schema transaction
+      db-since-schema (d/since curr-db schema-tx-inst)
+      _ (is (= 150 (count (communities-query-fn db-since-schema)))) ; find all communities since schema transaction
 
-      db-since-data1      (d/since db-val data1-tx-inst)
-      _ (is (=   0 (count (d/q communities-query db-since-data1 )))) ; find all communities since seed data transaction
+      db-since-data1  (d/since curr-db data1-tx-inst)
+      _ (is (=   0 (count (communities-query-fn db-since-data1 )))) ; find all communities since seed data transaction
 
       ; load additional seed data file
-      db-if-new-data    (:db-after (d/with db-val seattle-data-1))
-      _ (is (= 258 (count (d/q communities-query db-if-new-data)))) ; find all communities if new data is loaded
-      _ (is (= 150 (count (d/q communities-query db-val        )))) ; find all communities currently in DB
+      db-if-new-data  (:db-after (d/with curr-db seattle-data-1))
+      _ (is (= 258 (count (communities-query-fn db-if-new-data )))) ; find all communities if new data is loaded
+      _ (is (= 150 (count (communities-query-fn curr-db        )))) ; find all communities currently in DB
 
       ; submit new data tx
       _ @(d/transact *conn* seattle-data-1)
       db-val-new        (d/db *conn*)
       db-since-data2    (d/since db-val-new data1-tx-inst)
 
-      _ (is (= 258 (count (d/q communities-query db-val-new))))     ; find all communities currently in DB
-      _ (is (= 108 (count (d/q communities-query db-since-data2)))) ; find all communities since original seed data load transaction
-    ] )))
+      _ (is (= 258 (count (communities-query-fn db-val-new     )))) ; find all communities currently in DB
+      _ (is (= 108 (count (communities-query-fn db-since-data2 )))) ; find all communities since original seed data load transaction
+    ] 
+      (println "finished")
+    )))
+
 
 (deftest t-partitions
   (testing "adding & using a new partition"
