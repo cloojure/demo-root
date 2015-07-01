@@ -646,7 +646,7 @@ _ (println "#20")
   ;         (into #{} res-2)))
   ))
 
-#_(deftest t-pull-1
+(deftest t-pull-1
   (println (macroexpand-1 
              '(td/query-pull  :let    [$ db-val]
                               :find   [ (pull ?c [*]) ]
