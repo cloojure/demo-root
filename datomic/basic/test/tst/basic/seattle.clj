@@ -1,7 +1,7 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [tupelo.core      :refer [spy spyx spyxx it-> safe-> ]]
+            [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? ]]
             [tupelo.datomic   :as td]
             [tupelo.schema    :as ts]
             [basic.seattle-schema  :as b.ss]
@@ -580,39 +580,50 @@
       _ (is (= 258 (count (communities-query-fn db-val-new     )))) ; find all communities currently in DB
       _ (is (= 108 (count (communities-query-fn db-since-data2 )))) ; find all communities since original seed data load transaction
     ] 
-      (println "finished")
     )))
 
 
 (deftest t-partitions
   (testing "adding & using a new partition"
-    (td/transact *conn* (td/new-partition :communities) ) ; create a new partition
-    ; add Easton to new partition
-    (td/transact *conn* (td/new-entity :communities {:community/name "Easton"} ) )
+    (td/transact *conn* (td/new-partition :communities) )                             ; create a new partition
+    (td/transact *conn* (td/new-entity :communities {:community/name "Easton"} ) )    ; add Easton to new partition
     (let [
-      ; show format difference between query result-set and scalar "dot" output
-      belltown-eid-rs       (ffirst (d/q '{ :find  [?id]
-                                            :where [ [?id :community/name "belltown"] ] } (d/db *conn*) ))
-      belltown-eid-scalar           (d/q '{ :find  [?id .]
-                                            :where [ [?id :community/name "belltown"] ] } (d/db *conn*) )
+      ; show format difference between query result-set and scalar output
+      belltown-eid-rs       (s/validate ts/Eid 
+                              (ffirst (td/query   :let    [$ (d/db *conn*) ]
+                                                  :find   [?id]
+                                                  :where  [ [?id :community/name "belltown"] ] )))
+      belltown-eid-scalar   (s/validate ts/Eid 
+                              (td/query-scalar  :let    [$ (d/db *conn*) ]
+                                                :find   [?id]
+                                                :where  [ [?id :community/name "belltown"] ] ))
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
-      tx-1-result     @(td/transact *conn*   
-                       (td/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
-      tx-1-datoms      (td/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
+      tx-1-result       @(td/transact *conn*   
+                          (td/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
+      tx-1-datoms       (td/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
+      _ (is (matches? tx-1-datoms
+              [ {:e _ :a :db/txInstant        :v _              :tx _ :added true} 
+                {:e _ :a :community/category  :v "free stuff"   :tx _ :added true} ] ))
 
-      freestuff-rs-1     (result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
-      _ (is (= 1 (count freestuff-rs-1)))
-      freestuff-eid-1    (td/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
-      _ (is (s/validate ts/Eid freestuff-eid-1))
+      freestuff-rs-1    (s/validate ts/Eid 
+                          (td/query-scalar  :let    [$ (d/db *conn*)]
+                                            :find   [?id] 
+                                            :where  [ [?id :community/category "free stuff"] ] ))
 
       tx-2-result       @(td/transact *conn* 
-                         (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
+                          (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
       tx-2-datoms        (td/tx-datoms (d/db *conn*) tx-2-result)  ; #todo add to demo
+      _ (is (matches? tx-2-datoms
+              [ {:e _   :a :db/txInstant        :v _              :tx _ :added true} 
+                {:e _   :a :community/category  :v "free stuff"   :tx _ :added false} ] ))
 
-      freestuff-rs-2    (result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
+      freestuff-rs-2    (td/query-set   :let    [$ (d/db *conn*) ]
+                                        :find   [?id]
+                                        :where  [ [?id :community/category "free stuff"] ] )
       _ (is (= 0 (count freestuff-rs-2)))
-  ] )))
+  ]
+  )))
 
 (deftest t-pull-1
   (testing "demo for pull api"
