@@ -245,17 +245,17 @@
 ; This is possible but ugly, since we must use eval, syntax-quote, and hard-coded symbol names
 (deftest t-06
   (let [query-fn      (fn [db-arg type-arg]
-                        (td/query :let    [$       db-arg
-                                           ?type   type-arg]
-                                  :find   [?com-name]
-                                  :where  [ [?com   :community/name   ?com-name]
-                                            [?com   :community/type   ?type] ] ))
+                        (td/query-set :let    [$       db-arg
+                                               ?type   type-arg]
+                                      :find   [?com-name]
+                                      :where  [ [?com   :community/name   ?com-name]
+                                                [?com   :community/type   ?type] ] ))
 
         com-twitter   (query-fn (d/db *conn*) :community.type/twitter)
         com-facebook  (query-fn (d/db *conn*) :community.type/facebook-page)
   ]
     (is (= 6 (count com-twitter)))
-    (is (= (into #{} (map first com-twitter))  
+    (is (= com-twitter
            #{ "Magnolia Voice"
               "Columbia Citizens"
               "Discover SLU"
@@ -264,7 +264,7 @@
               "MyWallingford" } ))
 
     (is (= 9 (count com-facebook)))
-    (is (= (into #{} (mapv first com-facebook))
+    (is (= com-facebook
            #{ "Magnolia Voice"
               "Columbia Citizens"
               "Discover SLU"
@@ -353,17 +353,16 @@
 ; find all community names coming before "C" in alphabetical order
 (deftest t-09
   (let [
-    names-abc     (s/validate [s/Str]
-                    (sort (td/TupleSet->Set
-                      (td/query :let    [$ (d/db *conn*)]
-                                :find   [?name]
-                                :where  [ [?com :community/name ?name]
-                                          [(.compareTo ^String ?name "C") ?result]
-                                          [(neg? ?result)] ] ))))
+    names-abc     (s/validate #{s/Str}
+                    (td/query-set :let    [$ (d/db *conn*)]
+                                  :find   [?name]
+                                  :where  [ [?com :community/name ?name]
+                                            [(.compareTo ^String ?name "C") ?result]
+                                            [(neg? ?result)] ] ))
   ]
     (is (= 25 (count names-abc)))
     (is (= names-abc
-           [ "15th Ave Community"
+          #{ "15th Ave Community"
              "Admiral Neighborhood Association"
              "Alki News"
              "Alki News/Alki Community Council"
@@ -387,7 +386,7 @@
              "Beacon Hill Community Site"
              "Bike Works!"
              "Blogging Georgetown"
-             "Broadview Community Council" ] )))
+             "Broadview Community Council" } )))
 
   (let [
     ; find the community whose names includes the string "Wallingford"
@@ -429,44 +428,43 @@
                          [?eid :community/type :community.type/twitter]   ;          match pattern 1
                        ] ; end #1
                      ]
-      com-rules-tw  (s/validate [s/Str]
-                      (d/q '[:find [?name ...]    ; list output
-                             :in $ %
-                             :where   [?eid :community/name ?name]    ; match pattern
-                                      (is_comtype-twitter ?eid)       ; rule
-                            ]
-                           db-val rules-twitter ))
+      com-rules-tw  (s/validate #{s/Str}
+                      (td/query-set   :let    [$ db-val 
+                                               % rules-twitter]
+                                      :find   [?name]
+                                      :where  [ [?eid :community/name ?name]      ; match pattern
+                                                (is_comtype-twitter ?eid) ] ))    ; rule
     ]
       (is (= 6 (count com-rules-tw)))
-      (is (= com-rules-tw   ["Magnolia Voice" "Columbia Citizens" "Discover SLU" "Fremont Universe" 
-                             "Maple Leaf Life" "MyWallingford"] ))))
+      (is (= com-rules-tw   #{"Magnolia Voice" "Columbia Citizens" "Discover SLU" "Fremont Universe" 
+                              "Maple Leaf Life" "MyWallingford"} ))))
 
 (deftest t-rules-2
   (testing "find names of all communities in NE and SW regions, using rules to avoid repeating logic"
     (let [
       db-val       (d/db *conn*)
-      rules-list   '[  [ (com-region ?com-eid ?reg-ident)
-                         [?com-eid    :community/neighborhood   ?nbr]
-                         [?nbr        :neighborhood/district    ?dist]
-                         [?dist       :district/region          ?reg]
-                         [?reg        :db/ident                 ?reg-ident] ]
+      rules-list   '[ [ (com-region ?com-eid ?reg-ident) ; rule header
+                        [?com-eid    :community/neighborhood   ?nbr]          ; rule clause
+                        [?nbr        :neighborhood/district    ?dist]         ; rule clause
+                        [?dist       :district/region          ?reg]          ; rule clause
+                        [?reg        :db/ident                 ?reg-ident] ]  ; rule clause
                     ]
                   ; map-format query
       com-ne      (s/validate #{s/Str}
-                    (into (sorted-set)
-                      (d/q '{:find  [ [?name ...] ]  ; outer vec denotes bounds, inner vec is list-output
-                             :in    [$ %]
-                             :where [ [?com-eid :community/name ?name]
-                                      (com-region ?com-eid :region/ne) ] }
-                           db-val rules-list )))
+                    (td/query-set :let    [$ db-val 
+                                           % rules-list ]
+                                  :find   [?name]
+                                  :where  [ [?com-eid :community/name ?name]
+                                            (com-region ?com-eid :region/ne) ]
+                           ))
                   ; list-format query
       com-sw      (s/validate #{s/Str}
-                    (into (sorted-set)
-                      (d/q '[:find [?name ...]
-                             :in $ %
-                             :where   [?com-eid :community/name ?name]
-                                      (com-region ?com-eid :region/sw) ]
-                           db-val rules-list )))
+                    (td/query-set :let    [$ db-val
+                                           % rules-list]
+                                  :find   [?name]
+                                  :where  [ [?com-eid :community/name ?name]
+                                            (com-region ?com-eid :region/sw) ]
+                                 ))
     ]
       (is (= 9  (count com-ne)))
       (is (=  com-ne
@@ -504,36 +502,33 @@
   (testing "find names of all communities that are in any of the northern regions and are
             social-media, using rules for OR logic"
     (let [db-val (d/db *conn*)
-      or-rulelist       '[  
-                            ; rule #1
-                            [ (region ?com-eid ?reg-ident)
-                              [?com-eid    :community/neighborhood   ?nbr-eid]
-                              [?nbr-eid    :neighborhood/district    ?dist-eid]
-                              [?dist-eid   :district/region          ?reg-eid]
-                              [?reg-eid    :db/ident                 ?reg-ident] ]
+      or-rulelist     '[  ; rule #1
+                          [ (region ?com-eid ?reg-ident)
+                            [?com-eid    :community/neighborhood   ?nbr-eid]
+                            [?nbr-eid    :neighborhood/district    ?dist-eid]
+                            [?dist-eid   :district/region          ?reg-eid]
+                            [?reg-eid    :db/ident                 ?reg-ident] ]
 
-                            ; rule #2
-                            [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/twitter] ]
-                            [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/facebook-page] ]
+                          ; rule #2
+                          [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/twitter] ]
+                          [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/facebook-page] ]
 
-                            ; rule #3
-                            [ (northern?  ?com-eid) (region ?com-eid :region/ne) ]
-                            [ (northern?  ?com-eid) (region ?com-eid :region/e)  ]
-                            [ (northern?  ?com-eid) (region ?com-eid :region/nw) ]
+                          ; rule #3
+                          [ (northern?  ?com-eid) (region ?com-eid :region/ne) ]
+                          [ (northern?  ?com-eid) (region ?com-eid :region/e)  ]
+                          [ (northern?  ?com-eid) (region ?com-eid :region/nw) ]
 
-                            ; rule #4
-                            [ (southern?  ?com-eid) (region ?com-eid :region/se) ]
-                            [ (southern?  ?com-eid) (region ?com-eid :region/s)  ]
-                            [ (southern?  ?com-eid) (region ?com-eid :region/sw) ]
-                         ]
+                          ; rule #4
+                          [ (southern?  ?com-eid) (region ?com-eid :region/se) ]
+                          [ (southern?  ?com-eid) (region ?com-eid :region/s)  ]
+                          [ (southern?  ?com-eid) (region ?com-eid :region/sw) ] ]
       social-south    (s/validate #{s/Str}
-                        (into #{}
-                          (d/q  '{:find  [ [?name ...] ]
-                                  :in    [$ %]
-                                  :where [ [?com-eid :community/name ?name]
-                                           (southern? ?com-eid)
-                                           (social-media? ?com-eid) ] }
-                                db-val or-rulelist )))
+                        (td/query-set   :let   [$ db-val 
+                                                % or-rulelist]
+                                        :find  [?name]
+                                        :where [ [?com-eid :community/name ?name]
+                                                 (southern? ?com-eid)
+                                                 (social-media? ?com-eid) ] ))
     ]
       (is (= 4 (count social-south)))
       (is (=  social-south
