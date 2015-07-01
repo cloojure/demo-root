@@ -588,17 +588,20 @@
     (td/transact *conn* (td/new-partition :communities) )                             ; create a new partition
     (td/transact *conn* (td/new-entity :communities {:community/name "Easton"} ) )    ; add Easton to new partition
     (let [
+_ (println "#00")
       ; show format difference between query result-set and scalar output
       belltown-eid-rs       (s/validate ts/Eid 
                               (ffirst (td/query   :let    [$ (d/db *conn*) ]
                                                   :find   [?id]
                                                   :where  [ [?id :community/name "belltown"] ] )))
+_ (println "#01")
       belltown-eid-scalar   (s/validate ts/Eid 
                               (td/query-scalar  :let    [$ (d/db *conn*) ]
                                                 :find   [?id]
                                                 :where  [ [?id :community/name "belltown"] ] ))
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
+_ (println "#05")
       tx-1-result       @(td/transact *conn*   
                           (td/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
       tx-1-datoms       (td/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
@@ -611,6 +614,7 @@
                                             :find   [?id] 
                                             :where  [ [?id :community/category "free stuff"] ] ))
 
+_ (println "#10")
       tx-2-result       @(td/transact *conn* 
                           (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
       tx-2-datoms        (td/tx-datoms (d/db *conn*) tx-2-result)  ; #todo add to demo
@@ -622,19 +626,41 @@
                                         :find   [?id]
                                         :where  [ [?id :community/category "free stuff"] ] )
       _ (is (= 0 (count freestuff-rs-2)))
+_ (println "#20")
   ]
   )))
 
 (deftest t-pull-1
-  (testing "demo for pull api"
-  (let [db-val            (d/db *conn*)
-        pull-results      (s/validate [ts/TupleMap]
-                            (d/q '[:find  (pull ?c [*]) 
-                                   :where [?c :community/name] ]
-                                 db-val ))
+  (let [db-val    (d/db *conn*)
+        res-1     (s/validate [ts/TupleMap]  ; returns a vector of TupleMaps
+                    (d/q '[:find  (pull ?c [*]) 
+                           :where [?c :community/name] ]
+                         db-val ))
   ]
-    (is (s/validate [ts/TupleMap] pull-results))
-    (is (= 150 (count pull-results))))))
+    (println "res-1")
+    (pprint (take 5 res-1))
+
+    (is (= 150 (count res-1)))
+  ; (is (= 150 (count res-2)))
+  ; (is (=  (into #{} res-1)
+  ;         (into #{} res-2)))
+  ))
+
+#_(deftest t-pull-1
+  (println (macroexpand-1 
+             '(td/query-pull  :let    [$ db-val]
+                              :find   [ (pull ?c [*]) ]
+                              :where  [ [?c :community/name] ] )))
+
+  (let [db-val    (d/db *conn*)
+        res-2     (s/validate [ts/TupleMap]  ; returns a vector of TupleMaps
+                    (td/query-pull  :let    [$ db-val]
+                                    :find   [ (pull ?c [*]) ]
+                                    :where  [ [?c :community/name] ] ))
+  ]
+    (println "res-2")
+    (pprint (take 5 res-2))
+  ))
 
 #_(deftest t-00
   (testing "xxx"
