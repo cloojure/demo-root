@@ -1,7 +1,7 @@
 (ns tst.basic.seattle
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? ]]
+            [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? grab wild-match? ]]
             [tupelo.datomic   :as td]
             [tupelo.schema    :as ts]
             [basic.seattle-schema  :as b.ss]
@@ -636,31 +636,62 @@ _ (println "#20")
                     (d/q '[:find  (pull ?c [*]) 
                            :where [?c :community/name] ]
                          db-val ))
+        res-2     (td/query-pull  :let    [$ db-val]
+                                  :find   [ (pull ?c [*]) ]
+                                  :where  [ [?c :community/name] ] )
+        first-5   (take 5 (sort-by #(grab :community/name (first %)) res-2))
   ]
     (println "res-1")
     (pprint (take 5 res-1))
-
-    (is (= 150 (count res-1)))
-  ; (is (= 150 (count res-2)))
-  ; (is (=  (into #{} res-1)
-  ;         (into #{} res-2)))
-  ))
-
-(deftest t-pull-1
-  (println (macroexpand-1 
-             '(td/query-pull  :let    [$ db-val]
-                              :find   [ (pull ?c [*]) ]
-                              :where  [ [?c :community/name] ] )))
-
-  (let [db-val    (d/db *conn*)
-        res-2     (s/validate [ts/TupleMap]  ; returns a vector of TupleMaps
-                    (td/query-pull  :let    [$ db-val]
-                                    :find   [ (pull ?c [*]) ]
-                                    :where  [ [?c :community/name] ] ))
-  ]
     (println "res-2")
     (pprint (take 5 res-2))
+    (println "first-5")
+    (pprint first-5)
+    (is (wild-match? first-5
+            [[{:db/id 17592186045441,
+               :community/name "15th Ave Community",
+               :community/url "http://groups.yahoo.com/group/15thAve_Community/",
+               :community/neighborhood {:db/id 17592186045440},
+               :community/category ["15th avenue residents"],
+               :community/orgtype {:db/id 17592186045418},
+               :community/type [{:db/id 17592186045422}]}]
+             [{:db/id 17592186045444,
+               :community/name "Admiral Neighborhood Association",
+               :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/",
+               :community/neighborhood {:db/id 17592186045443},
+               :community/category ["neighborhood association"],
+               :community/orgtype {:db/id 17592186045418},
+               :community/type [{:db/id 17592186045422}]}]
+             [{:db/id 17592186045446,
+               :community/name "Alki News",
+               :community/url "http://groups.yahoo.com/group/alkibeachcommunity/",
+               :community/neighborhood {:db/id 17592186045445},
+               :community/category
+               ["members of the Alki Community Council and residents of the Alki Beach neighborhood"],
+               :community/orgtype {:db/id 17592186045418},
+               :community/type [{:db/id 17592186045422}]}]
+             [{:db/id 17592186045447,
+               :community/name "Alki News/Alki Community Council",
+               :community/url "http://alkinews.wordpress.com/",
+               :community/neighborhood {:db/id 17592186045445},
+               :community/category ["council meetings" "news"],
+               :community/orgtype {:db/id 17592186045418},
+               :community/type [{:db/id 17592186045425}]}]
+             [{:db/id 17592186045450,
+               :community/name "All About Belltown",
+               :community/url "http://www.belltown.org/",
+               :community/neighborhood {:db/id 17592186045449},
+               :community/category ["community council"],
+               :community/orgtype {:db/id 17592186045418},
+               :community/type [{:db/id 17592186045426}]}]]
+           ))
+
+    (is (= 150 (count res-1)))
+    (is (= 150 (count res-2)))
+    (is (=  (into #{} res-1)
+            (into #{} res-2)))
   ))
+
 
 #_(deftest t-00
   (testing "xxx"
