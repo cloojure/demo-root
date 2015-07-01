@@ -588,20 +588,17 @@
     (td/transact *conn* (td/new-partition :communities) )                             ; create a new partition
     (td/transact *conn* (td/new-entity :communities {:community/name "Easton"} ) )    ; add Easton to new partition
     (let [
-_ (println "#00")
       ; show format difference between query result-set and scalar output
       belltown-eid-rs       (s/validate ts/Eid 
                               (ffirst (td/query   :let    [$ (d/db *conn*) ]
                                                   :find   [?id]
                                                   :where  [ [?id :community/name "belltown"] ] )))
-_ (println "#01")
       belltown-eid-scalar   (s/validate ts/Eid 
                               (td/query-scalar  :let    [$ (d/db *conn*) ]
                                                 :find   [?id]
                                                 :where  [ [?id :community/name "belltown"] ] ))
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
-_ (println "#05")
       tx-1-result       @(td/transact *conn*   
                           (td/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
       tx-1-datoms       (td/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
@@ -614,7 +611,6 @@ _ (println "#05")
                                             :find   [?id] 
                                             :where  [ [?id :community/category "free stuff"] ] ))
 
-_ (println "#10")
       tx-2-result       @(td/transact *conn* 
                           (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
       tx-2-datoms        (td/tx-datoms (d/db *conn*) tx-2-result)  ; #todo add to demo
@@ -626,7 +622,6 @@ _ (println "#10")
                                         :find   [?id]
                                         :where  [ [?id :community/category "free stuff"] ] )
       _ (is (= 0 (count freestuff-rs-2)))
-_ (println "#20")
   ]
   )))
 
@@ -641,55 +636,50 @@ _ (println "#20")
                                   :where  [ [?c :community/name] ] )
         first-5   (take 5 (sort-by #(grab :community/name (first %)) res-2))
   ]
-    (println "res-1")
-    (pprint (take 5 res-1))
-    (println "res-2")
-    (pprint (take 5 res-2))
-    (println "first-5")
-    (pprint first-5)
-    (is (wild-match? first-5
-            [[{:db/id 17592186045441,
-               :community/name "15th Ave Community",
-               :community/url "http://groups.yahoo.com/group/15thAve_Community/",
-               :community/neighborhood {:db/id 17592186045440},
-               :community/category ["15th avenue residents"],
-               :community/orgtype {:db/id 17592186045418},
-               :community/type [{:db/id 17592186045422}]}]
-             [{:db/id 17592186045444,
-               :community/name "Admiral Neighborhood Association",
-               :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/",
-               :community/neighborhood {:db/id 17592186045443},
-               :community/category ["neighborhood association"],
-               :community/orgtype {:db/id 17592186045418},
-               :community/type [{:db/id 17592186045422}]}]
-             [{:db/id 17592186045446,
-               :community/name "Alki News",
-               :community/url "http://groups.yahoo.com/group/alkibeachcommunity/",
-               :community/neighborhood {:db/id 17592186045445},
-               :community/category
-               ["members of the Alki Community Council and residents of the Alki Beach neighborhood"],
-               :community/orgtype {:db/id 17592186045418},
-               :community/type [{:db/id 17592186045422}]}]
-             [{:db/id 17592186045447,
-               :community/name "Alki News/Alki Community Council",
-               :community/url "http://alkinews.wordpress.com/",
-               :community/neighborhood {:db/id 17592186045445},
-               :community/category ["council meetings" "news"],
-               :community/orgtype {:db/id 17592186045418},
-               :community/type [{:db/id 17592186045425}]}]
-             [{:db/id 17592186045450,
-               :community/name "All About Belltown",
-               :community/url "http://www.belltown.org/",
-               :community/neighborhood {:db/id 17592186045449},
-               :community/category ["community council"],
-               :community/orgtype {:db/id 17592186045418},
-               :community/type [{:db/id 17592186045426}]}]]
-           ))
-
     (is (= 150 (count res-1)))
     (is (= 150 (count res-2)))
     (is (=  (into #{} res-1)
             (into #{} res-2)))
+
+    ; #todo core.match fails for this case!  Why?
+    (is (wild-match? first-5
+            [[{:db/id :*
+               :community/name "15th Ave Community"
+               :community/url "http://groups.yahoo.com/group/15thAve_Community/"
+               :community/neighborhood {:db/id :*}
+               :community/category ["15th avenue residents"]
+               :community/orgtype {:db/id :*}
+               :community/type [{:db/id :*}]}]
+             [{:db/id :*
+               :community/name "Admiral Neighborhood Association"
+               :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"
+               :community/neighborhood {:db/id :*}
+               :community/category ["neighborhood association"]
+               :community/orgtype {:db/id :*}
+               :community/type [{:db/id :*}]}]
+             [{:db/id :*
+               :community/name "Alki News"
+               :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"
+               :community/neighborhood {:db/id :*}
+               :community/category
+               ["members of the Alki Community Council and residents of the Alki Beach neighborhood"]
+               :community/orgtype {:db/id :*}
+               :community/type [{:db/id :*}]}]
+             [{:db/id :*
+               :community/name "Alki News/Alki Community Council"
+               :community/url "http://alkinews.wordpress.com/"
+               :community/neighborhood {:db/id :*}
+               :community/category ["council meetings" "news"]
+               :community/orgtype {:db/id :*}
+               :community/type [{:db/id :*}]}]
+             [{:db/id :*
+               :community/name "All About Belltown"
+               :community/url "http://www.belltown.org/"
+               :community/neighborhood {:db/id :*}
+               :community/category ["community council"]
+               :community/orgtype {:db/id :*}
+               :community/type [{:db/id :*}]}]]
+           ))
   ))
 
 
