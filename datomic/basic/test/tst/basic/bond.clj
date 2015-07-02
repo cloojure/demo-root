@@ -125,9 +125,6 @@
          {:person/name "M"          :location "London"    :weapon/type #{:weapon/guile                           :weapon/gun} }
          {:person/name "Dr No"      :location "Caribbean" :weapon/type #{:weapon/guile             :weapon/knife :weapon/gun} } } )))
 
-  (newline)
-  (println "basic usage")
-
   ; For general queries, use td/query.  It returns a set of tuples (TupleSet).  Any duplicated
   ; tuples will be discarded
   (let [result-set    (s/validate ts/TupleSet
@@ -151,10 +148,46 @@
                                 :where  [ [?eid :location ?loc] ] )
 
   ]
+    (is (= names    #{"Dr No" "James Bond" "M"} ))  ; all names are present, since unique
+    (is (= cities   #{"Caribbean" "London"} )))     ; duplicate "London" discarded
+
+  (newline)
+  (println "current point")
+
+  ; If you want just a single tuple as output, you can get it (rather than a set of
+  ; tuples) using td/query-tuple.  It is an error if more than one tuple is found.
+  (let [beachy    (td/query-tuple :let    [$ (d/db conn)]
+                                  :find   [?eid ?name]
+                                  :where  [ [?eid :person/name ?name      ]
+                                            [?eid :location    "Caribbean"] ] )
+        busy      (try
+                    (td/query-tuple :let    [$ (d/db conn)]
+                                    :find   [?eid ?name]
+                                    :where  [ [?eid :person/name ?name      ]
+                                              [?eid :location    "London"   ] ] )
+                    (catch Exception ex (.toString ex)))
+  ]
+    (spyxx beachy)
+    (spyxx busy)
+    (is (matches? beachy [_ "Dr No"] ))           ; found 1 match as expected
+    (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught
+
+
+  ; If you know there is (or should be) only one answer, you can get the scalar value as output
+  ; using td/query-scalar. Any duplicate values will be discarded.
+  (let [names     (td/query-set :let    [$ (d/db conn)]
+                                :find   [?name] ; <- a single attr-val output allows use of td/query-set
+                                :where  [ [?eid :person/name ?name] ] )
+        cities    (td/query-set :let    [$ (d/db conn)]
+                                :find   [?loc]  ; <- a single attr-val output allows use of td/query-set
+                                :where  [ [?eid :location ?loc] ] )
+
+  ]
     (spyxx names)
     (spyxx cities)
     (is (= names    #{"Dr No" "James Bond" "M"} ))  ; all names are present, since unique
     (is (= cities   #{"Caribbean" "London"} )))     ; duplicate "London" discarded
+
 
   ; result is a list - retains duplicates
   (let [result-pull (td/query-pull  :let    [$ (d/db conn)]               ; $ is the implicit db name
