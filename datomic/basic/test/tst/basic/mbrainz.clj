@@ -55,14 +55,14 @@
 ;---------------------------------------------------------------------------------------------------
 (deftest t-connection-verify
   (testing "can we connect to the Datomic db"
-    (let [rs      (td/query-set :let  [$            db-val
+    (let [result  (td/query-set :let  [$            db-val
                                        ?artist-name "John Lennon"]
                                 :find [?title]
                                 :where [ [?a :artist/name ?artist-name]
                                          [?t :track/artists ?a]
                                          [?t :track/name ?title] ] )
     ]
-      (is (= rs
+      (is (= result
               #{"Aisumasen (I'm Sorry)" "Amsterdam" "Angela" "Attica State"
                 "Au" "Baby's Heartbeat" "Blue Suede Shoes" "Born in a Prison"
                 "Bring On the Lucie (Freda Peeple)" "Cambridge 1969"
@@ -87,8 +87,7 @@
                 "We're All Water" "Well (Baby Please Don't Go)"
                 "Well Well Well" "Who Has Seen the Wind?"
                 "Woman Is the Nigger of the World" "Working Class Hero"
-                "Yer Blues" "You Are Here" } ))
-    )))
+                "Yer Blues" "You Are Here" } )))))
 
 
 (deftest t-attribute-name
@@ -96,32 +95,32 @@
     (let [res1          (d/pull db-val [:artist/name :artist/startYear]   ; The pattern is a vector (of keywords) indicating the attr-vals to retrieve
                                         led-zeppelin) ; entity spec
     ]
-      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))))
+      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} )))) ; result is a map
   (testing "entity ref lookup"
-    (let [res2          (d/pull db-val [:artist/country]                  led-zeppelin)
-
+    (let [res2          (d/pull db-val [:artist/country] led-zeppelin)
           ; since :artist/country is a nested entity, we convert the EID (long) value to the
-          ; :db/ident (keyword) value
+          ; :db/ident (keyword) value for testing
           res-ident     (update-in res2  [:artist/country :db/id] #(td/eid->ident db-val %) )
     ]
       (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
-  (testing "reverse lookup"
+  (testing "reverse lookup; find all artists who live in Great Britain"
     (let [result              (d/pull db-val [:artist/_country]   ; pattern vec
                                               :country/GB)        ; entity spec
-          _                   (s/validate {:artist/_country [ {:db/id ts/Eid} ] } result )
+          _                   (s/validate {:artist/_country [ {:db/id ts/Eid} ] }  ; there will be many maps in the vector
+                                          result )
           eid-map-list        (:artist/_country result)
-          artist-ents         (for [eid-map eid-map-list
+          artist-recs         (for [eid-map eid-map-list
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do
                                   (s/validate ts/Eid eid)
                                   (td/entity-map db-val eid)))
-          _                   (s/validate [ts/KeyMap] artist-ents)
-          artist-countries    (mapv :artist/country artist-ents)
+          _                   (s/validate [ts/KeyMap] artist-recs)
+          artist-countries    (mapv :artist/country artist-recs)
     ]
       (is (=  1 (count result)))
       (is (=  482
               (count eid-map-list)
-              (count artist-ents)
+              (count artist-recs)
               (count artist-countries)))
       (is (apply = :country/GB artist-countries))))
 )
@@ -154,12 +153,12 @@
 ;                 :track/name "Breathe",
 ;                 :track/position 2,
 ;                 :track/artists [  {:db/id 17592186046909} ] }
+
 (deftest t-components
   (testing "component defaults - horrible name!"  ; #todo
-    (let [result  (d/pull db-val [:release/media]         ; desirec pattern vec
-                                 dark-side-of-the-moon)  ; entity spec
+    (let [result  (d/pull db-val [:release/media]         ; desired pattern vec
+                                 dark-side-of-the-moon)   ; entity spec
     ]
-      (s/validate {:release/media [s/Any]} result)
       (s/validate {:release/media [ { :db/id ts/Eid
                                       :medium/format {:db/id ts/Eid}
                                       :medium/position  s/Any   ; #todo 1
@@ -198,7 +197,7 @@
                                        :release/year Long}
                                     res-entity )
     ]
-      (is (submap?
+      (is (submap?          ; use submap? to ignore volatile fields
               {:release/artistCredit "Bob Dylan & George Harrison"
                :release/country :country/US
                :release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"
@@ -206,9 +205,16 @@
                :release/status "Bootleg"
                :release/year 1970}
               res-entity ))
-    ))
+      (is (matches? res-entity    ; use core.match & wildcards to ignore volatile fields
+              {:release/gid _
+               :release/name "Dylan–Harrison Sessions",
+               :release/media _
+               :release/year 1970,
+               :release/artistCredit "Bob Dylan & George Harrison",
+               :release/country :country/US,
+               :release/status "Bootleg",
+               :release/artists _} ))))
 )
-
 
 (deftest t-map-spec
   (testing "map specifications"
