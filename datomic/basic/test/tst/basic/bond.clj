@@ -35,25 +35,11 @@
       (for [eid eid-set]
         (td/entity-map db-val eid)))))
 
-(defn show-transactions
-  "Display all transactions in the DB"
-  [db-val]
-  (println "-----------------------------------------------------------------------------")
-  (println "Database Transactions:")
-  (let [all-tx      (td/transactions db-val)
-        sorted-tx   (sort-by #(grab :db/txInstant %) all-tx) ]
-    (doseq [it sorted-tx]
-      (pprint it))))
-
-(defn trunc-str [-str -chars]
-  (apply str (take -chars -str)))
+(defn live-db []
+  (d/db *conn*))
 
 ;---------------------------------------------------------------------------------------------------
 (deftest t-james-bond
-  ; Create a partition named :people (we could namespace it like :db.part/people if we wished)
-  (td/transact *conn* 
-    (td/new-partition :people ))
-
   ; Create some attribute definitions. We use a keyword as the attribute's name (it's :db/ident
   ; value). The attribute name may be namespaced like :person/name or it could be a plain keyword
   ; like :location. This keyword-name can be anything (it is not predefined anywhere).
@@ -90,14 +76,14 @@
     (td/new-entity { :person/name "Dr No"      :location "Caribbean"  :weapon/type    :weapon/gun                 } ))
 
   ; Verify the data was added to the DB
-  (let [people (get-people (d/db *conn*)) ]
+  (let [people (get-people (live-db)) ]
     (is (= people   
            #{ {:person/name "James Bond"    :location "London"      :weapon/type #{:weapon/wit    :weapon/gun} }
               {:person/name "M"             :location "London"      :weapon/type #{:weapon/guile  :weapon/gun} }
               {:person/name "Dr No"         :location "Caribbean"   :weapon/type #{:weapon/gun               } } } )))
 
   ; Verify we can find James by name 
-  (let [db-val      (d/db *conn*)
+  (let [db-val      (live-db)
         ; find James' EntityId (EID). It is a Long that is a unique ID across the whole DB
         james-eid   (td/query-scalar  :let    [$ db-val]
                                       :find   [?eid]
@@ -122,7 +108,7 @@
         { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } } )))
 
   ; Verify current status. Notice there are no duplicate weapons.
-  (let [people (get-people (d/db *conn*)) ]
+  (let [people (get-people (live-db)) ]
     (is (= people   
       #{ {:person/name "James Bond" :location "London"    :weapon/type #{              :weapon/wit :weapon/knife :weapon/gun} :person/secret-id 7 }
          {:person/name "M"          :location "London"    :weapon/type #{:weapon/guile                           :weapon/gun} }
@@ -131,7 +117,7 @@
   ; For general queries, use td/query.  It returns a set of tuples (TupleSet).  Any duplicated
   ; tuples will be discarded
   (let [result-set    (s/validate ts/TupleSet
-                        (td/query  :let    [$ (d/db *conn*)]
+                        (td/query  :let    [$ (live-db)]
                                    :find   [?name ?loc] ; <- shape of output tuples
                                    :where  [ [?eid :person/name ?name]      ; matching pattern-rules specify how the variables
                                              [?eid :location    ?loc ] ] )) ;   must be related (implicit join)
@@ -143,10 +129,10 @@
 
   ; If you want just a single attribute as output, you can get a set of values (rather than a set of
   ; tuples) using td/query-set.  Any duplicate values will be discarded.
-  (let [names     (td/query-set :let    [$ (d/db *conn*)]
+  (let [names     (td/query-set :let    [$ (live-db)]
                                 :find   [?name] ; <- a single attr-val output allows use of td/query-set
                                 :where  [ [?eid :person/name ?name] ] )
-        cities    (td/query-set :let    [$ (d/db *conn*)]
+        cities    (td/query-set :let    [$ (live-db)]
                                 :find   [?loc]  ; <- a single attr-val output allows use of td/query-set
                                 :where  [ [?eid :location ?loc] ] )
 
@@ -156,12 +142,12 @@
 
   ; If you want just a single tuple as output, you can get it (rather than a set of
   ; tuples) using td/query-tuple.  It is an error if more than one tuple is found.
-  (let [beachy    (td/query-tuple :let    [$ (d/db *conn*)]
+  (let [beachy    (td/query-tuple :let    [$ (live-db)]
                                   :find   [?eid ?name]
                                   :where  [ [?eid :person/name ?name      ]
                                             [?eid :location    "Caribbean"] ] )
         busy      (try
-                    (td/query-tuple :let    [$ (d/db *conn*)]       ; error - both James & M are in London
+                    (td/query-tuple :let    [$ (live-db)]       ; error - both James & M are in London
                                     :find   [?eid ?name]
                                     :where  [ [?eid :person/name ?name      ]
                                               [?eid :location    "London"   ] ] )
@@ -173,12 +159,12 @@
 
   ; If you know there is (or should be) only a single scalar answer, you can get the scalar value as
   ; output using td/query-scalar. It is an error if more than one tuple or value is present.
-  (let [beachy    (td/query-scalar  :let    [$ (d/db *conn*)]
+  (let [beachy    (td/query-scalar  :let    [$ (live-db)]
                                     :find   [?name]
                                     :where  [ [?eid :person/name ?name      ]
                                               [?eid :location    "Caribbean"] ] )
         busy      (try
-                    (td/query-scalar  :let    [$ (d/db *conn*)]       ; error - both James & M are in London
+                    (td/query-scalar  :let    [$ (live-db)]       ; error - both James & M are in London
                                       :find   [?eid ?name]
                                       :where  [ [?eid :person/name ?name    ]
                                                 [?eid :location  "Caribbean"  ] ] )
@@ -188,25 +174,35 @@
     (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught since 2 people in London
 
   ; result is a list - retains duplicates
-  (let [result-pull (td/query-pull  :let    [$ (d/db *conn*)]               ; $ is the implicit db name
-                                    :find   [ (pull ?eid [:location]) ]   ; output :location for each ?eid found
-                                    :where  [ [?eid :location] ] )        ; find any ?eid with a :location attr
+  (let [result-pull     (td/query-pull  :let    [$ (live-db)]               ; $ is the implicit db name
+                                        :find   [ (pull ?eid [:location]) ]   ; output :location for each ?eid found
+                                        :where  [ [?eid :location] ] )        ; find any ?eid with a :location attr
+        result-sort     (sort-by #(-> % first :location) result-pull)
   ]
     (is (s/validate [ts/TupleMap] result-pull))    ; a list of tuples of maps
-    (is (= result-pull  [ [ {:location "London"   } ] 
-                          [ {:location "Caribbean"} ] 
+    (is (s/validate [ts/TupleMap] result-sort))
+    (is (= result-sort  [ [ {:location "Caribbean"} ] 
+                          [ {:location "London"   } ]
                           [ {:location "London"   } ] ] )))
 
-  ; Try to add Honey as a weapon
-  (let [honey-eid   (first ; add Honey and pull out her EID
-                      (td/eids
-                        @(td/transact *conn* 
-                          (td/new-entity { :person/name "Honey Rider" :location "Caribbean" :weapon/type #{:weapon/knife} } )))) ]
+  ; Create a partition named :people (we could namespace it like :db.part/people if we wished)
+  (td/transact *conn* 
+    (td/new-partition :people ))
+
+  ; Create Honey Rider and add her to the :people partition
+  (let [tx-result   @(td/transact *conn* 
+                        (td/new-entity :people 
+                          { :person/name "Honey Rider" :location "Caribbean" :weapon/type #{:weapon/knife} } ))
+        [honey-eid]  (td/eids tx-result)  ; destructure to get the (only) eid from the seq
+  ]
     (is (s/validate ts/Eid honey-eid))  ; just a Long
+    (is (= :people (td/partition-name (live-db) honey-eid)))
+
+    ; Try to add Honey as a weapon
     (let [tx-result   @(td/transact *conn* 
                         (td/update [:person/name "James Bond"]
                                    {:weapon/type honey-eid} )) 
-          datoms      (td/tx-datoms (d/db *conn*) tx-result)    ; get a vec of the datoms maps from the transaction
+          datoms      (td/tx-datoms (live-db) tx-result)    ; get a vec of the datoms maps from the transaction
           datom-honey (first (filter #(= honey-eid (grab :v %)) datoms))
          ]
       (is (matches? datoms
@@ -215,13 +211,12 @@
       (is (submap? {:a :weapon/type  :v honey-eid :added true} datom-honey))
     ))
 
-  ; nothing will stop nonsense actions like this
+  ; Nothing will stop nonsense actions. Here we add 99 as a weapon for James (hey, this isn't Get Smart!).
   (let [tx-result   @(td/transact *conn* 
-                      (td/update
-                        [:person/name "James Bond"]
+                      (td/update [:person/name "James Bond"]
                         { :weapon/type #{ 99 } } )) ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
-        datoms      (td/tx-datoms (d/db *conn*) tx-result)    ; get a vec of the datoms maps from the transaction
-        datom-99    (first (filter #(= 99 (grab :v %)) datoms))
+        datoms      (td/tx-datoms (live-db) tx-result)    ; datoms added the transaction
+       [datom-99]   (filter #(= 99 (grab :v %)) datoms)   ; destructure to extract from seq
   ]
     (is (matches? datoms
             [ {:e _ :a :db/txInstant :v _  :tx _ :added true}
