@@ -188,9 +188,8 @@
     (let [result        (d/pull db-val [:release/_media]    ; pattern vec
                                         dylan-harrison-cd)  ; entity spec
           _             (s/validate {:release/_media {:db/id ts/Eid}} result)
-          res-entity    (td/entity-map      db-val (safe-> result :release/_media :db/id))
-          ;  fails -->  (td/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
 
+          res-entity    (td/entity-map db-val (safe-> result :release/_media :db/id))
           _             (s/validate   {:release/artistCredit s/Str
                                        :release/artists #{ s/Any }
                                        :release/country s/Keyword     ; #todo :country/US
