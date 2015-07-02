@@ -161,32 +161,32 @@
                                   :where  [ [?eid :person/name ?name      ]
                                             [?eid :location    "Caribbean"] ] )
         busy      (try
-                    (td/query-tuple :let    [$ (d/db conn)]
+                    (td/query-tuple :let    [$ (d/db conn)]       ; error - both James & M are in London
                                     :find   [?eid ?name]
                                     :where  [ [?eid :person/name ?name      ]
                                               [?eid :location    "London"   ] ] )
                     (catch Exception ex (.toString ex)))
   ]
-    (spyxx beachy)
-    (spyxx busy)
     (is (matches? beachy [_ "Dr No"] ))           ; found 1 match as expected
-    (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught
+    (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught since 2 people in London
 
 
-  ; If you know there is (or should be) only one answer, you can get the scalar value as output
-  ; using td/query-scalar. Any duplicate values will be discarded.
-  (let [names     (td/query-set :let    [$ (d/db conn)]
-                                :find   [?name] ; <- a single attr-val output allows use of td/query-set
-                                :where  [ [?eid :person/name ?name] ] )
-        cities    (td/query-set :let    [$ (d/db conn)]
-                                :find   [?loc]  ; <- a single attr-val output allows use of td/query-set
-                                :where  [ [?eid :location ?loc] ] )
-
+  ; If you know there is (or should be) only a single scalar answer, you can get the scalar value as
+  ; output using td/query-scalar. It is an error if more than one tuple or value is present.
+  (let [beachy    (td/query-scalar  :let    [$ (d/db conn)]
+                                    :find   [?name]
+                                    :where  [ [?eid :person/name ?name      ]
+                                              [?eid :location    "Caribbean"] ] )
+        busy      (try
+                    (td/query-scalar  :let    [$ (d/db conn)]       ; error - both James & M are in London
+                                      :find   [?eid ?name]
+                                      :where  [ [?eid :person/name ?name    ]
+                                                [?eid :location  "Caribbean"  ] ] )
+                    (catch Exception ex (.toString ex)))
   ]
-    (spyxx names)
-    (spyxx cities)
-    (is (= names    #{"Dr No" "James Bond" "M"} ))  ; all names are present, since unique
-    (is (= cities   #{"Caribbean" "London"} )))     ; duplicate "London" discarded
+    (is (= beachy "Dr No"))                       ; found 1 match as expected
+    (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught since 2 people in London
+
 
 
   ; result is a list - retains duplicates
