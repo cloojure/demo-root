@@ -13,7 +13,6 @@
 ; following the samples from https://github.com/Datomic/mbrainz-sample/wiki/Queries
 
 (set! *warn-on-reflection* false)
-(set! *print-length* 9)
 (set! *print-length* nil)
 
 ;---------------------------------------------------------------------------------------------------
@@ -34,19 +33,18 @@
 (def dylan-harrison-sessions    [:release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"])
 
 ; test entitie EID values found by entity query
-(def dylan-harrison-cd    (d/q  '[:find ?medium .
-                                  :in $ ?release
-                                  :where
-                                  [?release :release/media ?medium]]
-                                db-val
-                                dylan-harrison-sessions))
+(def dylan-harrison-cd    (td/query-scalar  :let  [$         db-val
+                                                   ?release  dylan-harrison-sessions]
+                                            :find [?medium]
+                                            :where [[?release :release/media ?medium]] ))
 (s/validate ts/Eid dylan-harrison-cd)
-(def ghost-riders       (d/q '{:find [?track .]
-                               :in [$ ?release ?trackno]
-                               :where  [ [?release :release/media ?medium]
-                                         [?medium :medium/tracks ?track]
-                                         [?track :track/position ?trackno] ] }
-                             db-val dylan-harrison-sessions 11 ))
+(def ghost-riders         (td/query-scalar  :let    [$         db-val 
+                                                     ?release  dylan-harrison-sessions 
+                                                     ?trackno  11]
+                                            :find   [?track]
+                                            :where  [ [?release :release/media ?medium]
+                                                      [?medium :medium/tracks ?track]
+                                                      [?track :track/position ?trackno] ] ))
 (s/validate ts/Eid ghost-riders)
 
 ;---------------------------------------------------------------------------------------------------
