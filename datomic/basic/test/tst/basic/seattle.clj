@@ -196,24 +196,24 @@
                                   :where  [ [?comm-eid :community/name ?name]
                                           [?comm-eid :community/type :community.type/twitter] ] )
   ]
-    (is (= comm-names   #{"Coxumbia Citizens" "Discover SLU" "Fremont Universe"
+    (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
                           "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
 
 (deftest t-ne-region
   (testing "find the names all communities in the NE region"
-    (let [names-ne    (td/query   :let    [$ (d/db *conn*)]
-                                  :find   [?name]
-                                  :where  [ [?com   :community/name         ?name]
-                                            [?com   :community/neighborhood ?nbr]
-                                            [?nbr   :neighborhood/district  ?dist]
-                                            [?dist  :district/region        :region/ne] ] ) 
+    (let [names-ne    (td/query-set :let    [$ (d/db *conn*)]
+                                    :find   [?name]
+                                    :where  [ [?com   :community/name         ?name]
+                                              [?com   :community/neighborhood ?nbr]
+                                              [?nbr   :neighborhood/district  ?dist]
+                                              [?dist  :district/region        :region/ne] ] )
     ]
       (is (= 9 (count names-ne)))
-      (is (= names-ne   #{ ["Aurora Seattle"] ["Hawthorne Hills Community Website"]
-                           ["KOMO Communities - U-District"] ["KOMO Communities - View Ridge"]
-                           ["Laurelhurst Community Club"] ["Magnuson Community Garden"]
-                           ["Magnuson Environmental Stewardship Alliance"]
-                           ["Maple Leaf Community Council"] ["Maple Leaf Life"] } )))))
+      (is (= names-ne   #{ "Aurora Seattle" "Hawthorne Hills Community Website"
+                           "KOMO Communities - U-District" "KOMO Communities - View Ridge"
+                           "Laurelhurst Community Club" "Magnuson Community Garden"
+                           "Magnuson Environmental Stewardship Alliance"
+                           "Maple Leaf Community Council" "Maple Leaf Life" } )))))
 
 (deftest t-all-com-name-reg
   (testing "find the names and regions of all communities"
