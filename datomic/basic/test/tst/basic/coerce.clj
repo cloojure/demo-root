@@ -1,4 +1,4 @@
-(ns basic.coerce
+(ns tst.basic.coerce
   (:require [datomic.api      :as d]
             [schema.core      :as s]
             [schema.coerce    :as coerce]

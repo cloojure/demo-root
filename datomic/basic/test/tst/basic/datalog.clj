@@ -26,7 +26,6 @@
                                       :find [?e] 
                                       :where [ [?e :age 42] ] )  
     ]
-      (spyxx res-datomic)
       (is (= java.util.HashSet (class res-datomic)))
       (is (= (into #{} res-datomic)   #{ '[ethel] '[fred] } ))
       (is (= res-tupelo               #{ 'ethel 'fred } ))))
@@ -42,6 +41,5 @@
                                   :find [?e] 
                                   :where [ [?e :age 42] ] )
     ]
-      (spyxx result)
       (is (= result #{:ethel :fred} )))))
 
