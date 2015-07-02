@@ -37,6 +37,9 @@
     (doseq [it sorted-tx]
       (pprint it))))
 
+(defn trunc-str [-str -chars]
+  (apply str (take -chars -str)))
+
 ;---------------------------------------------------------------------------------------------------
 (def uri "datomic:mem://bond")    ; the URI for our test db
 (d/create-database uri)           ; create the DB
@@ -50,16 +53,19 @@
   ; Create some attribute definitions. We use a keyword as the attribute's name (it's :db/ident
   ; value). The attribute name may be namespaced like :person/name or it could be a plain keyword
   ; like :location. This keyword-name can be anything (it is not predefined anywhere).
-  (td/transact conn 
-    ;                  <attr name>         <attr value type>       <non-default specs...>
-    (td/new-attribute :person/name         :db.type/string         :db.unique/value)
-    (td/new-attribute :person/secret-id    :db.type/long           :db.unique/value)
-    (td/new-attribute :weapon/type         :db.type/keyword        :db.cardinality/many )
-    (td/new-attribute :location            :db.type/string)
-    (td/new-attribute :favorite-weapon     :db.type/keyword ))
-        ; Note that :weapon/type is like an untyped set. Anything (any keyword) can be added here.
-        ; Example error is to add the keyword :location or :person/secret-id or :there.is/no-such-kw
-        ; It is really just like a set of strings, where any string is accepted.
+  (td/transact conn  ;  required              required               zero-or-more
+                     ; <attr name>         <attr value type>       <optional specs ...>
+    (td/new-attribute :person/name         :db.type/string         :db.unique/value)      ; each name      is unique
+    (td/new-attribute :person/secret-id    :db.type/long           :db.unique/value)      ; each secret-id is unique
+    (td/new-attribute :weapon/type         :db.type/ref            :db.cardinality/many)  ; one may have many weapons
+    (td/new-attribute :location            :db.type/string)     ; all default values
+    (td/new-attribute :favorite-weapon     :db.type/keyword ))  ; all default values
+          ; Note that an :db.type/keyword attribue (like :favorite-weapon) is very similar to an string Any
+          ; keyword can be added here.  Example error is to add the keyword :location or :person/secret-id
+          ; or :there.is/no-such-kw. It is really just like a strings, where anything is accepted. If you
+          ; want to enforce a limited set of values (or any other rules/invariants) you must write your own
+          ; functions to enforce 
+  ; #todo come back and change -> :db.type/ref
 
   ; Create some "enum" values. These are degenerate entities that serve the same purpose as
   ; (integer) enumerated values in Java, etc (these entities will never have any attributes).
@@ -89,28 +95,26 @@
 
   ; Verify we can find James by name 
   (let [db-val      (d/db conn)
-        ; find james' entity-id (EID)
+        ; find James' EntityId (EID). It is a Long that is a unique ID across the whole DB
         james-eid   (td/query-scalar  :let    [$ db-val]
                                       :find   [?eid]
                                       :where  [ [?eid :person/name "James Bond"] ] )
-        ; get all of james' attr-val pairs as a clojure map
+        ; get all of James' attr-val pairs as a clojure map
         james-map   (td/entity-map db-val james-eid) ]
     (is (s/validate ts/Eid james-eid))    ; verify eid (it is a long int)
     (is (pos? (long james-eid)))          ; eids are always positive (temp eids are negative)
-    (is (= james-map {:person/name "James Bond" :location "London" :weapon/type #{:weapon/wit :weapon/gun} } )))
+    (is (= james-map {:person/name "James Bond" :location "London" :weapon/type #{:weapon/wit :weapon/gun} } ))
 
-  ; Update the database with more weapons.  If we overwrite some items that are already present
-  ; (e.g. :weapon/gun) it is idempotent.
-  (td/transact conn 
-    ; We can lookup an entity by an "entity ref" (an attr-val with :db.unique/value or :db.unique/identity).
-    (td/update 
-      [:person/name "James Bond"]
-        { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile }
-          :person/secret-id 007 } )
-    (td/update
-      [:person/name "Dr No"]
-      { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } } )
-  )
+    ; Update the database with more weapons.  If we overwrite some items that are already present
+    ; (e.g. :weapon/gun) it is idempotent.  The first arg to td/update is an EntitySpec. This is
+    ; either (1) and EntityId (EID) or (2) a LookupRef.
+    (td/transact conn 
+      (td/update james-eid   ; Here we use an eid to specify the entity being updated
+          { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile }
+            :person/secret-id 007 } )
+      ; Here we use a LookupRef, which is any attr-val pair with :db.unique/value or :db.unique/identity
+      (td/update [:person/name "Dr No"]
+        { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } } )))
 
   (newline) (println "db 01")
   (pprint (get-people (d/db conn)))
@@ -205,31 +209,47 @@
     (pprint result))
 
   (newline)
+  (println "Trying to add Honey as a weapon")
+  (let [honey-eid   (first 
+                      (td/eids
+                        @(td/transact conn 
+                          (td/new-entity { :person/name "Honey Rider" :location "Caribbean" :weapon/type #{:weapon/knife} } )))) ]
+    (spyxx honey-eid)
+    (try
+      @(td/transact conn 
+        (td/update [:person/name "James Bond"] 
+                   {:weapon/type honey-eid} ))
+      (catch Exception ex (println "Honey: Caught exception: " (trunc-str (.toString ex) 333)))))
+  (println "  finished adding Honey")
+
+  (newline)
   (println "update error")
   ; nothing will stop nonsense actions like this
   (def error-tx-result
-    (td/transact conn 
-      (td/update
-        [:person/name "James Bond"]
-        { :weapon/type #{ 99 } } )))
-  (newline) 
-  (println "---------------------------------------------------------------------------------------------------")
-  (println " we can see the exception if we print the tx-result, but it won't halt execution")
-  ; (println error-tx-result)
-
-
-  (newline) 
-  (spyxx
     @(td/transact conn 
       (td/update
         [:person/name "James Bond"]
-        { :weapon/type #{ :person/secret-id :there.is/no-such-kw } } )))
+        { :weapon/type #{ 99 } } )))  ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
+  (newline) 
+  (println "---------------------------------------------------------------------------------------------------")
+  (println " we can see the exception if we print the tx-result, but it won't halt execution")
+  (println error-tx-result)
+
+
+
+  (newline) 
+  (println "Trying to add non-existent weapon")
+  (try
+    (spyxx
+      @(td/transact conn 
+        (td/update
+          [:person/name "James Bond"]
+          { :weapon/type #{ :there.is/no-such-kw } } )))
+    (catch Exception ex (println "Caught exception: " (trunc-str (.toString ex) 333))))
+
 
   (newline) (println "db 02")
   (pprint (get-people (d/db conn)))
-
-  (defn trunc-str [-str -chars]
-    (apply str (take -chars -str)))
 
   (newline) 
   (println "---------------------------------------------------------------------------------------------------")
