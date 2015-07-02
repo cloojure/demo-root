@@ -313,13 +313,13 @@
 ; Find all communities that are non-commercial email-lists or commercial
 ; web-sites using a list of tuple parameters
 (deftest t-email-commercial
-  (let [rs        (s/validate #{ [ (s/one s/Str      "name")
+  (let [rs        (s/validate #{ [ (s/one s/Str      "name") ; verify shape of output tuples
                                    (s/one s/Keyword  "type") 
                                    (s/one s/Keyword  "orgtype") ] }
                     (td/query   :let    [ $                    (d/db *conn*)
                                           [[?type ?orgtype]]   [ [:community.type/email-list  :community.orgtype/community] 
                                                                  [:community.type/website     :community.orgtype/commercial] ] ]
-                                :find   [?name ?type ?orgtype]
+                                :find   [?name ?type ?orgtype] ; <- shape of output tuple
                                 :where  [ [?com :community/name     ?name]
                                           [?com :community/type     ?type]
                                           [?com :community/orgtype  ?orgtype] ] ))
@@ -344,13 +344,11 @@
 
 ; find all community names coming before "C" in alphabetical order
 (deftest t-before-letter-C
-  (let [
-    names-abc     (s/validate #{s/Str}
-                    (td/query-set :let    [$ (d/db *conn*)]
+  (let [names-abc   (td/query-set :let    [$ (d/db *conn*)]
                                   :find   [?name]
                                   :where  [ [?com :community/name ?name]
                                             [(.compareTo ^String ?name "C") ?result]
-                                            [(neg? ?result)] ] ))
+                                            [(neg? ?result)] ] )
   ]
     (is (= 25 (count names-abc)))
     (is (= names-abc
@@ -380,18 +378,14 @@
              "Blogging Georgetown"
              "Broadview Community Council" } )))
 
-  (let [
-    ; find the community whose names includes the string "Wallingford"
-    names-wall    (s/validate [s/Str]
-                    (td/result-only
-                      (td/query   :let    [$ (d/db *conn*)] ; <db> is the only param that isn't a literal here
-                                  :find   [?com-name]
-                                  :where  [ [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]   ; ignore last 2
-        ;                  Usage: :where    [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
-                                          ] )))
+  (let [ ; find the community whose names includes the string "Wallingford"
+    names-wall    (td/query-scalar  :let    [$ (d/db *conn*)]
+                                    :find   [?com-name]
+                                    :where  [ [ (fulltext  $   :community/name  "Wallingford")  [[?com  ?com-name            ]] ]   ; ignore last 2
+          ;                  Usage: :where    [ (fulltext <db>  <attribute>       <val-str>)    [[?eid   ?value   ?tx  ?score]] ]
+                                            ] )                                                   ;      optional--^^----^^
   ]
-    (is (= 1 (count names-wall)))
-    (is (= names-wall ["KOMO Communities - Wallingford"] )))
+    (is (= names-wall "KOMO Communities - Wallingford" )))
 
   ; find all communities that are websites and that are about
   ; food, passing in type and search string as parameters
@@ -401,7 +395,7 @@
                           (td/query :let    [ $             (d/db *conn*)
                                               ?com-type     :community.type/website 
                                               ?search-word  "food" ]
-                                    :find   [?com-name ?com-cat]   ; rename :find -> :select or :return???
+                                    :find   [?com-name ?com-cat]
                                     :where  [ [?com-eid  :community/name  ?com-name]
                                               [?com-eid  :community/type  ?com-type]
                                               [ (fulltext $ :community/category ?search-word) [[?com-eid ?com-cat]] ] ] ))
