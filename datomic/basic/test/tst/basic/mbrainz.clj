@@ -219,27 +219,29 @@
 (deftest t-map-spec
   (testing "map specifications"
     (let [res-1       (d/pull db-val [:track/name :track/artists]        ; plain pattern spec
-                                                ghost-riders)                     ; source eid
+                                                ghost-riders) ; source eid
           res-2       (d/pull db-val [:track/name {:track/artists [:db/id :artist/name] } ]  ; nested map pattern spec
-                                                ghost-riders)                     ; source eid
+                                                ghost-riders) ; source eid
     ]
-      (is (matches? res-1     { :track/artists    ; we ignore the :db/id EID value (long int)
-                                [ {:db/id _ } 
-                                  {:db/id _ } ]
-                                :track/name "Ghost Riders in the Sky" } ))
-      (is (matches? res-2     { :track/artists    ; we ignore the :db/id EID value (long int)
-                                [ {:db/id _  :artist/name "Bob Dylan"}
-                                  {:db/id _  :artist/name "George Harrison"} ]
-                                :track/name "Ghost Riders in the Sky" } ))
+      (is (matches? res-1     { :track/name "Ghost Riders in the Sky"
+                                :track/artists
+                                  [ {:db/id _ } 
+                                    {:db/id _ } ] 
+                              } ))
+      (is (matches? res-2     { :track/name "Ghost Riders in the Sky" 
+                                :track/artists
+                                  [ {:db/id _  :artist/name "Bob Dylan"}
+                                    {:db/id _  :artist/name "George Harrison"} ]
+                              } ))
     ))
   (testing "nested map specifications"
     (let [res   (d/pull db-val 
                     [ { :release/media        ; for each :release/media entity recurse to
                         [ { :medium/tracks      ; for each medium/tracks entity recurse to
-                            [:track/name          ; simple value attr
-                             {:track/artists      ; recurse through :track/artists
-                              [:artist/name]        ; to :artist/name
-                             } ] } ] } ]
+                            [ :track/name          ; simple value attr
+                              { :track/artists      ; recurse through :track/artists
+                                [ :artist/name ]        ; to :artist/name
+                              } ] } ] } ]
                     concert-for-bangla-desh )
     ]
       (is (= res
