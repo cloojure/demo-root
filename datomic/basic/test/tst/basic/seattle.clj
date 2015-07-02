@@ -376,8 +376,9 @@
              "Beacon Hill Community Site"
              "Bike Works!"
              "Blogging Georgetown"
-             "Broadview Community Council" } )))
+             "Broadview Community Council" } ))))
 
+(deftest t-fulltext
   (let [ ; find the community whose names includes the string "Wallingford"
     names-wall    (td/query-scalar  :let    [$ (d/db *conn*)]
                                     :find   [?com-name]
@@ -402,8 +403,8 @@
   ]
     (is (= 2 (count names-full-join)))
     (is (=  names-full-join
-            #{ ["Community Harvest of Southwest Seattle" "sustainable food"]
-               ["InBallard" "food"] } ))))
+            #{ ["Community Harvest of Southwest Seattle"  "sustainable food" ]
+               ["InBallard"                               "food"             ] } ))))
 
 (deftest t-rules-1
   (testing "find all names of all communities that are twitter feeds, using rules")
