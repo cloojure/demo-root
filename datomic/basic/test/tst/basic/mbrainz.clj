@@ -452,9 +452,8 @@
                           {:track/name "Moby Dick"}
                           {:track/name "Bring It on Home"}
                           {:track/name "Whole Lotta Love"}]} ))))
-  (testing "nulllimit"
-    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) 
-    ]
+  (testing "nil limit"  ; a nil limit value retrievs all results
+    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) ]
       (is (matches? res-1 {:artist/name "Led Zeppelin", :track/_artists _ } ))
       (is (= 128 (count (grab :track/_artists res-1))))))
 )
