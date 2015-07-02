@@ -601,6 +601,7 @@
       freestuff-rs-2    (td/query-set   :let    [$ (d/db *conn*) ]
                                         :find   [?id]
                                         :where  [ [?id :community/category "free stuff"] ] )
+      _ (spyxx freestuff-rs-2)
       _ (is (= 0 (count freestuff-rs-2)))
   ]
   )))
