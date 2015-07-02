@@ -128,39 +128,44 @@
   (newline)
   (println "basic usage")
 
-  ; result is a set - discards duplicates
-  (let [find-loc-entity (td/query-set :let    [$ (d/db conn)]   ; $ is the implicit db name
-                                      :find   [?loc]            ; variables from the :where clause to output
-                                      :where  [ [?eid :location ?loc] ] ) ; multiple match patterns, as a vector-of-vectors
+  ; For general queries, use td/query.  It returns a set of tuples (TupleSet).  Any duplicated
+  ; tuples will be discarded
+  (let [result-set    (s/validate ts/TupleSet
+                        (td/query  :let    [$ (d/db conn)]
+                                   :find   [?name ?loc] ; <- shape of output tuples
+                                   :where  [ [?eid :person/name ?name]      ; matching pattern-rules specify how the variables
+                                             [?eid :location    ?loc ] ] )) ;   must be related (implicit join)
   ]
-    (is (s/validate #{s/Str} find-loc-entity))    ; a set of strings
-    (is (= find-loc-entity #{"Caribbean" "London"} )))
+    (is (s/validate #{ [s/Any] } result-set))       ; literal definition of TupleSet
+    (is (= result-set #{ ["Dr No"       "Caribbean"]      ; Even though London is repeated, each tuple is
+                         ["James Bond"  "London"]         ;   still unique. Otherwise, any duplicate tuples
+                         ["M"           "London"] } )))   ;   will be discarded since output is a clojure set.
 
-  ; result is a list made from a set - discards duplicates
-  (def find-loc-coll
-    (d/q  '{:find [ [?loc ...] ]
-            :where [ [?eid :location ?loc] ] }
-         (d/db conn)))
-  (spyxx find-loc-coll)
+  ; If you want just a single attribute as output, you can get a set of values (rather than a set of
+  ; tuples) using td/query-set.  Any duplicate values will be discarded.
+  (let [names     (td/query-set :let    [$ (d/db conn)]
+                                :find   [?name] ; <- a single attr-val output allows use of td/query-set
+                                :where  [ [?eid :person/name ?name] ] )
+        cities    (td/query-set :let    [$ (d/db conn)]
+                                :find   [?loc]  ; <- a single attr-val output allows use of td/query-set
+                                :where  [ [?eid :location ?loc] ] )
+
+  ]
+    (spyxx names)
+    (spyxx cities)
+    (is (= names    #{"Dr No" "James Bond" "M"} ))  ; all names are present, since unique
+    (is (= cities   #{"Caribbean" "London"} )))     ; duplicate "London" discarded
 
   ; result is a list - retains duplicates
-  (def find-pull
-    (d/q  '{:find   [ (pull ?eid [:location]) ]
-            :where  [ [?eid :location] ] }
-         (d/db conn)))
-  (spyxx find-pull)
+  (let [result-pull (td/query-pull  :let    [$ (d/db conn)]               ; $ is the implicit db name
+                                    :find   [ (pull ?eid [:location]) ]   ; output :location for each ?eid found
+                                    :where  [ [?eid :location] ] )        ; find any ?eid with a :location attr
+  ]
+    (is (s/validate [ts/TupleMap] result-pull))    ; a list of tuples of maps
+    (is (= result-pull  [ [ {:location "London"   } ] 
+                          [ {:location "Caribbean"} ] 
+                          [ {:location "London"   } ] ] )))
 
-  (def find-pull2 (into #{} find-pull))
-  (spyxx find-pull2)
-
-  ; shows some problems
-
-  ; silently discards all but first location
-  (let [single-tuple    (d/q  '{:find [ [?loc] ]
-                                :where [ [?eid :location ?loc] ] }
-                             (d/db conn)) ]
-    (spyxx single-tuple))
-  ;
   ; silently discards all but first location
   (let [single-scalar   (d/q  '{:find [?loc .]
                                 :where [ [?eid :location ?loc] ] }
