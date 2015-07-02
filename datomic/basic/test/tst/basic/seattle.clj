@@ -580,16 +580,16 @@
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
       tx-1-result       @(td/transact *conn*   
-                          (td/update belltown-eid-rs {:community/category "free stuff"} )) ; Add "free stuff"
+                          (td/update belltown-eid-rs {:community/category "free stuff"} ))          ; Add "free stuff"
       tx-1-datoms       (td/tx-datoms (d/db *conn*) tx-1-result)  ; #todo add to demo
       _ (is (matches? tx-1-datoms
               [ {:e _ :a :db/txInstant        :v _              :tx _ :added true} 
                 {:e _ :a :community/category  :v "free stuff"   :tx _ :added true} ] ))
 
-      freestuff-rs-1    (s/validate ts/Eid 
-                          (td/query-scalar  :let    [$ (d/db *conn*)]
-                                            :find   [?id] 
-                                            :where  [ [?id :community/category "free stuff"] ] ))
+      freestuff-rs-1    (td/query-scalar  :let    [$ (d/db *conn*)]
+                                          :find   [?id] 
+                                          :where  [ [?id :community/category "free stuff"] ] )
+      _ (is freestuff-rs-1 "freestuff-rs-1 (EID) must not be nil")
 
       tx-2-result       @(td/transact *conn* 
                           (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
