@@ -3,7 +3,7 @@
             [clojure.set            :as c.set]
             [schema.core            :as s]
             [tupelo.core            :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
-            [tupelo.datomic         :as t]
+            [tupelo.datomic         :as td]
             [tupelo.schema          :as ts]
   )
   (:use clojure.pprint
@@ -57,41 +57,39 @@
 ;---------------------------------------------------------------------------------------------------
 (deftest t-connection-verify
   (testing "can we connect to the Datomic db"
-    (let [rs        (t/result-set
-                      (d/q '[:find ?title
-                             :in $ ?artist-name
-                             :where
-                             [?a :artist/name ?artist-name]
-                             [?t :track/artists ?a]
-                             [?t :track/name ?title] ]
-                           db-val, "John Lennon" ))
+    (let [rs      (td/query-set :let  [$            db-val
+                                       ?artist-name "John Lennon"]
+                                :find [?title]
+                                :where [ [?a :artist/name ?artist-name]
+                                         [?t :track/artists ?a]
+                                         [?t :track/name ?title] ] )
     ]
       (is (= rs
-              #{["Aisumasen (I'm Sorry)"] ["Amsterdam"] ["Angela"] ["Attica State"]
-                ["Au"] ["Baby's Heartbeat"] ["Blue Suede Shoes"] ["Born in a Prison"]
-                ["Bring On the Lucie (Freda Peeple)"] ["Cambridge 1969"]
-                ["Cold Turkey"] ["Crippled Inside"] ["Dizzy Miss Lizzy"]
-                ["Don't Worry Kyoko"]
-                ["Don't Worry Kyoko (Mummy's Only Looking for Her Hand in the Snow)"]
-                ["Gimme Some Truth"] ["Give Peace a Chance"] ["God"]
-                ["Happy Xmas (War Is Over)"] ["Hold On"] ["How Do You Sleep?"]
-                ["How?"] ["I Don't Wanna Be a Soldier Mama I Don't Wanna Die"]
-                ["I Found Out"] ["I Know (I Know)"] ["Imagine"] ["Instant Karma!"]
-                ["Intuition"] ["Isolation"] ["It's So Hard"] ["Jamrag"]
-                ["Jealous Guy"] ["John & Yoko"] ["John John (Let's Hope for Peace)"]
-                ["John Sinclair"] ["Listen the Snow Is Falling"]
-                ["Listen, the Snow Is Falling"] ["Look at Me"] ["Love"] ["Meat City"]
-                ["Mind Games"] ["Money"] ["Mother"] ["My Mummy's Dead"]
-                ["New York City"] ["No Bed for Beatle John"]
-                ["Nutopian International Anthem"] ["Oh My Love"] ["Oh Yoko!"]
-                ["One Day (at a Time)"] ["Only People"] ["Open Your Box"]
-                ["Out the Blue"] ["Power to the People"] ["Radio Play"] ["Remember"]
-                ["Scumbag"] ["Sisters, O Sisters"] ["Sunday Bloody Sunday"]
-                ["The Luck of the Irish"] ["Tight A$"] ["Two Minutes Silence"]
-                ["We're All Water"] ["Well (Baby Please Don't Go)"]
-                ["Well Well Well"] ["Who Has Seen the Wind?"]
-                ["Woman Is the Nigger of the World"] ["Working Class Hero"]
-                ["Yer Blues"] ["You Are Here"] } ))
+              #{"Aisumasen (I'm Sorry)" "Amsterdam" "Angela" "Attica State"
+                "Au" "Baby's Heartbeat" "Blue Suede Shoes" "Born in a Prison"
+                "Bring On the Lucie (Freda Peeple)" "Cambridge 1969"
+                "Cold Turkey" "Crippled Inside" "Dizzy Miss Lizzy"
+                "Don't Worry Kyoko"
+                "Don't Worry Kyoko (Mummy's Only Looking for Her Hand in the Snow)"
+                "Gimme Some Truth" "Give Peace a Chance" "God"
+                "Happy Xmas (War Is Over)" "Hold On" "How Do You Sleep?"
+                "How?" "I Don't Wanna Be a Soldier Mama I Don't Wanna Die"
+                "I Found Out" "I Know (I Know)" "Imagine" "Instant Karma!"
+                "Intuition" "Isolation" "It's So Hard" "Jamrag"
+                "Jealous Guy" "John & Yoko" "John John (Let's Hope for Peace)"
+                "John Sinclair" "Listen the Snow Is Falling"
+                "Listen, the Snow Is Falling" "Look at Me" "Love" "Meat City"
+                "Mind Games" "Money" "Mother" "My Mummy's Dead"
+                "New York City" "No Bed for Beatle John"
+                "Nutopian International Anthem" "Oh My Love" "Oh Yoko!"
+                "One Day (at a Time)" "Only People" "Open Your Box"
+                "Out the Blue" "Power to the People" "Radio Play" "Remember"
+                "Scumbag" "Sisters, O Sisters" "Sunday Bloody Sunday"
+                "The Luck of the Irish" "Tight A$" "Two Minutes Silence"
+                "We're All Water" "Well (Baby Please Don't Go)"
+                "Well Well Well" "Who Has Seen the Wind?"
+                "Woman Is the Nigger of the World" "Working Class Hero"
+                "Yer Blues" "You Are Here" } ))
     )))
 
 
@@ -106,7 +104,7 @@
 
           ; since :artist/country is a nested entity, we convert the EID (long) value to the
           ; :db/ident (keyword) value
-          res-ident     (update-in res2  [:artist/country :db/id] #(t/eid->ident db-val %) )
+          res-ident     (update-in res2  [:artist/country :db/id] #(td/eid->ident db-val %) )
     ]
       (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
   (testing "reverse lookup"
@@ -118,7 +116,7 @@
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do
                                   (s/validate ts/Eid eid)
-                                  (t/entity-map db-val eid)))
+                                  (td/entity-map db-val eid)))
           _                   (s/validate [ts/KeyMap] artist-ents)
           artist-countries    (mapv :artist/country artist-ents)
     ]
@@ -190,8 +188,8 @@
     (let [result        (d/pull db-val [:release/_media]    ; pattern vec
                                         dylan-harrison-cd)  ; entity spec
           _             (s/validate {:release/_media {:db/id ts/Eid}} result)
-          res-entity    (t/entity-map      db-val (safe-> result :release/_media :db/id))
-          ;  fails -->  (t/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
+          res-entity    (td/entity-map      db-val (safe-> result :release/_media :db/id))
+          ;  fails -->  (td/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
 
           _             (s/validate   {:release/artistCredit s/Str
                                        :release/artists #{ s/Any }
