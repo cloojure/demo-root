@@ -45,7 +45,7 @@
 (d/create-database uri)           ; create the DB
 (def conn (d/connect uri))        ;   & get a connection to it
 
-(deftest t-bond
+(deftest t-james-bond
   ; Create a partition named :people (we could namespace it like :db.part/people if we wished)
   (td/transact conn 
     (td/new-partition :people ))
@@ -60,26 +60,26 @@
     (td/new-attribute :weapon/type         :db.type/ref            :db.cardinality/many)  ; one may have many weapons
     (td/new-attribute :location            :db.type/string)     ; all default values
     (td/new-attribute :favorite-weapon     :db.type/keyword ))  ; all default values
-          ; Note that an :db.type/keyword attribue (like :favorite-weapon) is very similar to an string Any
+          ; Note that an :db.type/keyword attribue (like :favorite-weapon) is very similar to an string. Any
           ; keyword can be added here.  Example error is to add the keyword :location or :person/secret-id
-          ; or :there.is/no-such-kw. It is really just like a strings, where anything is accepted. If you
+          ; or :there.is/no-such-kw. It is really just like a string, where anything is accepted. If you
           ; want to enforce a limited set of values (or any other rules/invariants) you must write your own
-          ; functions to enforce 
+          ; functions to enforce it.
   ; #todo come back and change -> :db.type/ref
 
-  ; Create some "enum" values. These are degenerate entities that serve the same purpose as
-  ; (integer) enumerated values in Java, etc (these entities will never have any attributes).
+  ; Create some "enum" values. These are degenerate entities (which therefore have an EID) that
+  ; serve the same purpose as an (integer) enumerated value in Java (these entities will never
+  ; have any attributes).
   (td/transact conn 
     (td/new-enum :weapon/gun)
     (td/new-enum :weapon/knife)
     (td/new-enum :weapon/guile)
-    (td/new-enum :weapon/curse)
     (td/new-enum :weapon/wit))
 
   ; Create some antagonists and load them into the db.  We can specify some of the attribute-value
   ; pairs at the time of creation, and add others later. Note that whenever we are adding multiple
-  ; values for an attribute (e.g. :weapon/type) in a single step, we must wrap all of the values
-  ; in a set.
+  ; values for an attribute in a single step (e.g. :weapon/type), we must wrap all of the values
+  ; in a set. Howevever, the set implies there can never be duplicates.
   (td/transact conn 
     (td/new-entity { :person/name "James Bond" :location "London"     :weapon/type #{ :weapon/gun :weapon/wit   } } )
     (td/new-entity { :person/name "M"          :location "London"     :weapon/type #{ :weapon/gun :weapon/guile } } )
@@ -101,20 +101,30 @@
                                       :where  [ [?eid :person/name "James Bond"] ] )
         ; get all of James' attr-val pairs as a clojure map
         james-map   (td/entity-map db-val james-eid) ]
-    (is (s/validate ts/Eid james-eid))    ; verify eid (it is a long int)
+    (is (s/validate ts/Eid james-eid))    ; verify eid (it is a Long)
     (is (pos? (long james-eid)))          ; eids are always positive (temp eids are negative)
     (is (= james-map {:person/name "James Bond" :location "London" :weapon/type #{:weapon/wit :weapon/gun} } ))
 
     ; Update the database with more weapons.  If we overwrite some items that are already present
-    ; (e.g. :weapon/gun) it is idempotent.  The first arg to td/update is an EntitySpec. This is
-    ; either (1) and EntityId (EID) or (2) a LookupRef.
+    ; (e.g. :weapon/gun) it is idempotent (no duplicates are allowed).  The first arg to td/update
+    ; is an EntitySpec and determines the Entity that is updated. This is either (1) and EntityId
+    ; (EID) or (2) a LookupRef.
     (td/transact conn 
-      (td/update james-eid   ; Here we use an eid to specify the entity being updated
+      (td/update james-eid   ; Here we use the eid we found earlier as a "pointer" to James
           { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile }
             :person/secret-id 007 } )
       ; Here we use a LookupRef, which is any attr-val pair with :db.unique/value or :db.unique/identity
       (td/update [:person/name "Dr No"]
         { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } } )))
+
+  (pprint (get-people (d/db conn)))
+  (let [people (get-people (d/db conn)) ]
+    (is (= people   
+           #{ {:person/name "James Bond"    :location "London"      :weapon/type #{:weapon/wit    :weapon/gun} }
+              {:person/name "M"             :location "London"      :weapon/type #{:weapon/guile  :weapon/gun} }
+              {:person/name "Dr No"         :location "Caribbean"   :weapon/type #{:weapon/gun               } } } )))
+
+  
 
   (newline) (println "db 01")
   (pprint (get-people (d/db conn)))
