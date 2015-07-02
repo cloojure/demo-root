@@ -410,13 +410,13 @@
   (testing "find all names of all communities that are twitter feeds, using rules")
     (let [
       rules-twitter '[ ; list of all rules 
-                       [ (is_comtype-twitter ?eid)                                   ; rule #1: declaration (<name> & <args>)
-                         [?eid :community/type :community.type/twitter]   ;          match pattern 1
+                       [ (is_comtype-twitter ?eid)                        ; rule #1: declaration (<name> & <args>)
+                         [?eid :community/type :community.type/twitter]   ; match pattern 1
                        ] ; end #1
                      ]
       com-rules-tw  (s/validate #{s/Str}
-                      (td/query-set   :let    [$ (d/db *conn*)
-                                               % rules-twitter]
+                      (td/query-set   :let    [$ (d/db *conn*)    ; data srcs match $-named symbols
+                                               % rules-twitter]   ; rule sets match %-named symbols
                                       :find   [?name]
                                       :where  [ [?eid :community/name ?name]      ; match pattern
                                                 (is_comtype-twitter ?eid) ] ))    ; rule
@@ -434,7 +434,6 @@
                         [?dist       :district/region          ?reg]          ; rule clause
                         [?reg        :db/ident                 ?reg-ident] ]  ; rule clause
                     ]
-                  ; map-format query
       com-ne      (s/validate #{s/Str}
                     (td/query-set :let    [$ (d/db *conn*)
                                            % rules-list ]
@@ -442,7 +441,6 @@
                                   :where  [ [?com-eid :community/name ?name]
                                             (com-region ?com-eid :region/ne) ]
                            ))
-                  ; list-format query
       com-sw      (s/validate #{s/Str}
                     (td/query-set :let    [$ (d/db *conn*)
                                            % rules-list]
@@ -478,7 +476,7 @@
                 "Highland Park Action Committee" "Highland Park Improvement Club"
                 "Junction Neighborhood Organization" "KOMO Communities - Green Lake"
                 "KOMO Communities - Greenwood-Phinney"
-                "KOMO Communities - Wallingford" "KOMO Communities - West Seattle"
+                "KOMO Communities -xWallingford" "KOMO Communities - West Seattle"
                 "Licton Springs Neighborhood " "Longfellow Creek Community Website"
                 "Morgan Junction Community Association" "My Greenlake Blog"
                 "MyWallingford" "Nature Consortium"} )))))
