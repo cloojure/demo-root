@@ -24,7 +24,6 @@
 (def seattle-data-0   (read-string (slurp "samples/seattle/seattle-data0.edn")))
 (def seattle-data-1   (read-string (slurp "samples/seattle/seattle-data1.edn")))
 
-
 (use-fixtures :each
   (fn [tst-fn]
     ; Create the database & a connection to it
@@ -37,69 +36,68 @@
         (tst-fn))
       (d/delete-database uri))))
 
-(defn result-set-sort [result-set]
-  (into (sorted-set) result-set))
-
 (deftest t-01
   (let [db-val  (d/db *conn*)
-        rs1     (td/query :let   [$ db-val]
-                          :find  [?c]
-                          :where [ [?c :community/name] ] )
-        _       (s/validate  ts/TupleSet rs1)
-        rs2     (result-set-sort rs1)
-        _ (is (= 150 (count rs1)))
-        _ (is (s/validate #{ [ ts/Eid ] } rs1))
+        eid-set (s/validate ts/Set  ; #{s/Any}
+                  (td/query-set :let   [$ db-val]
+                                :find  [?c]
+                                :where [ [?c :community/name] ] ))
+        _ (s/validate #{ts/Eid} eid-set)  ; verify it is a set of EIDs
+        _ (is (= 150 (count eid-set)))
+        _ (is (s/validate #{ts/Eid} eid-set))
 
-        eid-1   (s/validate ts/Eid (ffirst rs2))
+        eid-1   (first eid-set)
         entity  (s/validate ts/KeyMap (td/entity-map db-val eid-1))
-        _ (is (= (sort (keys entity))
-                 [:community/category :community/name :community/neighborhood 
-                  :community/orgtype  :community/type :community/url] ))
-        entity-maps   (for [[eid] rs2]  ; destructure as we loop
+        _ (is (= (into #{} (keys entity))
+                #{:community/category :community/name :community/neighborhood 
+                  :community/orgtype  :community/type :community/url} ))
+        entity-maps   (for [eid eid-set]
                         (td/entity-map db-val eid))  ; return clojure map from eid
         first-3   (it-> entity-maps
                         (sort-by :community/name it)
-                        (take 3 it))
-
+                        (take 3 it)
+                        (vec it))
+        ; *** WARNING ***  the print format {:db/id <eid>} for datomic.query.EntityMap is not its
+        ; "true" contents, which looks like a ts/KeyMap of all attr-val pairs, and w/o :db/id.
+        ; #todo: make sure this ^^^ gets into demo/blog post/Datomic docs.
+        ;
         ; The value for :community/neighborhood is another entity (datomic.query.EntityMap) like {:db/id <eid>},
-        ; where the <eid> is volatile.  Replace this degenerate & volatile value with a dummy value
-        ; in a plain clojure map.
+        ; where the <eid> is volatile.  We must use a wildcard to ignore this degenerate & volatile value for testing.
+        ; Also, the datomic.query.EntityMap is an "active" record and will be replaced with its
+        ; contents when attempt to use it: (into {} ...).
         sample-comm-nbr  (:community/neighborhood (first entity-maps))
         _ (is (= datomic.query.EntityMap (class sample-comm-nbr)))
-        first-3   (map #(assoc % :community/neighborhood {:db/id -1}) first-3)
-    ]
-      (is (=  first-3
-              [ {:community/category #{"15th avenue residents"},
-                 :community/name "15th Ave Community",
-                 :community/neighborhood {:db/id -1}
-                 :community/orgtype :community.orgtype/community,
-                 :community/type #{:community.type/email-list},
-                 :community/url "http://groups.yahoo.com/group/15thAve_Community/"}
+  ]
+    (is (wild-match? first-3
+         [ {:community/name "15th Ave Community"
+            :community/url "http://groups.yahoo.com/group/15thAve_Community/"
+            :community/neighborhood :*  ; ignore the whole record (datomic.query.EntityMap)
+            :community/category #{"15th avenue residents"}
+            :community/orgtype :community.orgtype/community
+            :community/type #{:community.type/email-list}}
+           {:community/name "Admiral Neighborhood Association"
+            :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"
+            :community/neighborhood :*
+            :community/category #{"neighborhood association"}
+            :community/orgtype :community.orgtype/community
+            :community/type #{:community.type/email-list}}
+           {:community/name "Alki News"
+            :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"
+            :community/neighborhood :*
+            :community/category #{"members of the Alki Community Council and residents of the Alki Beach neighborhood"}
+            :community/orgtype :community.orgtype/community
+            :community/type #{:community.type/email-list}} ] ))))
 
-                {:community/category #{"neighborhood association"},
-                 :community/name "Admiral Neighborhood Association",
-                 :community/neighborhood {:db/id -1}
-                 :community/orgtype :community.orgtype/community,
-                 :community/type #{:community.type/email-list},
-                 :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"}
-
-                {:community/category #{"members of the Alki Community Council and residents of the Alki Beach neighborhood"},
-                 :community/name "Alki News",
-                 :community/neighborhood {:db/id -1}
-                 :community/orgtype :community.orgtype/community,
-                 :community/type #{:community.type/email-list},
-                 :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"} ] ))))
-
-(deftest t-02
+(deftest t-communities-1
   ; Find all communities (any entity with a :community/name attribute), then return a list of tuples
   ; like [ community-name & neighborhood-name ]
   (let [db-val            (d/db *conn*)
-        rs                (td/query   :let    [$ db-val]
-                                      :find   [?c] 
-                                      :where  [ [?c :community/name] ] )
-        _ (s/validate ts/TupleSet rs)
+        results           (td/query-set :let    [$ db-val]
+                                        :find   [?c] 
+                                        :where  [ [?c :community/name] ] )
+        _ (s/validate #{ts/Eid} results)
         entity-maps       (sort-by :community/name 
-                            (for [[eid] rs]
+                            (for [eid results]
                               (td/entity-map db-val eid)))
         comm-nbr-names    (map #(let [entity-map  %
                                       comm-name   (safe-> entity-map :community/name)
@@ -125,24 +123,22 @@
         communities               (s/validate #{datomic.query.EntityMap}    ; hash-set is not sorted
                                     (safe-> neighborhood :community/_neighborhood))
         ; Pull out their names
-        communities-names         (s/validate [s/Str] (mapv :community/name communities))
-        _ (is (= communities-names    ["Capitol Hill Community Council"     ; names from hash-set are not sorted
+        communities-names         (into #{} (mapv :community/name communities))
+        _ (is (= communities-names   #{"Capitol Hill Community Council"
                                        "KOMO Communities - Captol Hill"
                                        "15th Ave Community"
                                        "Capitol Hill Housing"
                                        "CHS Capitol Hill Seattle Blog"
-                                       "Capitol Hill Triangle"] ))
+                                       "Capitol Hill Triangle"} ))
   ] ))
 
-(deftest t-02
-  (let [db-val              (d/db *conn*)
-
-        ; Find all tuples of [community-eid community-name] and collect results into a regular
+(deftest t-communities-2
+  (let [; Find all tuples of [community-eid community-name] and collect results into a regular
         ; Clojure set (the native Datomic return type is set-like but not a Clojure set, so it
         ; doesn't work right with Prismatic Schema specs)
         comms-and-names     (s/validate  #{ [ (s/one ts/Eid "comm-eid") (s/one s/Str "comm-name") ] } ; verify expected shape
                               (into (sorted-set)
-                                (td/query   :let    [$ db-val]
+                                (td/query   :let    [$ (d/db *conn*)]
                                             :find   [?comm-eid ?comm-name] ; <- shape of output RS tuples
                                             :where  [ [?comm-eid :community/name ?comm-name ] ] )))
         _ (is (= 150 (count comms-and-names)))   ; all communities
@@ -163,13 +159,13 @@
                                                 :community/url       s/Str }
                                             ] ]
                               (sort-by first 
-                                (td/query   :let    [$ db-val]
-                                            :find   [ ?comm-name (pull ?comm-eid [:community/category :community/url] ) ]
-                                            :where  [ [?comm-eid :community/name ?comm-name] ] )))
+                                (td/query-pull  :let    [$ (d/db *conn*)]
+                                                :find   [ ?comm-name (pull ?comm-eid [:community/category :community/url] ) ]
+                                                :where  [ [?comm-eid :community/name ?comm-name] ] )))
         _ (is (= 150 (count comm-names-urls)))
 
         ; We must normalize the Pull API results for :community/category from a vector of string [s/Str] to
-        ; a hash-set so we can test for the expected results.
+        ; a hash-set of string #{s/Str} so we can test for the expected results.
         normalized-results    (take 5
                                 (for [entry comm-names-urls]
                                   (update-in entry [1 :community/category]  ; 1 -> get 2nd item (map) in result tuple
@@ -193,7 +189,7 @@
                       :community/url "http://www.belltown.org/"}] ] ))
   ] ))
 
-(deftest t-03
+(deftest t-twitter-feeds
   (let [db-val              (d/db *conn*)
         ; find the names of all communities that are twitter feeds
         comm-names  (td/query   :let    [$ db-val]
@@ -204,7 +200,7 @@
     (is (= comm-names   #{["Columbia Citizens"] ["Discover SLU"] ["Fremont Universe"]
                           ["Magnolia Voice"] ["Maple Leaf Life"] ["MyWallingford"]} ))))
 
-(deftest t-04
+(deftest t-ne-region
   (testing "find the names all communities in the NE region"
     (let [names-ne    (td/query   :let    [$ (d/db *conn*)]
                                   :find   [?name]
@@ -220,7 +216,7 @@
                            ["Magnuson Environmental Stewardship Alliance"]
                            ["Maple Leaf Community Council"] ["Maple Leaf Life"] } )))))
 
-(deftest t-05
+(deftest t-all-com-name-reg
   (testing "find the names and regions of all communities"
     (let [com-name-reg  (s/validate #{ [ (s/one s/Str      "com-name") 
                                          (s/one s/Keyword  "reg-id") ] }
@@ -243,7 +239,7 @@
 ; find all communities that are either twitter feeds or facebook pages, by calling a single query
 ; with a parameterized type value.
 ; This is possible but ugly, since we must use eval, syntax-quote, and hard-coded symbol names
-(deftest t-06
+(deftest t-twit-or-fb
   (let [query-fn      (fn [db-arg type-arg]
                         (td/query-set :let    [$       db-arg
                                                ?type   type-arg]
@@ -277,7 +273,7 @@
 
 ; In a single query, find all communities that are twitter feeds or facebook pages, using a list
 ; of parameters
-(deftest t-07
+(deftest t-list-of-params
   (let [db-val            (d/db *conn*)
         type-ident-list   [:community.type/twitter :community.type/facebook-page]  
 
@@ -319,7 +315,7 @@
 
 ; Find all communities that are non-commercial email-lists or commercial
 ; web-sites using a list of tuple parameters
-(deftest t-08
+(deftest t-email-commercial
   (let [db-val    (d/db *conn*)
         rs        (s/validate #{ [ (s/one s/Str      "name")
                                    (s/one s/Keyword  "type") 
@@ -351,7 +347,7 @@
               ["Madrona Moms"                                 :community.type/email-list  :community.orgtype/community] } ))))
 
 ; find all community names coming before "C" in alphabetical order
-(deftest t-09
+(deftest t-before-letter-C
   (let [
     names-abc     (s/validate #{s/Str}
                     (td/query-set :let    [$ (d/db *conn*)]
