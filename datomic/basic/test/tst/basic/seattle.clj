@@ -476,42 +476,41 @@
                 "Highland Park Action Committee" "Highland Park Improvement Club"
                 "Junction Neighborhood Organization" "KOMO Communities - Green Lake"
                 "KOMO Communities - Greenwood-Phinney"
-                "KOMO Communities -xWallingford" "KOMO Communities - West Seattle"
+                "KOMO Communities - Wallingford" "KOMO Communities - West Seattle"
                 "Licton Springs Neighborhood " "Longfellow Creek Community Website"
                 "Morgan Junction Community Association" "My Greenlake Blog"
                 "MyWallingford" "Nature Consortium"} )))))
 
 (deftest t-rules-or-logic
-  (testing "find names of all communities that are in any of the northern regions and are
+  (testing "find names of all communities that are in any of the southern regions and are
             social-media, using rules for OR logic"
     (let [
-      or-rulelist     '[  ; rule #1
+      or-rulelist     '[  ; rule #1: a normal chain-type rule
                           [ (region ?com-eid ?reg-ident)
                             [?com-eid    :community/neighborhood   ?nbr-eid]
                             [?nbr-eid    :neighborhood/district    ?dist-eid]
                             [?dist-eid   :district/region          ?reg-eid]
                             [?reg-eid    :db/ident                 ?reg-ident] ]
 
-                          ; rule #2
+                          ; rule #2: an OR rule
                           [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/twitter] ]
                           [ (social-media? ?com-eid) [?com-eid  :community/type  :community.type/facebook-page] ]
 
-                          ; rule #3
+                          ; rule #3: an OR rule
                           [ (northern?  ?com-eid) (region ?com-eid :region/ne) ]
                           [ (northern?  ?com-eid) (region ?com-eid :region/e)  ]
                           [ (northern?  ?com-eid) (region ?com-eid :region/nw) ]
 
-                          ; rule #4
+                          ; rule #4: an OR rule
                           [ (southern?  ?com-eid) (region ?com-eid :region/se) ]
                           [ (southern?  ?com-eid) (region ?com-eid :region/s)  ]
                           [ (southern?  ?com-eid) (region ?com-eid :region/sw) ] ]
-      social-south    (s/validate #{s/Str}
-                        (td/query-set   :let   [$ (d/db *conn*)
-                                                % or-rulelist]
-                                        :find  [?name]
-                                        :where [ [?com-eid :community/name ?name]
-                                                 (southern? ?com-eid)
-                                                 (social-media? ?com-eid) ] ))
+      social-south    (td/query-set   :let   [$ (d/db *conn*)
+                                              % or-rulelist]
+                                      :find  [?name]
+                                      :where [ [?com-eid :community/name ?name]
+                                               (southern? ?com-eid)
+                                               (social-media? ?com-eid) ] )
     ]
       (is (= 4 (count social-south)))
       (is (=  social-south
@@ -540,9 +539,8 @@
 
       db-asof-schema  (d/as-of curr-db schema-tx-inst)
       db-asof-data    (d/as-of curr-db data1-tx-inst)
-
-      _ (is (=   0 (count (communities-query-fn db-asof-schema)))) ; all communities as of schema transaction
-      _ (is (= 150 (count (communities-query-fn db-asof-data  )))) ; all communities as of seed data transaction
+      _ (is (=   0 (count (communities-query-fn db-asof-schema))))  ; all communities as of schema transaction
+      _ (is (= 150 (count (communities-query-fn db-asof-data  ))))  ; all communities as of seed data transaction
 
       db-since-schema (d/since curr-db schema-tx-inst)
       _ (is (= 150 (count (communities-query-fn db-since-schema)))) ; find all communities since schema transaction
@@ -568,18 +566,17 @@
 
 (deftest t-partitions
   (testing "adding & using a new partition"
-    (td/transact *conn* (td/new-partition :communities) )                             ; create a new partition
-    (td/transact *conn* (td/new-entity :communities {:community/name "Easton"} ) )    ; add Easton to new partition
+    (td/transact *conn* (td/new-partition :communities) )                               ; create a new partition
+    (td/transact *conn* (td/new-entity    :communities {:community/name "Easton"} ) )   ; add Easton to new partition
     (let [
-      ; show format difference between query result-set and scalar output
-      belltown-eid-rs       (s/validate ts/Eid 
-                              (ffirst (td/query   :let    [$ (d/db *conn*) ]
-                                                  :find   [?id]
-                                                  :where  [ [?id :community/name "belltown"] ] )))
-      belltown-eid-scalar   (s/validate ts/Eid 
-                              (td/query-scalar  :let    [$ (d/db *conn*) ]
+      ; If you want a scalar result it is much better (& safer) to use td/query-scalar rather than
+      ; getting the TupleSet returned by td/query and using (ffirst ...)
+      belltown-eid-rs       (ffirst (td/query   :let    [$ (d/db *conn*) ]  ; returns #{ [ts/Eid] }
                                                 :find   [?id]
                                                 :where  [ [?id :community/name "belltown"] ] ))
+      belltown-eid-scalar     (td/query-scalar  :let    [$ (d/db *conn*) ]  ; returns ts/Eid
+                                                :find   [?id]
+                                                :where  [ [?id :community/name "belltown"] ] )
       _ (is (= belltown-eid-rs belltown-eid-scalar))
 
       tx-1-result       @(td/transact *conn*   
