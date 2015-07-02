@@ -237,7 +237,6 @@
 
 ; find all communities that are either twitter feeds or facebook pages, by calling a single query
 ; with a parameterized type value.
-; This is possible but ugly, since we must use eval, syntax-quote, and hard-coded symbol names
 (deftest t-twit-or-fb
   (let [query-fn      (fn [db-arg type-arg]
                         (td/query-set :let    [$       db-arg
@@ -273,12 +272,11 @@
 ; In a single query, find all communities that are twitter feeds or facebook pages, using a list
 ; of parameters
 (deftest t-list-of-params
-  (let [db-val            (d/db *conn*)
-        type-ident-list   [:community.type/twitter :community.type/facebook-page]  
+  (let [type-ident-list   [:community.type/twitter :community.type/facebook-page]  
 
         result-set        (s/validate #{ [ (s/one s/Str      "com-name")
                                            (s/one s/Keyword  "type-ident") ] }
-                            (td/query  :let     [ $                  db-val
+                            (td/query  :let     [ $                  (d/db *conn*)
                                                   [?type-ident ...]  type-ident-list ]
                                        :find    [?com-name ?type-ident]
                                        :where   [ [?com        :community/name ?com-name]
@@ -291,7 +289,7 @@
                 ;        :where   [?comm        :community/name ?com-name]
                 ;                 [?comm        :community/type ?com-type]
                 ;                 [?comm-type   :db/ident       ?comm-type-ident] ]
-                ;      db-val 
+                ;      (d/db *conn*)
                 ;      [:community.type/twitter :community.type/facebook-page] )
   ]
     (is (= 15 (count result-set)))
@@ -315,11 +313,10 @@
 ; Find all communities that are non-commercial email-lists or commercial
 ; web-sites using a list of tuple parameters
 (deftest t-email-commercial
-  (let [db-val    (d/db *conn*)
-        rs        (s/validate #{ [ (s/one s/Str      "name")
+  (let [rs        (s/validate #{ [ (s/one s/Str      "name")
                                    (s/one s/Keyword  "type") 
                                    (s/one s/Keyword  "orgtype") ] }
-                    (td/query   :let    [ $ db-val
+                    (td/query   :let    [ $                    (d/db *conn*)
                                           [[?type ?orgtype]]   [ [:community.type/email-list  :community.orgtype/community] 
                                                                  [:community.type/website     :community.orgtype/commercial] ] ]
                                 :find   [?name ?type ?orgtype]
@@ -417,14 +414,13 @@
 (deftest t-rules-1
   (testing "find all names of all communities that are twitter feeds, using rules")
     (let [
-      db-val (d/db *conn*)
       rules-twitter '[ ; list of all rules 
                        [ (is_comtype-twitter ?eid)                                   ; rule #1: declaration (<name> & <args>)
                          [?eid :community/type :community.type/twitter]   ;          match pattern 1
                        ] ; end #1
                      ]
       com-rules-tw  (s/validate #{s/Str}
-                      (td/query-set   :let    [$ db-val 
+                      (td/query-set   :let    [$ (d/db *conn*)
                                                % rules-twitter]
                                       :find   [?name]
                                       :where  [ [?eid :community/name ?name]      ; match pattern
@@ -437,7 +433,6 @@
 (deftest t-rules-2
   (testing "find names of all communities in NE and SW regions, using rules to avoid repeating logic"
     (let [
-      db-val       (d/db *conn*)
       rules-list   '[ [ (com-region ?com-eid ?reg-ident) ; rule header
                         [?com-eid    :community/neighborhood   ?nbr]          ; rule clause
                         [?nbr        :neighborhood/district    ?dist]         ; rule clause
@@ -446,7 +441,7 @@
                     ]
                   ; map-format query
       com-ne      (s/validate #{s/Str}
-                    (td/query-set :let    [$ db-val 
+                    (td/query-set :let    [$ (d/db *conn*)
                                            % rules-list ]
                                   :find   [?name]
                                   :where  [ [?com-eid :community/name ?name]
@@ -454,7 +449,7 @@
                            ))
                   ; list-format query
       com-sw      (s/validate #{s/Str}
-                    (td/query-set :let    [$ db-val
+                    (td/query-set :let    [$ (d/db *conn*)
                                            % rules-list]
                                   :find   [?name]
                                   :where  [ [?com-eid :community/name ?name]
@@ -496,7 +491,7 @@
 (deftest t-rules-or-logic
   (testing "find names of all communities that are in any of the northern regions and are
             social-media, using rules for OR logic"
-    (let [db-val (d/db *conn*)
+    (let [
       or-rulelist     '[  ; rule #1
                           [ (region ?com-eid ?reg-ident)
                             [?com-eid    :community/neighborhood   ?nbr-eid]
@@ -518,7 +513,7 @@
                           [ (southern?  ?com-eid) (region ?com-eid :region/s)  ]
                           [ (southern?  ?com-eid) (region ?com-eid :region/sw) ] ]
       social-south    (s/validate #{s/Str}
-                        (td/query-set   :let   [$ db-val 
+                        (td/query-set   :let   [$ (d/db *conn*)
                                                 % or-rulelist]
                                         :find  [?name]
                                         :where [ [?com-eid :community/name ?name]
