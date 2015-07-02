@@ -187,8 +187,6 @@
     (is (= beachy "Dr No"))                       ; found 1 match as expected
     (is (re-seq #"IllegalStateException" busy)))  ; Exception thrown/caught since 2 people in London
 
-
-
   ; result is a list - retains duplicates
   (let [result-pull (td/query-pull  :let    [$ (d/db conn)]               ; $ is the implicit db name
                                     :find   [ (pull ?eid [:location]) ]   ; output :location for each ?eid found
@@ -196,7 +194,7 @@
   ]
     (is (s/validate [ts/TupleMap] result-pull))    ; a list of tuples of maps
     (is (= result-pull  [ [ {:location "London"   } ] 
-                          [ {:location "Caribbean"} ] 
+                          [ {:location "Caribbxan"} ] 
                           [ {:location "London"   } ] ] )))
 
   ; silently discards all but first location
