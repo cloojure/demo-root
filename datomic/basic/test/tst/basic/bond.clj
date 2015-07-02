@@ -199,11 +199,11 @@
     (is (= :people (td/partition-name (live-db) honey-eid)))
 
     ; Try to add Honey as a weapon
-    (let [tx-result   @(td/transact *conn* 
-                        (td/update [:person/name "James Bond"]
-                                   {:weapon/type honey-eid} )) 
-          datoms      (td/tx-datoms (live-db) tx-result)    ; get a vec of the datoms maps from the transaction
-          datom-honey (first (filter #(= honey-eid (grab :v %)) datoms))
+    (let [tx-result     @(td/transact *conn* 
+                           (td/update [:person/name "James Bond"]
+                                      {:weapon/type honey-eid} )) 
+          datoms        (td/tx-datoms (live-db) tx-result)    ; get a vec of the datoms maps from the transaction
+         [datom-honey]  (filter #(= honey-eid (grab :v %)) datoms)
          ]
       (is (matches? datoms
             [ {:e _ :a :db/txInstant :v _ :tx _ :added true}
@@ -216,7 +216,6 @@
                       (td/update [:person/name "James Bond"]
                         { :weapon/type #{ 99 } } )) ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
         datoms      (td/tx-datoms (live-db) tx-result)    ; datoms added the transaction
-       [datom-99]   (filter #(= 99 (grab :v %)) datoms)   ; destructure to extract from seq
   ]
     (is (matches? datoms
             [ {:e _ :a :db/txInstant :v _  :tx _ :added true}
