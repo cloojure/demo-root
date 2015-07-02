@@ -87,14 +87,26 @@
               {:person/name "M"             :location "London"      :weapon/type #{:weapon/guile  :weapon/gun} }
               {:person/name "Dr No"         :location "Caribbean"   :weapon/type #{:weapon/gun               } } } )))
 
+  ; Verify we can find James by name 
+  (let [db-val      (d/db conn)
+        ; find james' entity-id (EID)
+        james-eid   (td/query-scalar  :let    [$ db-val]
+                                      :find   [?eid]
+                                      :where  [ [?eid :person/name "James Bond"] ] )
+        ; get all of james' attr-val pairs as a clojure map
+        james-map   (td/entity-map db-val james-eid) ]
+    (is (s/validate ts/Eid james-eid))    ; verify eid (it is a long int)
+    (is (pos? (long james-eid)))          ; eids are always positive (temp eids are negative)
+    (is (= james-map {:person/name "James Bond" :location "London" :weapon/type #{:weapon/wit :weapon/gun} } )))
 
   ; Update the database with more weapons.  If we overwrite some items that are already present
   ; (e.g. :weapon/gun) it is idempotent.
   (td/transact conn 
-    (td/update
+    ; We can lookup an entity by an "entity ref" (an attr-val with :db.unique/value or :db.unique/identity).
+    (td/update 
       [:person/name "James Bond"]
-      { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } 
-        :person/secret-id 007 } )
+        { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile }
+          :person/secret-id 007 } )
     (td/update
       [:person/name "Dr No"]
       { :weapon/type #{ :weapon/gun :weapon/knife :weapon/guile } } )
