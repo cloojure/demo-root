@@ -235,7 +235,7 @@
                               } ))
     ))
   (testing "nested map specifications"
-    (let [res   (d/pull db-val 
+    (let [result  (d/pull db-val 
                     [ { :release/media        ; for each :release/media entity recurse to
                         [ { :medium/tracks      ; for each medium/tracks entity recurse to
                             [ :track/name          ; simple value attr
@@ -244,7 +244,7 @@
                               } ] } ] } ]
                     concert-for-bangla-desh )
     ]
-      (is (= res
+      (is (= result
              { :release/media
                [ { :medium/tracks
                    [ { :track/name "George Harrison / Ravi Shankar Introduction" 
@@ -328,7 +328,37 @@
                    :track/name "Bangla Dhun",
                    :track/position 2,
                    :track/artists [{:db/id _}]}]}  ))
-    #_(is (matches? result
+      (is (wild-match? result
+              {:release/name "The Concert for Bangla Desh", :release/artists [{:db/id :*}], :release/country {:db/id :*}, :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
+               :release/day 20, :release/status "Official", :release/month 12, :release/artistCredit "George Harrison", :db/id :*, :release/year 1971,
+               :release/media
+               [{:db/id :*, :medium/format {:db/id :*}, :medium/position 1, :medium/trackCount 2,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 376000, :track/name "George Harrison / Ravi Shankar Introduction", :track/position 1, :track/artists [{:db/id :*} {:db/id :*}]}
+                  {:db/id :*, :track/duration 979000, :track/name "Bangla Dhun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 3, :medium/trackCount 4, :medium/tracks
+                 [{:db/id :*, :track/duration 195000, :track/name "Wah-Wah", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 256000, :track/name "My Sweet Lord", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 157000, :track/name "Awaiting on You All", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 245000, :track/name "That's the Way God Planned It", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 5, :medium/trackCount 4, :medium/tracks
+                 [{:db/id :*, :track/duration 158000, :track/name "It Don't Come Easy", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 206000, :track/name "Beware of Darkness", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 180000, :track/name "Introduction of the Band", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 279000, :track/name "While My Guitar Gently Weeps", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 6, :medium/trackCount 2, :medium/tracks
+                 [{:db/id :*, :track/duration 551000, :track/name "Jumpin' Jack Flash / Youngblood", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 171000, :track/name "Here Comes the Sun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 4, :medium/trackCount 5, :medium/tracks
+                 [{:db/id :*, :track/duration 304000, :track/name "A Hard Rain's Gonna Fall", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 174000, :track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 214000, :track/name "Blowin' in the Wind", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 246000, :track/name "Mr. Tambourine Man", :track/position 4, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Just Like a Woman", :track/position 5, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 2, :medium/trackCount 2, :medium/tracks
+                 [{:db/id :*, :track/duration 185000, :track/name "Something", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Bangla Desh", :track/position 2, :track/artists [{:db/id :*}]}]}]} ))
+    #_(is (matches? result  ; #todo can create StackOverflowError if enabled and a mismatch is induced
               {:release/name "The Concert for Bangla Desh", :release/artists [{:db/id _}], :release/country {:db/id _}, :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
                :release/day 20, :release/status "Official", :release/month 12, :release/artistCredit "George Harrison", :db/id _, :release/year 1971,
                :release/media
@@ -370,15 +400,17 @@
                :track/duration 218506,
                :track/name "Ghost Riders in the Sky",
                :track/position 11,
-               :track/artists [{:db/id _} {:db/id _}]} ))
+               :track/artists 
+                 [ {:db/id _} 
+                   {:db/id _} ] } ))
       (is (matches? res-2
               {:db/id _,
                :track/duration 218506,
                :track/name "Ghost Riders in the Sky",
                :track/position 11,
                :track/artists
-               [{:artist/name "Bob Dylan"} {:artist/name "George Harrison"}]} ))
-)))
+                 [ {:artist/name "Bob Dylan"} 
+                   {:artist/name "George Harrison"} ] } )))))
 
 (deftest t-defaults
   (testing "default expressions"
@@ -387,38 +419,39 @@
           res-3     (d/pull db-val '[:artist/name (default :died-in-1966?)]          mccartney)
     ]
       (is (= res-1  {:artist/name "Paul McCartney", :artist/endYear 0} ))
-      (is (= res-2  {:artist/name "Paul McCartney", :artist/endYear "N/A"} ))
+      (is (= res-2  {:artist/name "Paul McCartney", :artist/endYear "N/A"} ))  ; default doesn't have to match normal type of attr-val
       (is (= res-3  {:artist/name "Paul McCartney"} )))))
 
 (deftest t-limit
   (testing "limit"
-    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists 10) ]        led-zeppelin)
-          res-2   (d/pull db-val '[ { (limit :track/_artists 10) [:track/name] } ]  led-zeppelin)
+    (let [res-1   (d/pull db-val '[:artist/name     (limit :track/_artists 10) ]        led-zeppelin)
+          res-2   (d/pull db-val '[:artist/name   { (limit :track/_artists 10) [:track/name] } ]  led-zeppelin)
     ]
       (is (matches?   res-1
                       { :artist/name "Led Zeppelin",
                         :track/_artists
-                        [ {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _} ] } ))
-      (is (= res-2  { :track/_artists
-                      [ {:track/name "Whole Lotta Love"}
-                        {:track/name "What Is and What Should Never Be"}
-                        {:track/name "The Lemon Song"}
-                        {:track/name "Thank You"}
-                        {:track/name "Heartbreaker"}
-                        {:track/name "Living Loving Maid (She's Just a Woman)"}
-                        {:track/name "Ramble On"}
-                        {:track/name "Moby Dick"}
-                        {:track/name "Bring It on Home"}
-                        {:track/name "Whole Lotta Love"}]} ))))
+                          [ {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _} ] } ))
+      (is (= res-2  { :artist/name "Led Zeppelin",
+                      :track/_artists
+                        [ {:track/name "Whole Lotta Love"}
+                          {:track/name "What Is and What Should Never Be"}
+                          {:track/name "The Lemon Song"}
+                          {:track/name "Thank You"}
+                          {:track/name "Heartbreaker"}
+                          {:track/name "Living Loving Maid (She's Just a Woman)"}
+                          {:track/name "Ramble On"}
+                          {:track/name "Moby Dick"}
+                          {:track/name "Bring It on Home"}
+                          {:track/name "Whole Lotta Love"}]} ))))
   (testing "nulllimit"
     (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) 
     ]
