@@ -190,15 +190,14 @@
   ] ))
 
 (deftest t-twitter-feeds
-  (let [db-val              (d/db *conn*)
-        ; find the names of all communities that are twitter feeds
-        comm-names  (td/query   :let    [$ db-val]
-                                :find   [?name]
-                                :where  [ [?comm-eid :community/name ?name]
+  (let [; find the names of all communities that are twitter feeds
+        comm-names  (td/query-set :let    [$ (d/db *conn*)]
+                                  :find   [?name]
+                                  :where  [ [?comm-eid :community/name ?name]
                                           [?comm-eid :community/type :community.type/twitter] ] )
   ]
-    (is (= comm-names   #{["Columbia Citizens"] ["Discover SLU"] ["Fremont Universe"]
-                          ["Magnolia Voice"] ["Maple Leaf Life"] ["MyWallingford"]} ))))
+    (is (= comm-names   #{"Coxumbia Citizens" "Discover SLU" "Fremont Universe"
+                          "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
 
 (deftest t-ne-region
   (testing "find the names all communities in the NE region"
