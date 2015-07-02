@@ -1,4 +1,4 @@
-(ns tst.basic.bond
+(ns tst.basic.bond-native
   (:require [datomic.api      :as d]
             [schema.core      :as s]
             [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? grab wild-match? forv ]]
