@@ -589,7 +589,7 @@
       freestuff-rs-1    (td/query-scalar  :let    [$ (d/db *conn*)]
                                           :find   [?id] 
                                           :where  [ [?id :community/category "free stuff"] ] )
-      _ (is freestuff-rs-1 "freestuff-rs-1 (EID) must not be nil")
+      _ (is (not (nil? freestuff-rs-1)) "freestuff-rs-1 (EID) must not be nil")
 
       tx-2-result       @(td/transact *conn* 
                           (td/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
@@ -601,26 +601,21 @@
       freestuff-rs-2    (td/query-set   :let    [$ (d/db *conn*) ]
                                         :find   [?id]
                                         :where  [ [?id :community/category "free stuff"] ] )
-      _ (spyxx freestuff-rs-2)
-      _ (is (= 0 (count freestuff-rs-2)))
+      _ (is (zero? (count freestuff-rs-2)))
   ]
   )))
 
+; For using the Datomic Pull API, it is best to user td/query-pull as it ensures you receive a List
+; of Tuples (a Clojure vector-of-vectors).  This allows for repeating values, unlike all other
+; functions which return a Set with no duplicates allowed.
 (deftest t-pull-1
-  (let [db-val    (d/db *conn*)
-        res-1     (s/validate [ts/TupleMap]  ; returns a vector of TupleMaps
-                    (d/q '[:find  (pull ?c [*]) 
-                           :where [?c :community/name] ]
-                         db-val ))
-        res-2     (td/query-pull  :let    [$ db-val]
+  (let [result    (td/query-pull  :let    [$ (d/db *conn*)]
                                   :find   [ (pull ?c [*]) ]
                                   :where  [ [?c :community/name] ] )
-        first-5   (take 5 (sort-by #(grab :community/name (first %)) res-2))
+        first-5   (take 5 (sort-by #(grab :community/name (first %)) result))
+        first-5-1 (first first-5)
   ]
-    (is (= 150 (count res-1)))
-    (is (= 150 (count res-2)))
-    (is (=  (into #{} res-1)
-            (into #{} res-2)))
+    (is (= 150 (count result)))
 
     ; #todo core.match fails for this case!  Why?
     (is (wild-match? first-5
@@ -661,12 +656,56 @@
                :community/orgtype {:db/id :*}
                :community/type [{:db/id :*}]}]]
            ))
+  
+  ; This fails:
+  ; (println "first-5") (pprint first-5)
+  #_(is (matches? first-5
+            [[{:db/id _
+               :community/name "15th Ave Community"
+               :community/url "http://groups.yahoo.com/group/15thAve_Community/"
+               :community/neighborhood _
+               :community/category ["15th avenue residents"]
+               :community/orgtype _
+               :community/type _}]
+             [{:db/id _
+               :community/name "Admiral Neighborhood Association"
+               :community/url "http://groups.yahoo.com/group/AdmiralNeighborhood/"
+               :community/neighborhood _
+               :community/category ["neighborhood association"]
+               :community/orgtype _
+               :community/type _}]
+             [{:db/id _
+               :community/name "Alki News"
+               :community/url "http://groups.yahoo.com/group/alkibeachcommunity/"
+               :community/neighborhood _
+               :community/category
+               ["members of the Alki Community Council and residents of the Alki Beach neighborhood"]
+               :community/orgtype _
+               :community/type _}]
+             [{:db/id _
+               :community/name "Alki News/Alki Community Council"
+               :community/url "http://alkinews.wordpress.com/"
+               :community/neighborhood _
+               :community/category ["council meetings" "news"]
+               :community/orgtype _
+               :community/type _}]
+             [{:db/id _
+               :community/name "All About Belltown"
+               :community/url "http://www.belltown.org/"
+               :community/neighborhood _
+               :community/category ["community council"]
+               :community/orgtype _
+               :community/type _}]]
+           ))
+
+    ; this works
+    (is (matches? first-5-1
+             [{:db/id _
+               :community/name "15th Ave Community"
+               :community/url "http://groups.yahoo.com/group/15thAve_Community/"
+               :community/neighborhood _
+               :community/category ["15th avenue residents"]
+               :community/orgtype _
+               :community/type _}] ))
   ))
-
-
-#_(deftest t-00
-  (testing "xxx"
-  (let [db-val (d/db *conn*)
-  ]
-)))
 
