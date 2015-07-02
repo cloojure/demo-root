@@ -1,7 +1,7 @@
 (ns tst.basic.bond
   (:require [datomic.api      :as d]
             [schema.core      :as s]
-            [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? grab wild-match? forv ]]
+            [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? grab wild-match? forv submap? ]]
             [tupelo.datomic   :as td]
             [tupelo.schema    :as ts]
   )
@@ -85,8 +85,7 @@
     (td/new-entity { :person/name "M"          :location "London"     :weapon/type #{ :weapon/gun :weapon/guile } } )
     (td/new-entity { :person/name "Dr No"      :location "Caribbean"  :weapon/type    :weapon/gun                 } ))
 
-  (newline) (println "db 00")
-  (pprint (get-people (d/db conn)))
+  ; Verify the data was added to the DB
   (let [people (get-people (d/db conn)) ]
     (is (= people   
            #{ {:person/name "James Bond"    :location "London"      :weapon/type #{:weapon/wit    :weapon/gun} }
@@ -151,9 +150,6 @@
     (is (= names    #{"Dr No" "James Bond" "M"} ))  ; all names are present, since unique
     (is (= cities   #{"Caribbean" "London"} )))     ; duplicate "London" discarded
 
-  (newline)
-  (println "current point")
-
   ; If you want just a single tuple as output, you can get it (rather than a set of
   ; tuples) using td/query-tuple.  It is an error if more than one tuple is found.
   (let [beachy    (td/query-tuple :let    [$ (d/db conn)]
@@ -194,121 +190,43 @@
   ]
     (is (s/validate [ts/TupleMap] result-pull))    ; a list of tuples of maps
     (is (= result-pull  [ [ {:location "London"   } ] 
-                          [ {:location "Caribbxan"} ] 
+                          [ {:location "Caribbean"} ] 
                           [ {:location "London"   } ] ] )))
 
-  ; silently discards all but first location
-  (let [single-scalar   (d/q  '{:find [?loc .]
-                                :where [ [?eid :location ?loc] ] }
-                             (d/db conn)) ]
-    (spyxx single-scalar))
-
-  (newline)
-  (println "show problems")
-
-  ; silently discards all but first location
-  (let [single-tuple    (d/q  '{:find [ [?loc] ]
-                                :where [ [?eid :location ?loc] ] }
-                             (d/db conn)) ]
-    (spyxx single-tuple))
-  ;
-  ; silently discards all but first location
-  (let [single-scalar   (d/q  '{:find [?loc .]
-                                :where [ [?eid :location ?loc] ] }
-                             (d/db conn)) ]
-    (spyxx single-scalar))
-
-  (newline)
-  (println "finding name & loc")
-  ; result is a set - discards duplicates
-  (let [find-name-loc-entity
-              (d/q  '{:find [?name ?loc]
-                      :where [ [?eid :location    ?loc] 
-                               [?eid :person/name ?name] ] }
-                   (d/db conn)) ]
-    (spyxx find-name-loc-entity))
-
-  ; result is a list - retains duplicates
-  (let [find-name-loc-pull
-              (d/q  '{:find   [ (pull ?eid [:person/name :location]) ]
-                      :where [ [?eid :location] ] }
-                   (d/db conn)) 
-        find-name-loc-pull2 (into #{} find-name-loc-pull) ]
-    (spyxx find-name-loc-pull)
-    (spyxx find-name-loc-pull2))
-
-  (newline)
-  (println "pulling with defaults")
-  (let [result    (d/q  '{:find   [ (pull ?eid [:person/name (default :person/secret-id -1) ] ) ]
-                          :where  [ [?eid :person/name ?name] ] }
-                    (d/db conn))
-  ]
-    (pprint result))
-  (println "pulling without defaults")
-  (let [result    (d/q  '{:find   [ (pull ?eid [:person/name :person/secret-id] ) ]
-                          :where  [ [?eid :person/name ?name] ] }
-                    (d/db conn))
-  ]
-    (pprint result))
-
-  (newline)
-  (println "Trying to add Honey as a weapon")
-  (let [honey-eid   (first 
+  ; Try to add Honey as a weapon
+  (let [honey-eid   (first ; add Honey and pull out her EID
                       (td/eids
                         @(td/transact conn 
                           (td/new-entity { :person/name "Honey Rider" :location "Caribbean" :weapon/type #{:weapon/knife} } )))) ]
-    (spyxx honey-eid)
-    (try
-      @(td/transact conn 
-        (td/update [:person/name "James Bond"] 
-                   {:weapon/type honey-eid} ))
-      (catch Exception ex (println "Honey: Caught exception: " (trunc-str (.toString ex) 333)))))
-  (println "  finished adding Honey")
+    (is (s/validate ts/Eid honey-eid))  ; just a Long
+    (let [tx-result   @(td/transact conn 
+                        (td/update [:person/name "James Bond"]
+                                   {:weapon/type honey-eid} )) 
+          datoms      (td/tx-datoms (d/db conn) tx-result)    ; get a vec of the datoms maps from the transaction
+          datom-honey (first (filter #(= honey-eid (grab :v %)) datoms))
+         ]
+      (is (matches? datoms
+            [ {:e _ :a :db/txInstant :v _ :tx _ :added true}
+              {:e _ :a :weapon/type  :v _ :tx _ :added true} ] ))
+      (is (submap? {:a :weapon/type  :v honey-eid :added true} datom-honey))
+    ))
 
-  (newline)
-  (println "update error")
   ; nothing will stop nonsense actions like this
-  (def error-tx-result
-    @(td/transact conn 
-      (td/update
-        [:person/name "James Bond"]
-        { :weapon/type #{ 99 } } )))  ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
-  (newline) 
-  (println "---------------------------------------------------------------------------------------------------")
-  (println " we can see the exception if we print the tx-result, but it won't halt execution")
-  (println error-tx-result)
+  (let [tx-result   @(td/transact conn 
+                      (td/update
+                        [:person/name "James Bond"]
+                        { :weapon/type #{ 99 } } )) ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
+        datoms      (td/tx-datoms (d/db conn) tx-result)    ; get a vec of the datoms maps from the transaction
+        datom-99    (first (filter #(= 99 (grab :v %)) datoms))
+  ]
+    (is (matches? datoms
+            [ {:e _ :a :db/txInstant :v _  :tx _ :added true}
+              {:e _ :a :weapon/type  :v 99 :tx _ :added true} ] )))
 
+  ; Trying to add non-existent weapon
+  (is (thrown? Exception   @(td/transact conn 
+                              (td/update
+                                [:person/name "James Bond"]
+                                { :weapon/type #{ :there.is/no-such-kw } } ))))
 
-
-  (newline) 
-  (println "Trying to add non-existent weapon")
-  (try
-    (spyxx
-      @(td/transact conn 
-        (td/update
-          [:person/name "James Bond"]
-          { :weapon/type #{ :there.is/no-such-kw } } )))
-    (catch Exception ex (println "Caught exception: " (trunc-str (.toString ex) 333))))
-
-
-  (newline) (println "db 02")
-  (pprint (get-people (d/db conn)))
-
-  (newline) 
-  (println "---------------------------------------------------------------------------------------------------")
-  (println "Here we try to retrive the result. Now the Exception is thrown.")
-  (newline) 
-  (try
-    (spyxx @error-tx-result)
-    (catch Exception ex (println "Caught exception: " (trunc-str (.toString ex) 333))))
-
-  ; (println "exit")
-  ; (System/exit 1)
-  (defn -main []
-    (newline)
-    (println "---------------------------------------------------------------------------------------------------")
-    (println "main - enter")
-    (println "main - exit")
-    (shutdown-agents)
-  )
 )
