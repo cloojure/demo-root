@@ -16,7 +16,11 @@
 
 (def uri "datomic:mem://bond")          ; the URI for our test db
 (def ^:dynamic *conn*)                  ; dynamic var to hold the db connection
-(use-fixtures :each
+
+; Convience function to keep syntax a bit more concise
+(defn live-db [] (d/db *conn*))
+
+(use-fixtures :each     ; setup & teardown for each test
   (fn [tst-fn]
     (d/create-database uri)             ; create the DB
     (binding [*conn* (d/connect uri) ]  ; create & save a connection to the db
@@ -35,15 +39,12 @@
       (for [eid eid-set]
         (td/entity-map db-val eid)))))
 
-(defn live-db []
-  (d/db *conn*))
-
 ;---------------------------------------------------------------------------------------------------
 (deftest t-james-bond
   ; Create some attribute definitions. We use a keyword as the attribute's name (it's :db/ident
   ; value). The attribute name may be namespaced like :person/name or it could be a plain keyword
   ; like :location. This keyword-name can be anything (it is not predefined anywhere).
-  (td/transact *conn*  ;  required              required               zero-or-more
+  (td/transact *conn*  ;  required              required             zero-or-more
                      ; <attr name>         <attr value type>       <optional specs ...>
     (td/new-attribute :person/name         :db.type/string         :db.unique/value)      ; each name      is unique
     (td/new-attribute :person/secret-id    :db.type/long           :db.unique/value)      ; each secret-id is unique
@@ -96,8 +97,8 @@
 
     ; Update the database with more weapons.  If we overwrite some items that are already present
     ; (e.g. :weapon/gun) it is idempotent (no duplicates are allowed).  The first arg to td/update
-    ; is an EntitySpec and determines the Entity that is updated. This is either (1) and EntityId
-    ; (EID) or (2) a LookupRef.
+    ; is an EntitySpec and determines the Entity that is updated. This is either an EntityId
+    ; (EID) or a LookupRef.
     (td/transact *conn* 
       (td/update james-eid   ; Here we use the eid we found earlier as a "pointer" to James
           { :weapon/type #{ :weapon/gun :weapon/knife }
@@ -196,32 +197,35 @@
         [honey-eid]  (td/eids tx-result)  ; destructure to get the (only) eid from the seq
   ]
     (is (s/validate ts/Eid honey-eid))  ; just a Long
-    (is (= :people (td/partition-name (live-db) honey-eid)))
+    (is (= :people 
+           (td/partition-name (live-db) honey-eid)))
 
-    ; Try to add Honey as a weapon
+    ; Use Honey as a weapon
     (let [tx-result     @(td/transact *conn* 
                            (td/update [:person/name "James Bond"]
-                                      {:weapon/type honey-eid} )) 
+                                      {:weapon/type honey-eid} ))
           datoms        (td/tx-datoms (live-db) tx-result)    ; get a vec of the datoms maps from the transaction
-         [datom-honey]  (filter #(= honey-eid (grab :v %)) datoms)
-         ]
+         [datom-honey]  (filter #(= honey-eid (grab :v %)) datoms) 
+    ]
       (is (matches? datoms
             [ {:e _ :a :db/txInstant :v _ :tx _ :added true}
               {:e _ :a :weapon/type  :v _ :tx _ :added true} ] ))
-      (is (submap? {:a :weapon/type  :v honey-eid :added true} datom-honey))
-    ))
+      (is (submap? {:a :weapon/type  :v honey-eid :added true} datom-honey))))
 
-  ; Nothing will stop nonsense actions. Here we add 99 as a weapon for James (hey, this isn't Get Smart!).
+  ; Nothing will stop nonsense actions. Here we add Agent 99 as a weapon 
+  ; for James (hey, this isn't Get Smart!).
   (let [tx-result   @(td/transact *conn* 
                       (td/update [:person/name "James Bond"]
-                        { :weapon/type #{ 99 } } )) ; Datomic accepts the 99 since it looks like an EID (a :db.type/ref)
-        datoms      (td/tx-datoms (live-db) tx-result)    ; datoms added the transaction
+                        { :weapon/type #{ 99 } } )) ; Datomic accepts 99 since it looks like an EID (a :db.type/ref)
+        datoms      (td/tx-datoms (live-db) tx-result)
   ]
     (is (matches? datoms
             [ {:e _ :a :db/txInstant :v _  :tx _ :added true}
               {:e _ :a :weapon/type  :v 99 :tx _ :added true} ] )))
 
-  ; Trying to add non-existent weapon
+  ; Try to add non-existent weapon. This throws since the bogus kw does not match up with an entity.
+  ; However, as Honey showed, any entity will be accepted, not just those entities meant to act as
+  ; enum values for weapons.
   (is (thrown? Exception   @(td/transact *conn* 
                               (td/update
                                 [:person/name "James Bond"]
