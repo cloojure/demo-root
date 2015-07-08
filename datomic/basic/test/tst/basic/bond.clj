@@ -1,9 +1,9 @@
 (ns tst.basic.bond
-  (:require [datomic.api      :as d]
+  (:require [tupelo.datomic   :as td]
+            [tupelo.schema    :as ts]
+            [datomic.api      :as d]
             [schema.core      :as s]
             [tupelo.core      :refer [spy spyx spyxx it-> safe-> matches? grab wild-match? forv submap? ]]
-            [tupelo.datomic   :as td]
-            [tupelo.schema    :as ts]
   )
   (:use clojure.pprint
         clojure.test)
