@@ -83,7 +83,7 @@
               {:person/name "M"             :location "London"      :weapon/type #{:weapon/guile  :weapon/gun} }
               {:person/name "Dr No"         :location "Caribbean"   :weapon/type #{:weapon/gun               } } } )))
 
-  ; Verify we can find James by name 
+  ; Using James' name, lookup his EntityId (EID). It is a java.lang.Long that is a unique ID across the whole DB.
   (let [db-val      (live-db)
         ; find James' EntityId (EID). It is a Long that is a unique ID across the whole DB
         james-eid   (td/query-scalar  :let    [$ db-val]
@@ -91,7 +91,8 @@
                                       :where  [ [?eid :person/name "James Bond"] ] )
         ; get all of James' attr-val pairs as a clojure map
         james-map   (td/entity-map db-val james-eid) ]
-    (is (s/validate ts/Eid james-eid))    ; verify eid (it is a Long)
+    (is (s/validate ts/Eid          james-eid))    ; verify eid type
+    (is (s/validate java.lang.Long  james-eid))    ;  (it is a Long)
     (is (pos? (long james-eid)))          ; eids are always positive (temp eids are negative)
     (is (= james-map {:person/name "James Bond" :location "London" :weapon/type #{:weapon/wit :weapon/gun} } ))
 
