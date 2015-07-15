@@ -20,7 +20,7 @@
 
 (def ^:dynamic *conn*)
 
-(def uri              "datomic:mem://seattle")
+(def uri              "datomic:mem://tst.seattle")
 (def seattle-data-0   (read-string (slurp "samples/seattle/seattle-data0.edn")))
 (def seattle-data-1   (read-string (slurp "samples/seattle/seattle-data1.edn")))
 
