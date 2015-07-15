@@ -36,10 +36,12 @@
         (tst-fn))
       (d/delete-database uri))))
 
+; Convenience function to keep syntax a bit more concise
+(defn live-db [] (d/db *conn*))
+
 (deftest t-01
-  (let [db-val  (d/db *conn*)
-        eid-set (s/validate ts/Set  ; #{s/Any}
-                  (td/query-set :let   [$ db-val]
+  (let [eid-set (s/validate ts/Set  ; #{s/Any}
+                  (td/query-set :let   [$ (live-db)]
                                 :find  [?c]
                                 :where [ [?c :community/name] ] ))
         _ (s/validate #{ts/Eid} eid-set)  ; verify it is a set of EIDs
@@ -47,12 +49,12 @@
         _ (is (s/validate #{ts/Eid} eid-set))
 
         eid-1   (first eid-set)
-        entity  (s/validate ts/KeyMap (td/entity-map db-val eid-1))
+        entity  (s/validate ts/KeyMap (td/entity-map (live-db) eid-1))
         _ (is (= (into #{} (keys entity))
                 #{:community/category :community/name :community/neighborhood 
                   :community/orgtype  :community/type :community/url} ))
         entity-maps   (for [eid eid-set]
-                        (td/entity-map db-val eid))  ; return clojure map from eid
+                        (td/entity-map (live-db) eid))  ; return clojure map from eid
         first-3   (it-> entity-maps
                         (sort-by :community/name it)
                         (take 3 it)
@@ -91,14 +93,14 @@
 (deftest t-communities-1
   ; Find all communities (any entity with a :community/name attribute), then return a list of tuples
   ; like [ community-name & neighborhood-name ]
-  (let [db-val            (d/db *conn*)
-        results           (td/query-set :let    [$ db-val]
+  (let [
+        results           (td/query-set :let    [$ (live-db)]
                                         :find   [?c] 
                                         :where  [ [?c :community/name] ] )
         _ (s/validate #{ts/Eid} results)
         entity-maps       (sort-by :community/name 
                             (for [eid results]
-                              (td/entity-map db-val eid)))
+                              (td/entity-map (live-db) eid)))
         comm-nbr-names    (map #(let [entity-map  %
                                       comm-name   (safe-> entity-map :community/name)
                                       nbr-name    (safe-> entity-map :community/neighborhood :neighborhood/name) ]
@@ -190,14 +192,14 @@
   ] ))
 
 (deftest t-twitter-feeds
-  (let [; find the names of all communities that are twitter feeds
-        comm-names  (td/query-set :let    [$ (d/db *conn*)]
-                                  :find   [?name]
-                                  :where  [ [?comm-eid :community/name ?name]
-                                          [?comm-eid :community/type :community.type/twitter] ] )
-  ]
-    (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
-                          "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} ))))
+  (testing "find the names of all communities that are twitter feeds"
+    (let [comm-names  (td/query-set :let    [$ (d/db *conn*)]
+                                    :find   [?name]
+                                    :where  [ [?comm-eid :community/name ?name]
+                                              [?comm-eid :community/type :community.type/twitter] ] )
+    ]
+      (is (= comm-names   #{"Columbia Citizens" "Discover SLU" "Fremont Universe"
+                            "Magnolia Voice" "Maple Leaf Life" "MyWallingford"} )))))
 
 (deftest t-ne-region
   (testing "find the names all communities in the NE region"
@@ -555,7 +557,7 @@
 
       ; submit new data tx
       _ @(d/transact *conn* seattle-data-1)
-      db-val-new        (d/db *conn*)
+      db-val-new        (live-db)
       db-since-data2    (d/since db-val-new data1-tx-inst)
 
       _ (is (= 258 (count (communities-query-fn db-val-new     )))) ; find all communities currently in DB

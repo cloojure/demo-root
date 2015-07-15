@@ -630,8 +630,8 @@
 
       freestuff-rs-1     (result-set-sort (d/q  '[:find  ?id :where [?id :community/category "free stuff"] ] (d/db *conn*) ))
       _ (is (= 1 (count freestuff-rs-1)))
-      freestuff-eid-1    (t/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
-      _ (is (s/validate ts/Eid freestuff-eid-1))
+;     freestuff-eid-1    (t/result-scalar freestuff-rs-1)  ; #todo add to demo, & result-only
+;     _ (is (s/validate ts/Eid freestuff-eid-1))
 
       tx-2-result       @(t/transact *conn* 
                           (t/retract-value belltown-eid-scalar :community/category "free stuff" )) ; Retract "free stuff"
