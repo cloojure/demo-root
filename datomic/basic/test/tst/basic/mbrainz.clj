@@ -470,3 +470,16 @@
       (is (nil? res-2)))
 )))
 
+;---------------------------------------------------------------------------------------------------
+
+(deftest t-pull-enum
+  (testing "StackOverflow question: pull enum value"
+    (let [x1      (td/query-scalar  :let     [$ db-val]
+                                    :find    [ ?e ]
+                                    :where   [ [?e :artist/name "Ray Charles"] ] )
+          x2      (td/entity-map db-val x1)
+         ]
+      (spyx x1)
+      (spyx x2)
+    )
+  ))

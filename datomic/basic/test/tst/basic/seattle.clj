@@ -11,18 +11,17 @@
   (:gen-class))
 
 (set! *warn-on-reflection* false)
-(set! *print-length* 5)
 (set! *print-length* nil)
-;
-;---------------------------------------------------------------------------------------------------
+
 ; Prismatic Schema type definitions
 (s/set-fn-validation! true)   ; #todo add to Schema docs
 
-(def ^:dynamic *conn*)
-
+;---------------------------------------------------------------------------------------------------
 (def uri              "datomic:mem://tst.seattle")
 (def seattle-data-0   (read-string (slurp "samples/seattle/seattle-data0.edn")))
 (def seattle-data-1   (read-string (slurp "samples/seattle/seattle-data1.edn")))
+
+(def ^:dynamic *conn*)
 
 (use-fixtures :each
   (fn [tst-fn]
