@@ -3,7 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [  [org.clojure/clojure "1.7.0-alpha4"]
+  :dependencies [  [org.clojure/clojure "1.7.0"]
                    [com.datomic/datomic-free "0.8.3826"]
                    [io.pedestal/pedestal.service "0.3.1"]
 
@@ -18,7 +18,7 @@
                    [org.slf4j/jcl-over-slf4j "1.7.7"]
                    [org.slf4j/log4j-over-slf4j "1.7.7"]
                    [com.taoensso/timbre "3.3.1" :exclusions [org.clojure/tools.reader]]
-                   [cooljure "0.1.15"]
+                   [tupelo "0.1.42"]
                  ]
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]

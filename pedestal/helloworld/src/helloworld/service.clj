@@ -7,7 +7,8 @@
             [ring.util.response                       :as ring-resp]
             [taoensso.timbre                          :as timbre]
             [taoensso.timbre.profiling                :as timbre-prof]
-            [helloworld.peer                          :as peer])
+          ; [helloworld.peer                          :as peer]
+            )
   (:import [java.io ByteArrayOutputStream PrintWriter] ))
 
 (defn about-page
@@ -22,9 +23,8 @@
 (defn home-page
   [request]
   (timbre/info  "home-page: request=" request)
-  (ring-resp/response 
-    (str "Hello Colors! " 
-      (timbre/spy :info "home-page result:" (peer/results) ))))
+  (ring-resp/response "Hello World!" ))
+    ; (timbre/spy :info "home-page result:" (peer/results) )
 
 (interceptor/defmiddleware log-it 
   ([req]    (do (timbre/info  "#awt log-it enter: " req)
