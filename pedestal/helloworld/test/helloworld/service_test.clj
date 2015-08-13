@@ -21,10 +21,9 @@
 
 
 (deftest about-page-test
-  (is (.contains
+  (is (re-find #"Clojure 1.8.0"
        (spyx
-         (:body (response-for service :get "/about")))
-       "Clojure 1.8.0-alpha4"))
+         (:body (response-for service :get "/about")))))
   (is (= (:headers (response-for service :get "/about"))
          {"Content-Type" "text/html;charset=UTF-8"
           "Strict-Transport-Security" "max-age=31536000; includeSubdomains"

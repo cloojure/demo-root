@@ -2,6 +2,7 @@
   (:require [io.pedestal.http                         :as ped-http]
             [io.pedestal.http.body-params             :as body-params]
             [io.pedestal.interceptor                  :as interceptor]
+            [io.pedestal.interceptor.helpers          :as ihelp]
             [io.pedestal.http.route                   :as route]
             [io.pedestal.http.route.definition        :as route-def]
             [ring.util.response                       :as ring-resp]
@@ -26,32 +27,33 @@
   (ring-resp/response "Hello World!" ))
     ; (timbre/spy :info "home-page result:" (peer/results) )
 
-(interceptor/defmiddleware log-it 
+(ihelp/defmiddleware log-it 
   ([req]    (do (timbre/info  "#awt log-it enter: " req)
                 req))
   ([resp]   (do (timbre/info  "#awt log-it exit: " resp)
                 resp)))
 
-(def catch-errors 
-  (interceptor/interceptor 
-      :error (fn [ctx excp]  
-                (timbre/info  "#awt catch-excps ctx"    ctx)  
-                (timbre/info  "#awt catch-excps excp"   excp)  
-                (let [baos  (ByteArrayOutputStream.)
-                      pw    (PrintWriter. baos)
-                      *     (.fillInStackTrace excp)
-                      *     (.printStackTrace excp pw)
-                      *     (.flush pw)
-                      err-str (.toString baos) ]
-                  (timbre/error "catch-errors err-str" err-str )
-                  (assoc ctx
-                    :response { :status 500
-                                :body  (str "Exception: " (.toString excp) \newline 
-                                            "stacktrace: " err-str  ) } )))
-  ))
+; ***** old way 0.3.1 *****
+; (def catch-errors 
+;   (interceptor/interceptor 
+;       :error (fn [ctx excp]  
+;                 (timbre/info  "#awt catch-excps ctx"    ctx)  
+;                 (timbre/info  "#awt catch-excps excp"   excp)  
+;                 (let [baos  (ByteArrayOutputStream.)
+;                       pw    (PrintWriter. baos)
+;                       *     (.fillInStackTrace excp)
+;                       *     (.printStackTrace excp pw)
+;                       *     (.flush pw)
+;                       err-str (.toString baos) ]
+;                   (timbre/error "catch-errors err-str" err-str )
+;                   (assoc ctx
+;                     :response { :status 500
+;                                 :body  (str "Exception: " (.toString excp) \newline 
+;                                             "stacktrace: " err-str  ) } )))
+;   ))
 
 (route-def/defroutes routes
-  [[[ "/"   ^:interceptors [log-it catch-errors]
+  [[[ "/"   ^:interceptors [log-it ] ; <- catch-errors interceptor (need 0.4.0 update)
             {:get home-page}
 
       ; Set default interceptors for /about and any other paths under /
