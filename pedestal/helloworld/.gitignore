@@ -2,3 +2,4 @@ target/
 tmp/
 logs/
 .lein-failures
+log.txt

@@ -3,7 +3,11 @@
             [tupelo.core            :refer :all ]
             [io.pedestal.test       :refer :all]
             [io.pedestal.http       :as ped-http]
-            [helloworld.service     :as service]))
+            [helloworld.server      :as server]
+            [helloworld.service     :as service]
+            ))
+
+(server/timber-config)
 
 (def service
   (::ped-http/service-fn (ped-http/create-servlet service/service)))
