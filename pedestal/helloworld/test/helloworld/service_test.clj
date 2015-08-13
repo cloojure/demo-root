@@ -21,7 +21,7 @@
 
 
 (deftest about-page-test
-  (is (re-find #"Clojure 1.8.0"
+  (is (re-find #"Clojure 1.* served from .*"
        (spyx
          (:body (response-for service :get "/about")))))
   (is (= (:headers (response-for service :get "/about"))
