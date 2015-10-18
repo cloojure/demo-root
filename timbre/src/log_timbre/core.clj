@@ -42,13 +42,13 @@
   (error "Hello, Timbre! error")
   (fatal "Hello, Timbre! fatal")
 
-  ; Demonstrate 3 arities of spy
+  ; Demonstrate the 4 arities of logging commands like info
   (info "Arg-1")
   (info "Arg-1" :Arg-2)
   (info "Arg-1" :Arg-2 ["Arg-3"] )
   (info "Arg-1" :Arg-2 ["Arg-3"] {:Arg 4} )
 
-  ; Demonstrate 3 arities of spy
+  ; Demonstrate the 3 arities of spy
   (assert (= {:a 1}     (spy :info "Spy returns the last value" {:a 1} )))
   (assert (= 42         (spy (* 6 7) ))) ; no level implies :debug
   (assert (= 42         (spy :warn (* 6 7))))
@@ -67,4 +67,5 @@
   ; test".  Presumably "lein test" either calls either (shutdown-agents) or (System/exit 0)
   ; when it is complete.
   (shutdown-agents) 
+  (println "Goodbye, Timber....")  ; a short message to the console
 )

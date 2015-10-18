@@ -7,27 +7,25 @@
             [taoensso.timbre.profiling      :as timbre-prof]
   ))
 
-;--------------------------------------------------------------------------------
 ; Timbre config stuff
 
 ; Set up the name of the log output file and delete any contents from previous runs (the
 ; default is to continually append all runs to the file).
 (def log-file-name "log.txt")
-(io/delete-file log-file-name :quiet)
+(defn timber-config []
+  (io/delete-file log-file-name :quiet)
 
-; The default setup is simple console logging only.  We wish to turn off console logging and
-; turn on file logging to our chosen filename.
-(timbre/set-config! [:appenders :standard-out   :enabled?] false)   
-(timbre/set-config! [:appenders :spit           :enabled?] true)
-(timbre/set-config! [:shared-appender-config :spit-filename] log-file-name)
-
-; end of Timbre stuff
-;--------------------------------------------------------------------------------
-
+  ; The default setup is simple console logging only.  We wish to turn off console logging and
+  ; turn on file logging to our chosen filename.
+  (timbre/set-config! [:appenders :standard-out   :enabled?] false)   
+  (timbre/set-config! [:appenders :spit           :enabled?] true)
+  (timbre/set-config! [:shared-appender-config :spit-filename] log-file-name)
+)
 
 (defn run-dev
   "The entry-point for 'lein run-dev'"
   [& args]
+  (timber-config)
   (println "\nCreating your [DEV] server...")
   (-> service/service ;; start with production configuration
       (merge {:env :dev
@@ -51,6 +49,7 @@
 (defn -main
   "The entry-point for 'lein run'"
   [& args]
+  (timber-config)
   (timbre/info  "\nCreating your server...")
   (println      "\nCreating your server...")
   (ped-http/start runnable-service))

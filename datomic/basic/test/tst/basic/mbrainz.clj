@@ -3,7 +3,7 @@
             [clojure.set            :as c.set]
             [schema.core            :as s]
             [tupelo.core            :refer [spy spyx spyxx it-> safe-> grab submap? matches? wild-match?] ]
-            [tupelo.datomic         :as t]
+            [tupelo.datomic         :as td]
             [tupelo.schema          :as ts]
   )
   (:use clojure.pprint
@@ -13,7 +13,6 @@
 ; following the samples from https://github.com/Datomic/mbrainz-sample/wiki/Queries
 
 (set! *warn-on-reflection* false)
-(set! *print-length* 9)
 (set! *print-length* nil)
 
 ;---------------------------------------------------------------------------------------------------
@@ -34,19 +33,18 @@
 (def dylan-harrison-sessions    [:release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"])
 
 ; test entitie EID values found by entity query
-(def dylan-harrison-cd    (d/q  '[:find ?medium .
-                                  :in $ ?release
-                                  :where
-                                  [?release :release/media ?medium]]
-                                db-val
-                                dylan-harrison-sessions))
+(def dylan-harrison-cd    (td/query-scalar  :let  [$         db-val
+                                                   ?release  dylan-harrison-sessions]
+                                            :find [?medium]
+                                            :where [[?release :release/media ?medium]] ))
 (s/validate ts/Eid dylan-harrison-cd)
-(def ghost-riders       (d/q '{:find [?track .]
-                               :in [$ ?release ?trackno]
-                               :where  [ [?release :release/media ?medium]
-                                         [?medium :medium/tracks ?track]
-                                         [?track :track/position ?trackno] ] }
-                             db-val dylan-harrison-sessions 11 ))
+(def ghost-riders         (td/query-scalar  :let    [$         db-val 
+                                                     ?release  dylan-harrison-sessions 
+                                                     ?trackno  11]
+                                            :find   [?track]
+                                            :where  [ [?release :release/media ?medium]
+                                                      [?medium :medium/tracks ?track]
+                                                      [?track :track/position ?trackno] ] ))
 (s/validate ts/Eid ghost-riders)
 
 ;---------------------------------------------------------------------------------------------------
@@ -57,42 +55,39 @@
 ;---------------------------------------------------------------------------------------------------
 (deftest t-connection-verify
   (testing "can we connect to the Datomic db"
-    (let [rs        (t/result-set-sort
-                      (d/q '[:find ?title
-                             :in $ ?artist-name
-                             :where
-                             [?a :artist/name ?artist-name]
-                             [?t :track/artists ?a]
-                             [?t :track/name ?title] ]
-                           db-val, "John Lennon" ))
+    (let [result  (td/query-set :let  [$            db-val
+                                       ?artist-name "John Lennon"]
+                                :find [?title]
+                                :where [ [?a :artist/name ?artist-name]
+                                         [?t :track/artists ?a]
+                                         [?t :track/name ?title] ] )
     ]
-      (is (= rs
-              #{["Aisumasen (I'm Sorry)"] ["Amsterdam"] ["Angela"] ["Attica State"]
-                ["Au"] ["Baby's Heartbeat"] ["Blue Suede Shoes"] ["Born in a Prison"]
-                ["Bring On the Lucie (Freda Peeple)"] ["Cambridge 1969"]
-                ["Cold Turkey"] ["Crippled Inside"] ["Dizzy Miss Lizzy"]
-                ["Don't Worry Kyoko"]
-                ["Don't Worry Kyoko (Mummy's Only Looking for Her Hand in the Snow)"]
-                ["Gimme Some Truth"] ["Give Peace a Chance"] ["God"]
-                ["Happy Xmas (War Is Over)"] ["Hold On"] ["How Do You Sleep?"]
-                ["How?"] ["I Don't Wanna Be a Soldier Mama I Don't Wanna Die"]
-                ["I Found Out"] ["I Know (I Know)"] ["Imagine"] ["Instant Karma!"]
-                ["Intuition"] ["Isolation"] ["It's So Hard"] ["Jamrag"]
-                ["Jealous Guy"] ["John & Yoko"] ["John John (Let's Hope for Peace)"]
-                ["John Sinclair"] ["Listen the Snow Is Falling"]
-                ["Listen, the Snow Is Falling"] ["Look at Me"] ["Love"] ["Meat City"]
-                ["Mind Games"] ["Money"] ["Mother"] ["My Mummy's Dead"]
-                ["New York City"] ["No Bed for Beatle John"]
-                ["Nutopian International Anthem"] ["Oh My Love"] ["Oh Yoko!"]
-                ["One Day (at a Time)"] ["Only People"] ["Open Your Box"]
-                ["Out the Blue"] ["Power to the People"] ["Radio Play"] ["Remember"]
-                ["Scumbag"] ["Sisters, O Sisters"] ["Sunday Bloody Sunday"]
-                ["The Luck of the Irish"] ["Tight A$"] ["Two Minutes Silence"]
-                ["We're All Water"] ["Well (Baby Please Don't Go)"]
-                ["Well Well Well"] ["Who Has Seen the Wind?"]
-                ["Woman Is the Nigger of the World"] ["Working Class Hero"]
-                ["Yer Blues"] ["You Are Here"] } ))
-    )))
+      (is (= result
+              #{"Aisumasen (I'm Sorry)" "Amsterdam" "Angela" "Attica State"
+                "Au" "Baby's Heartbeat" "Blue Suede Shoes" "Born in a Prison"
+                "Bring On the Lucie (Freda Peeple)" "Cambridge 1969"
+                "Cold Turkey" "Crippled Inside" "Dizzy Miss Lizzy"
+                "Don't Worry Kyoko"
+                "Don't Worry Kyoko (Mummy's Only Looking for Her Hand in the Snow)"
+                "Gimme Some Truth" "Give Peace a Chance" "God"
+                "Happy Xmas (War Is Over)" "Hold On" "How Do You Sleep?"
+                "How?" "I Don't Wanna Be a Soldier Mama I Don't Wanna Die"
+                "I Found Out" "I Know (I Know)" "Imagine" "Instant Karma!"
+                "Intuition" "Isolation" "It's So Hard" "Jamrag"
+                "Jealous Guy" "John & Yoko" "John John (Let's Hope for Peace)"
+                "John Sinclair" "Listen the Snow Is Falling"
+                "Listen, the Snow Is Falling" "Look at Me" "Love" "Meat City"
+                "Mind Games" "Money" "Mother" "My Mummy's Dead"
+                "New York City" "No Bed for Beatle John"
+                "Nutopian International Anthem" "Oh My Love" "Oh Yoko!"
+                "One Day (at a Time)" "Only People" "Open Your Box"
+                "Out the Blue" "Power to the People" "Radio Play" "Remember"
+                "Scumbag" "Sisters, O Sisters" "Sunday Bloody Sunday"
+                "The Luck of the Irish" "Tight A$" "Two Minutes Silence"
+                "We're All Water" "Well (Baby Please Don't Go)"
+                "Well Well Well" "Who Has Seen the Wind?"
+                "Woman Is the Nigger of the World" "Working Class Hero"
+                "Yer Blues" "You Are Here" } )))))
 
 
 (deftest t-attribute-name
@@ -100,32 +95,32 @@
     (let [res1          (d/pull db-val [:artist/name :artist/startYear]   ; The pattern is a vector (of keywords) indicating the attr-vals to retrieve
                                         led-zeppelin) ; entity spec
     ]
-      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} ))))
+      (is (= res1       {:artist/name "Led Zeppelin", :artist/startYear 1968} )))) ; result is a map
   (testing "entity ref lookup"
-    (let [res2          (d/pull db-val [:artist/country]                  led-zeppelin)
-
+    (let [res2          (d/pull db-val [:artist/country] led-zeppelin)
           ; since :artist/country is a nested entity, we convert the EID (long) value to the
-          ; :db/ident (keyword) value
-          res-ident     (update-in res2  [:artist/country :db/id] #(t/eid->ident db-val %) )
+          ; :db/ident (keyword) value for testing
+          res-ident     (update-in res2  [:artist/country :db/id] #(td/eid->ident db-val %) )
     ]
       (is (= res-ident  {:artist/country {:db/id :country/GB}} ))))
-  (testing "reverse lookup"
+  (testing "reverse lookup; find all artists who live in Great Britain"
     (let [result              (d/pull db-val [:artist/_country]   ; pattern vec
                                               :country/GB)        ; entity spec
-          _                   (s/validate {:artist/_country [ {:db/id ts/Eid} ] } result )
+          _                   (s/validate {:artist/_country [ {:db/id ts/Eid} ] }  ; there will be many maps in the vector
+                                          result )
           eid-map-list        (:artist/_country result)
-          artist-ents         (for [eid-map eid-map-list
+          artist-recs         (for [eid-map eid-map-list
                                     :let [eid (grab :db/id eid-map)] ]
                                 (do
                                   (s/validate ts/Eid eid)
-                                  (t/entity-map-sort db-val eid)))
-          _                   (s/validate [ts/KeyMap] artist-ents)
-          artist-countries    (mapv :artist/country artist-ents)
+                                  (td/entity-map db-val eid)))
+          _                   (s/validate [ts/KeyMap] artist-recs)
+          artist-countries    (mapv :artist/country artist-recs)
     ]
       (is (=  1 (count result)))
       (is (=  482
               (count eid-map-list)
-              (count artist-ents)
+              (count artist-recs)
               (count artist-countries)))
       (is (apply = :country/GB artist-countries))))
 )
@@ -158,12 +153,12 @@
 ;                 :track/name "Breathe",
 ;                 :track/position 2,
 ;                 :track/artists [  {:db/id 17592186046909} ] }
+
 (deftest t-components
   (testing "component defaults - horrible name!"  ; #todo
-    (let [result  (d/pull db-val [:release/media]         ; desirec pattern vec
-                                 dark-side-of-the-moon)  ; entity spec
+    (let [result  (d/pull db-val [:release/media]         ; desired pattern vec
+                                 dark-side-of-the-moon)   ; entity spec
     ]
-      (s/validate {:release/media [s/Any]} result)
       (s/validate {:release/media [ { :db/id ts/Eid
                                       :medium/format {:db/id ts/Eid}
                                       :medium/position  s/Any   ; #todo 1
@@ -190,9 +185,8 @@
     (let [result        (d/pull db-val [:release/_media]    ; pattern vec
                                         dylan-harrison-cd)  ; entity spec
           _             (s/validate {:release/_media {:db/id ts/Eid}} result)
-          res-entity    (t/entity-map      db-val (safe-> result :release/_media :db/id))
-          ;  fails -->  (t/entity-map-sort db-val (safe-> result :release/_media :db/id))  #todo Schema
 
+          res-entity    (td/entity-map db-val (safe-> result :release/_media :db/id))
           _             (s/validate   {:release/artistCredit s/Str
                                        :release/artists #{ s/Any }
                                        :release/country s/Keyword     ; #todo :country/US
@@ -203,7 +197,7 @@
                                        :release/year Long}
                                     res-entity )
     ]
-      (is (submap?
+      (is (submap?          ; use submap? to ignore volatile fields
               {:release/artistCredit "Bob Dylan & George Harrison"
                :release/country :country/US
                :release/gid #uuid "67bbc160-ac45-4caf-baae-a7e9f5180429"
@@ -211,37 +205,46 @@
                :release/status "Bootleg"
                :release/year 1970}
               res-entity ))
-    ))
+      (is (matches? res-entity    ; use core.match & wildcards to ignore volatile fields
+              {:release/gid _
+               :release/name "Dylan–Harrison Sessions",
+               :release/media _
+               :release/year 1970,
+               :release/artistCredit "Bob Dylan & George Harrison",
+               :release/country :country/US,
+               :release/status "Bootleg",
+               :release/artists _} ))))
 )
-
 
 (deftest t-map-spec
   (testing "map specifications"
     (let [res-1       (d/pull db-val [:track/name :track/artists]        ; plain pattern spec
-                                                ghost-riders)                     ; source eid
+                                                ghost-riders) ; source eid
           res-2       (d/pull db-val [:track/name {:track/artists [:db/id :artist/name] } ]  ; nested map pattern spec
-                                                ghost-riders)                     ; source eid
+                                                ghost-riders) ; source eid
     ]
-      (is (matches? res-1     { :track/artists    ; we ignore the :db/id EID value (long int)
-                                [ {:db/id _ } 
-                                  {:db/id _ } ]
-                                :track/name "Ghost Riders in the Sky" } ))
-      (is (matches? res-2     { :track/artists    ; we ignore the :db/id EID value (long int)
-                                [ {:db/id _  :artist/name "Bob Dylan"}
-                                  {:db/id _  :artist/name "George Harrison"} ]
-                                :track/name "Ghost Riders in the Sky" } ))
+      (is (matches? res-1     { :track/name "Ghost Riders in the Sky"
+                                :track/artists
+                                  [ {:db/id _ } 
+                                    {:db/id _ } ] 
+                              } ))
+      (is (matches? res-2     { :track/name "Ghost Riders in the Sky" 
+                                :track/artists
+                                  [ {:db/id _  :artist/name "Bob Dylan"}
+                                    {:db/id _  :artist/name "George Harrison"} ]
+                              } ))
     ))
   (testing "nested map specifications"
-    (let [res   (d/pull db-val 
+    (let [result  (d/pull db-val 
                     [ { :release/media        ; for each :release/media entity recurse to
                         [ { :medium/tracks      ; for each medium/tracks entity recurse to
-                            [:track/name          ; simple value attr
-                             {:track/artists      ; recurse through :track/artists
-                              [:artist/name]        ; to :artist/name
-                             } ] } ] } ]
+                            [ :track/name          ; simple value attr
+                              { :track/artists      ; recurse through :track/artists
+                                [ :artist/name ]        ; to :artist/name
+                              } ] } ] } ]
                     concert-for-bangla-desh )
     ]
-      (is (= res
+      (is (= result
              { :release/media
                [ { :medium/tracks
                    [ { :track/name "George Harrison / Ravi Shankar Introduction" 
@@ -325,7 +328,37 @@
                    :track/name "Bangla Dhun",
                    :track/position 2,
                    :track/artists [{:db/id _}]}]}  ))
-    #_(is (matches? result
+      (is (wild-match? result
+              {:release/name "The Concert for Bangla Desh", :release/artists [{:db/id :*}], :release/country {:db/id :*}, :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
+               :release/day 20, :release/status "Official", :release/month 12, :release/artistCredit "George Harrison", :db/id :*, :release/year 1971,
+               :release/media
+               [{:db/id :*, :medium/format {:db/id :*}, :medium/position 1, :medium/trackCount 2,
+                 :medium/tracks
+                 [{:db/id :*, :track/duration 376000, :track/name "George Harrison / Ravi Shankar Introduction", :track/position 1, :track/artists [{:db/id :*} {:db/id :*}]}
+                  {:db/id :*, :track/duration 979000, :track/name "Bangla Dhun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 3, :medium/trackCount 4, :medium/tracks
+                 [{:db/id :*, :track/duration 195000, :track/name "Wah-Wah", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 256000, :track/name "My Sweet Lord", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 157000, :track/name "Awaiting on You All", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 245000, :track/name "That's the Way God Planned It", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 5, :medium/trackCount 4, :medium/tracks
+                 [{:db/id :*, :track/duration 158000, :track/name "It Don't Come Easy", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 206000, :track/name "Beware of Darkness", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 180000, :track/name "Introduction of the Band", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 279000, :track/name "While My Guitar Gently Weeps", :track/position 4, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 6, :medium/trackCount 2, :medium/tracks
+                 [{:db/id :*, :track/duration 551000, :track/name "Jumpin' Jack Flash / Youngblood", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 171000, :track/name "Here Comes the Sun", :track/position 2, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 4, :medium/trackCount 5, :medium/tracks
+                 [{:db/id :*, :track/duration 304000, :track/name "A Hard Rain's Gonna Fall", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 174000, :track/name "It Takes a Lot to Laugh / It Takes a Train to Cry", :track/position 2, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 214000, :track/name "Blowin' in the Wind", :track/position 3, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 246000, :track/name "Mr. Tambourine Man", :track/position 4, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Just Like a Woman", :track/position 5, :track/artists [{:db/id :*}]}]}
+                {:db/id :*, :medium/format {:db/id :*}, :medium/position 2, :medium/trackCount 2, :medium/tracks
+                 [{:db/id :*, :track/duration 185000, :track/name "Something", :track/position 1, :track/artists [{:db/id :*}]}
+                  {:db/id :*, :track/duration 254000, :track/name "Bangla Desh", :track/position 2, :track/artists [{:db/id :*}]}]}]} ))
+    #_(is (matches? result  ; #todo can create StackOverflowError if enabled and a mismatch is induced
               {:release/name "The Concert for Bangla Desh", :release/artists [{:db/id _}], :release/country {:db/id _}, :release/gid #uuid "f3bdff34-9a85-4adc-a014-922eef9cdaa5",
                :release/day 20, :release/status "Official", :release/month 12, :release/artistCredit "George Harrison", :db/id _, :release/year 1971,
                :release/media
@@ -367,15 +400,17 @@
                :track/duration 218506,
                :track/name "Ghost Riders in the Sky",
                :track/position 11,
-               :track/artists [{:db/id _} {:db/id _}]} ))
+               :track/artists 
+                 [ {:db/id _} 
+                   {:db/id _} ] } ))
       (is (matches? res-2
               {:db/id _,
                :track/duration 218506,
                :track/name "Ghost Riders in the Sky",
                :track/position 11,
                :track/artists
-               [{:artist/name "Bob Dylan"} {:artist/name "George Harrison"}]} ))
-)))
+                 [ {:artist/name "Bob Dylan"} 
+                   {:artist/name "George Harrison"} ] } )))))
 
 (deftest t-defaults
   (testing "default expressions"
@@ -384,41 +419,41 @@
           res-3     (d/pull db-val '[:artist/name (default :died-in-1966?)]          mccartney)
     ]
       (is (= res-1  {:artist/name "Paul McCartney", :artist/endYear 0} ))
-      (is (= res-2  {:artist/name "Paul McCartney", :artist/endYear "N/A"} ))
+      (is (= res-2  {:artist/name "Paul McCartney", :artist/endYear "N/A"} ))  ; default doesn't have to match normal type of attr-val
       (is (= res-3  {:artist/name "Paul McCartney"} )))))
 
 (deftest t-limit
   (testing "limit"
-    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists 10) ]        led-zeppelin)
-          res-2   (d/pull db-val '[ { (limit :track/_artists 10) [:track/name] } ]  led-zeppelin)
+    (let [res-1   (d/pull db-val '[:artist/name     (limit :track/_artists 10) ]        led-zeppelin)
+          res-2   (d/pull db-val '[:artist/name   { (limit :track/_artists 10) [:track/name] } ]  led-zeppelin)
     ]
       (is (matches?   res-1
                       { :artist/name "Led Zeppelin",
                         :track/_artists
-                        [ {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _}
-                          {:db/id _} ] } ))
-      (is (= res-2  { :track/_artists
-                      [ {:track/name "Whole Lotta Love"}
-                        {:track/name "What Is and What Should Never Be"}
-                        {:track/name "The Lemon Song"}
-                        {:track/name "Thank You"}
-                        {:track/name "Heartbreaker"}
-                        {:track/name "Living Loving Maid (She's Just a Woman)"}
-                        {:track/name "Ramble On"}
-                        {:track/name "Moby Dick"}
-                        {:track/name "Bring It on Home"}
-                        {:track/name "Whole Lotta Love"}]} ))))
-  (testing "nulllimit"
-    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) 
-    ]
+                          [ {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _}
+                            {:db/id _} ] } ))
+      (is (= res-2  { :artist/name "Led Zeppelin",
+                      :track/_artists
+                        [ {:track/name "Whole Lotta Love"}
+                          {:track/name "What Is and What Should Never Be"}
+                          {:track/name "The Lemon Song"}
+                          {:track/name "Thank You"}
+                          {:track/name "Heartbreaker"}
+                          {:track/name "Living Loving Maid (She's Just a Woman)"}
+                          {:track/name "Ramble On"}
+                          {:track/name "Moby Dick"}
+                          {:track/name "Bring It on Home"}
+                          {:track/name "Whole Lotta Love"}]} ))))
+  (testing "nil limit"  ; a nil limit value retrievs all results
+    (let [res-1   (d/pull db-val '[:artist/name (limit :track/_artists nil) ] led-zeppelin) ]
       (is (matches? res-1 {:artist/name "Led Zeppelin", :track/_artists _ } ))
       (is (= 128 (count (grab :track/_artists res-1))))))
 )
@@ -435,3 +470,16 @@
       (is (nil? res-2)))
 )))
 
+;---------------------------------------------------------------------------------------------------
+
+(deftest t-pull-enum
+  (testing "StackOverflow question: pull enum value"
+    (let [x1      (td/query-scalar  :let     [$ db-val]
+                                    :find    [ ?e ]
+                                    :where   [ [?e :artist/name "Ray Charles"] ] )
+          x2      (td/entity-map db-val x1)
+         ]
+      (spyx x1)
+      (spyx x2)
+    )
+  ))
