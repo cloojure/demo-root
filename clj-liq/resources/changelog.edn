@@ -1,0 +1,9 @@
+{:database-change-log
+   [{:change-set
+      {:id "101"
+       :author "shantanu"
+       :changes [{:create-table {:table-name "sample-table1"
+       :columns [{:column {:name "id"   :type "int" :auto-increment true :constraints {:primary-key? true
+                                                                                       :nullable?    false}}}
+                 {:column {:name "name" :type "varchar(40)" :constraints {:nullable? false}}}
+                 {:column {:name "gender" :type "char(1)"   :constraints {:nullable? false}}}]}}]}}]}

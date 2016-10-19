@@ -3,7 +3,6 @@
             [tupelo.datomic   :as t]
             [tupelo.schema    :as ts]
             [schema.core      :as s]
-            [schema.coerce    :as coerce]
   )
   (:use   clojure.pprint
           tupelo.core
