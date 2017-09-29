@@ -1,7 +1,6 @@
 (ns tst.embedded-clojure.core
   (:use embedded-clojure.core
-        clojure.test)
-)
+        clojure.test))
 
-(deftest a-test
-  (is (= 5 (add 2 3))))
+(deftest simple-add
+  (is (= 13 (add 6 7))))
