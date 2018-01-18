@@ -19,11 +19,19 @@
     (is= (vec (avl/subrange ss1 > [3]))         [[3 0] [4] [5 :x] [5 :y] [5 :z]] )
     (is= (vec (avl/subrange ss1 > [3] < [5]))   [[3 0] [4] ] )
     (is= (vec (avl/subrange ss1 > [4]))         [[5 :x] [5 :y] [5 :z]] )
-    (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] ))
-  (let [data-all (range 10)
-        data-even (range 0 10 2)
-        join (fn join-fn [left right]
-               )
-        ]
-    )
-  )
+    (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] )) )
+
+(defn join-avl
+  [arg1 arg2]
+  (let [[shorter longer] (sort-by count [arg1 arg2])]
+    (forv [item-item-short shorter
+           :let [[ignore-less item-long ignore-greater] (avl/split-key item-item-short longer)]
+           :when (not-nil? item-long)]
+      item-item-short)))
+
+(dotest
+  (let [data-all  (into (avl/sorted-set) (range 20))
+        data-even (into (avl/sorted-set) (range 0 10 2))]
+    (is=
+      (join-avl data-all data-even)
+      (join-avl data-even data-all)) ))
