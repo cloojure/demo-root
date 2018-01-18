@@ -23,6 +23,8 @@
 
 (defn join-avl
   [set-1 set-2]
+  (assert (has-none? nil? (seq set-1)) "nil elements not allowed")
+  (assert (has-none? nil? (seq set-2)) "nil elements not allowed")
   (let [[shorter longer] (sort-by count [set-1 set-2])]
     (forv [item-short shorter
            :let [[ignore-lesser item-long ignore-greater] (avl/split-key item-short longer)]
@@ -31,7 +33,11 @@
 
 (dotest
   (let [data-all  (into (avl/sorted-set) (range 20))
-        data-even (into (avl/sorted-set) (range 0 10 2))]
+        data-even (into (avl/sorted-set) (range 0 10 2))
+        data-invalid (into (avl/sorted-set) [ 1 2 nil 3])]
     (is=
       (join-avl data-all data-even)
-      (join-avl data-even data-all)) ))
+      (join-avl data-even data-all))
+    (throws? (join-avl data-invalid data-even) )
+    (throws? (join-avl data-even data-invalid) )
+    ))
