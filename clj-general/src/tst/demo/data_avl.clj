@@ -22,12 +22,12 @@
     (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] )) )
 
 (defn join-avl
-  [arg1 arg2]
-  (let [[shorter longer] (sort-by count [arg1 arg2])]
-    (forv [item-item-short shorter
-           :let [[ignore-less item-long ignore-greater] (avl/split-key item-item-short longer)]
+  [set-1 set-2]
+  (let [[shorter longer] (sort-by count [set-1 set-2])]
+    (forv [item-short shorter
+           :let [[ignore-lesser item-long ignore-greater] (avl/split-key item-short longer)]
            :when (not-nil? item-long)]
-      item-item-short)))
+      item-short)))
 
 (dotest
   (let [data-all  (into (avl/sorted-set) (range 20))
