@@ -19,5 +19,11 @@
     (is= (vec (avl/subrange ss1 > [3]))         [[3 0] [4] [5 :x] [5 :y] [5 :z]] )
     (is= (vec (avl/subrange ss1 > [3] < [5]))   [[3 0] [4] ] )
     (is= (vec (avl/subrange ss1 > [4]))         [[5 :x] [5 :y] [5 :z]] )
-    (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] )
-    ))
+    (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] ))
+  (let [data-all (range 10)
+        data-even (range 0 10 2)
+        join (fn join-fn [left right]
+               )
+        ]
+    )
+  )
