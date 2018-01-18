@@ -22,7 +22,7 @@
     (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] )) )
 
 (defn join-avl
-  [set-1 set-2]
+  [set-1 set-2]     ; #todo generalize to n-way join
   (assert (has-none? nil? (seq set-1)) "nil elements not allowed")
   (assert (has-none? nil? (seq set-2)) "nil elements not allowed")
   (let [[shorter longer] (sort-by count [set-1 set-2])]
