@@ -21,15 +21,15 @@
     (is= (vec (avl/subrange ss1 > [4]))         [[5 :x] [5 :y] [5 :z]] )
     (is= (vec (avl/subrange ss1 >= [4]))        [[4] [5 :x] [5 :y] [5 :z]] )) )
 
-(defn join-avl
+(defn join-avl      ; #todo add type checking input/output
   [set-1 set-2]     ; #todo generalize to n-way join
   (assert (has-none? nil? (seq set-1)) "nil elements not allowed")
   (assert (has-none? nil? (seq set-2)) "nil elements not allowed")
   (let [[shorter longer] (sort-by count [set-1 set-2])]
-    (forv [item-short shorter
-           :let [[ignore-lesser item-long ignore-greater] (avl/split-key item-short longer)]
-           :when (not-nil? item-long)]
-      item-short)))
+    (forv [item-loop shorter
+           :let [[ignore-lesser item-found ignore-greater] (avl/split-key item-loop longer)]
+           :when (not-nil? item-found)]
+      item-found)))
 
 (dotest
   (let [data-all  (into (avl/sorted-set) (range 20))
